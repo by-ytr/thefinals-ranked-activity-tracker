@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>THE FINALS – Ranked Activity Tracker</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="i18n.js"></script>
 </head>
 <body>
   <header class="bar">
     <div class="left">
       <div class="title">THE FINALS – Ranked Activity Tracker</div>
-      <div class="sub">外部リーダーボードの更新から活動状態を推定します。</div>
+      <div class="sub" data-i18n="site.sub">外部リーダーボードの更新から活動状態を推定します。</div>
     </div>
     <div class="right">
       <div class="meta">
@@ -21,11 +22,16 @@
         <span id="lastPoll">—</span>
       </div>
       <div class="meta2"><span id="netHint" class="hintTop"></span></div>
+      <div class="langSwitcher">
+        <button class="langBtn" data-lang="ja">日本語</button>
+        <button class="langBtn" data-lang="ko">한국어</button>
+        <button class="langBtn" data-lang="en">English</button>
+      </div>
       <div id="headerAuthBtns" style="display:flex;gap:8px;align-items:center;margin-top:4px;">
         <span id="headerUserInfo" style="display:none;font-size:12px;color:#7eb8ff;font-weight:600;"></span>
-        <button id="btnHeaderLogout" class="headerAuthBtn" style="display:none;">ログアウト</button>
-        <button id="btnHeaderLogin" class="headerAuthBtn">ログイン</button>
-        <button id="btnHeaderAdmin" class="headerAuthBtn primary">アカウント作成</button>
+        <button id="btnHeaderLogout" class="headerAuthBtn" style="display:none;" data-i18n="btn.logout">ログアウト</button>
+        <button id="btnHeaderLogin" class="headerAuthBtn" data-i18n="btn.login">ログイン</button>
+        <button id="btnHeaderAdmin" class="headerAuthBtn primary" data-i18n="btn.admin">アカウント作成</button>
       </div>
     </div>
   </header>
@@ -37,53 +43,53 @@
       <div class="bigSearchWrap">
         <div class="bigSearchBar">
           <svg class="searchIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="playerSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Search players... (Embark / Steam / PSN / Xbox)" />
-          <button id="btnAdd" class="primary">Add</button>
+          <input id="playerSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Search players... (Embark / Steam / PSN / Xbox)" data-i18n-ph="search.placeholder" />
+          <button id="btnAdd" class="primary" data-i18n="btn.add">Add</button>
         </div>
         <div id="searchDropdown" class="suggestions"></div>
       </div>
-      <div class="searchHint">Embark ID &nbsp;·&nbsp; Steam &nbsp;·&nbsp; PSN &nbsp;·&nbsp; Xbox &nbsp;に対応。追加すると自動で監視開始。</div>
+      <div class="searchHint" data-i18n="search.hint">Embark ID &nbsp;·&nbsp; Steam &nbsp;·&nbsp; PSN &nbsp;·&nbsp; Xbox &nbsp;に対応。追加すると自動で監視開始。</div>
     </div>
 
     <!-- ② Live table -->
     <section class="card">
       <div class="row between" style="margin-bottom:8px">
         <div>
-          <div class="h2">Live table</div>
-          <div class="hint">points が N/A：leaderboard にいない / season違い / CORS。</div>
+          <div class="h2" data-i18n="live.title">Live table</div>
+          <div class="hint" data-i18n="live.hint">points が N/A：leaderboard にいない / season違い / CORS。</div>
         </div>
         <div class="row tight">
-          <button id="btnClear" class="danger">Clear local data</button>
+          <button id="btnClear" class="danger" data-i18n="btn.clear">Clear local data</button>
         </div>
       </div>
       <div class="modeTabs" style="margin-bottom:6px">
-        <button id="liveTabPersonal" class="modeTab active">👤 自分のリスト</button>
-        <button id="liveTabGlobal" class="modeTab">🌐 グローバルリスト</button>
-        <button id="liveTabPickup" class="modeTab">⭐ 注目</button>
+        <button id="liveTabPersonal" class="modeTab active" data-i18n="tab.personal">👤 自分のリスト</button>
+        <button id="liveTabGlobal" class="modeTab" data-i18n="tab.global">🌐 グローバルリスト</button>
+        <button id="liveTabPickup" class="modeTab" data-i18n="tab.pickup">⭐ 注目</button>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <div class="regionTabs" id="liveRegionTabs" style="margin:0">
-          <button class="liveRegionTab regionTab active" data-lregion="all">🌐 全て</button>
+          <button class="liveRegionTab regionTab active" data-lregion="all" data-i18n="region.all">🌐 全て</button>
           <button class="liveRegionTab regionTab" data-lregion="AS">🌏 AS</button>
           <button class="liveRegionTab regionTab" data-lregion="EU">🌍 EU</button>
           <button class="liveRegionTab regionTab" data-lregion="NA">🌎 NA</button>
         </div>
-        <input id="liveSearch" type="text" placeholder="🔍 名前で絞り込み…" autocomplete="off" spellcheck="false"
+        <input id="liveSearch" type="text" placeholder="🔍 名前で絞り込み…" data-i18n-ph="live.search" autocomplete="off" spellcheck="false"
           style="flex:1;min-width:140px;max-width:240px;height:28px;font-size:12px;padding:0 10px;border-radius:999px;border:1px solid #1e2e40;background:#0d1520;color:#cfe0ff" />
       </div>
       <div class="tableWrap">
         <table id="tbl">
           <thead>
             <tr>
-              <th>name</th>
-              <th>rank</th>
-              <th class="num">points</th>
-              <th class="num">delta</th>
-              <th>変動</th>
+              <th data-i18n="th.name">name</th>
+              <th data-i18n="th.rank">rank</th>
+              <th class="num" data-i18n="th.points">points</th>
+              <th class="num" data-i18n="th.delta">delta</th>
+              <th data-i18n="th.changed">変動</th>
               <th>inferred_state <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip"><div class="thHelpRow"><span class="thHelpState" style="color:#5b9cf6">Lobby</span><span>試合終了後 or キュー待機中。<b style="color:#5b9cf6">遭遇確率が上昇中</b>。まもなく次の試合へ。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#39d98a">In Match (Est. R1)</span><span>R1試合中と推定。試合終了まで<b>しばらく待機</b>。遭遇は次の Lobby まで。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#39d98a">In Match (Est. R2)</span><span>R2以降と推定（Match+Jitter 超過）。引き続き試合継続中。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#c77dff">Final Round</span><span>Tournament 時間超過後の猶予期間。FINAL終了 or まもなくオフライン。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#8ea0b7">Offline</span><span>最新バッチでポイント変動なし。<b style="color:#8ea0b7">ゲームオフ</b>と判断。遭遇不可。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#5a7aaa">Unknown</span><span>初回ポーリング待ち。データ未取得の初期状態。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#ff9944">Missing</span><span>LBから連続3回以上消失。BAN または名前変更の可能性。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#ff4444">Banned</span><span>LBから完全消去。<b style="color:#ff4444">BAN 判定</b>。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#6de9ff">Name Changed</span><span>Alt名で別エントリーと照合済み。<b style="color:#6de9ff">名前変更</b>の可能性。</span></div><div class="thHelpNote">📌 バッジ表示中 = 手動遭遇記録が状態予測より優先</div></span></span></th>
-              <th class="num">next_match%</th>
-              <th>last_poll</th>
-              <th>error</th>
+              <th class="num" data-i18n="th.nextmatch">next_match%</th>
+              <th data-i18n="th.lastpoll">last_poll</th>
+              <th data-i18n="th.error">error</th>
               <th></th>
             </tr>
           </thead>
@@ -110,7 +116,7 @@
     <!-- ④ 設定 (controls + advanced) -->
     <section class="card settingsCard">
       <div class="ctrlRow">
-        <span class="ctrlLabel">マッチ設定</span>
+        <span class="ctrlLabel" data-i18n="adv.matchSetting">マッチ設定</span>
         <div class="pill sm">
           <span>Wait <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">キューに入ってから次の試合が開始するまでの待ち時間（分）。<br>ポイント変動後この時間は <b>Lobby</b> ステートと推定します。<br>目安：約5分</span></span></span>
           <input id="matchWait" type="number" min="0" max="30" step="1" value="5" />
@@ -127,12 +133,12 @@
           <span>m</span>
         </div>
         <div class="ctrlSep"></div>
-        <button id="btnStop">Stop</button>
-        <button id="btnShare">Share</button>
+        <button id="btnStop" data-i18n="btn.stop">Stop</button>
+        <button id="btnShare" data-i18n="btn.share">Share</button>
       </div>
 
       <details class="advanced" id="advancedDetails">
-        <summary>Advanced 設定</summary>
+        <summary data-i18n="adv.summary">Advanced 設定</summary>
 
         <div class="advSection">
           <div class="advLabel">リーダーボード <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">Embark 公式リーダーボードAPIの取得設定です。</span></span></div>
@@ -239,7 +245,7 @@
         <!-- ── アクセス管理（右上ボタンから開くモーダルに移動） ── -->
         <div class="advSection">
           <div class="advLabel">🔐 アクセス管理</div>
-          <button onclick="document.getElementById('adminModal').style.display='flex'" style="margin-top:6px;font-size:12px;">アカウント管理を開く →</button>
+          <button onclick="document.getElementById('adminModal').style.display='flex'" style="margin-top:6px;font-size:12px;" data-i18n="adv.access.open">アカウント管理を開く →</button>
         </div>
       </details>
 
@@ -268,7 +274,7 @@
         <button id="tabGlobal" class="modeTab">🌐 グローバルリスト</button>
       </div>
       <div class="personalView">
-        <div class="hint">Embark ID（<b>name#1234</b>）を改行 / カンマ区切りで入力。上の検索バーから追加も可。</div>
+        <div class="hint" data-i18n-html="personal.hint">Embark ID（<b>name#1234</b>）を改行 / カンマ区切りで入力。上の検索バーから追加も可。</div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;">
           <div class="regionTabs">
             <button class="personalRegionTab regionTab active" data-pregion="all">🌐 全て</button>
@@ -276,7 +282,7 @@
             <button class="personalRegionTab regionTab" data-pregion="EU">🌍 EU</button>
             <button class="personalRegionTab regionTab" data-pregion="NA">🌎 NA</button>
           </div>
-          <button id="btnCopyToGlobal" style="padding:5px 14px;font-size:12px;border-radius:999px;">📋 グローバルにコピー</button>
+          <button id="btnCopyToGlobal" style="padding:5px 14px;font-size:12px;border-radius:999px;" data-i18n="btn.copyToGlobal">📋 グローバルにコピー</button>
         </div>
         <textarea id="namesBox" spellcheck="false" placeholder="playerA#1234
 playerB#5678"></textarea>
@@ -299,22 +305,22 @@ playerB#5678"></textarea>
         <div id="globalPlayerList" class="globalPlayerList"></div>
         <!-- 追加フォーム -->
         <details class="communityAddWrap" style="margin-top:12px">
-          <summary class="communityAddSummary">＋ チーター / 注目プレイヤーを報告・追加</summary>
+          <summary class="communityAddSummary" data-i18n="global.add.summary">＋ チーター / 注目プレイヤーを報告・追加</summary>
           <div class="communityAddForm">
             <input id="communityName" type="text" placeholder="Embark ID（name#1234）" autocomplete="off" spellcheck="false" />
-            <select id="communityRegion">
+            <select id="communityRegion" data-i18n-opt="opt.region.AS,opt.region.EU,opt.region.NA,opt.region.unknown">
               <option value="AS">🌏 AS（アジア）</option>
               <option value="EU">🌍 EU</option>
               <option value="NA">🌎 NA</option>
               <option value="">🌐 地域不明</option>
             </select>
-            <select id="communityCategory">
+            <select id="communityCategory" data-i18n-opt="opt.cat.cheater,opt.cat.suspicious,opt.cat.notable">
               <option value="cheater">🚫 チーター</option>
               <option value="suspicious">⚠️ 疑い</option>
               <option value="notable">👁 注目</option>
             </select>
-            <input id="communityNote" type="text" placeholder="メモ（任意）" />
-            <button id="btnCommunityAdd" class="primary">追加</button>
+            <input id="communityNote" type="text" placeholder="メモ（任意）" data-i18n-ph="global.note.ph" />
+            <button id="btnCommunityAdd" class="primary" data-i18n="btn.global.add">追加</button>
           </div>
         </details>
       </div>
@@ -323,7 +329,7 @@ playerB#5678"></textarea>
   </main>
 
   <footer class="siteFooter">
-    <div class="footerTitle">Feedback / Bug Report</div>
+    <div class="footerTitle" data-i18n="footer.title">Feedback / Bug Report</div>
     <div class="footerContacts">
       <span>🇬🇧 Found a bug or have feedback? Contact: <strong>Discord: yatoru</strong></span>
       <span>🇯🇵 バグ報告・フィードバックはこちら: <strong>Discord: yatoru</strong></span>
@@ -337,21 +343,21 @@ playerB#5678"></textarea>
   <!-- ── ログインモーダル ── -->
   <div id="loginModal" class="loginModalOverlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
     <div class="loginModalBox">
-      <div class="loginModalTitle" id="loginModalTitle">🔐 ログイン</div>
+      <div class="loginModalTitle" id="loginModalTitle" data-i18n="modal.login.title">🔐 ログイン</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div>
-          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginId">ID</label>
-          <input id="loginId" type="text" placeholder="ユーザーID" autocomplete="username" style="width:100%" />
+          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginId" data-i18n="login.id.label">ID</label>
+          <input id="loginId" type="text" placeholder="ユーザーID" autocomplete="username" style="width:100%" data-i18n-ph="login.id.ph" />
         </div>
         <div>
-          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginPassword">パスワード</label>
-          <input id="loginPassword" type="password" placeholder="パスワード" autocomplete="current-password" style="width:100%" />
+          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginPassword" data-i18n="login.pw.label">パスワード</label>
+          <input id="loginPassword" type="password" placeholder="パスワード" autocomplete="current-password" style="width:100%" data-i18n-ph="login.pw.ph" />
         </div>
       </div>
       <div id="loginError" class="loginError"></div>
       <div class="loginModalBtns">
-        <button id="btnLoginCancel">キャンセル</button>
-        <button id="btnLoginSubmit" class="primary">ログイン</button>
+        <button id="btnLoginCancel" data-i18n="btn.login.cancel">キャンセル</button>
+        <button id="btnLoginSubmit" class="primary" data-i18n="btn.login.submit">ログイン</button>
       </div>
     </div>
   </div>
@@ -360,29 +366,29 @@ playerB#5678"></textarea>
   <div id="adminModal" class="loginModalOverlay" style="display:none;" role="dialog" aria-modal="true">
     <div class="loginModalBox" style="max-width:460px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div class="loginModalTitle">🔐 アカウント管理</div>
+        <div class="loginModalTitle" data-i18n="modal.admin.title">🔐 アカウント管理</div>
         <button id="btnAdminModalClose" style="background:none;border:none;color:#b8c4d6;font-size:20px;cursor:pointer;line-height:1;">✕</button>
       </div>
       <div class="row tight" style="margin-bottom:8px">
-        <input id="adminPasswordInput" type="password" placeholder="アドミンパスワード（未設定なら新規設定）" style="flex:1;height:34px;font-size:12px" />
-        <button id="btnAdminUnlock" style="height:34px;font-size:12px">🔓 解除 / 設定</button>
+        <input id="adminPasswordInput" type="password" placeholder="アドミンパスワード（未設定なら新規設定）" style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.pw.ph" />
+        <button id="btnAdminUnlock" style="height:34px;font-size:12px" data-i18n="btn.admin.unlock">🔓 解除 / 設定</button>
       </div>
       <div id="adminPanel" style="display:none">
-        <div class="sectionLabel" style="margin-top:6px">許可ユーザー一覧</div>
+        <div class="sectionLabel" style="margin-top:6px" data-i18n="admin.users.title">許可ユーザー一覧</div>
         <div id="allowedUserList"></div>
         <div class="row tight" style="margin-top:8px">
-          <input id="newUserId" type="text" placeholder="新しいID" style="flex:1;height:34px;font-size:12px" autocomplete="off" />
-          <input id="newUserPassword" type="password" placeholder="パスワード" style="flex:1;height:34px;font-size:12px" />
-          <button id="btnAddUser" class="primary" style="height:34px;font-size:12px">追加</button>
+          <input id="newUserId" type="text" placeholder="新しいID" style="flex:1;height:34px;font-size:12px" autocomplete="off" data-i18n-ph="admin.newid.ph" />
+          <input id="newUserPassword" type="password" placeholder="パスワード" style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.newpw.ph" />
+          <button id="btnAddUser" class="primary" style="height:34px;font-size:12px" data-i18n="btn.adduser">追加</button>
         </div>
-        <div class="sectionLabel" style="margin-top:12px">アドミンパスワード変更</div>
+        <div class="sectionLabel" style="margin-top:12px" data-i18n="admin.changepw">アドミンパスワード変更</div>
         <div class="row tight">
-          <input id="newAdminPassword" type="password" placeholder="新しいアドミンパスワード" style="flex:1;height:34px;font-size:12px" />
-          <button id="btnChangeAdminPassword" style="height:34px;font-size:12px">変更</button>
+          <input id="newAdminPassword" type="password" placeholder="新しいアドミンパスワード" style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.newadminpw.ph" />
+          <button id="btnChangeAdminPassword" style="height:34px;font-size:12px" data-i18n="btn.changepw">変更</button>
         </div>
-        <div class="sectionLabel" style="margin-top:12px">インターネット公開・共有</div>
-        <div class="hint" style="margin-bottom:6px">Global Backend URL が設定されている場合、許可ユーザーリストをバックエンドに保存します。</div>
-        <button id="btnSyncAuth" style="height:34px;font-size:12px">☁️ バックエンドに同期</button>
+        <div class="sectionLabel" style="margin-top:12px" data-i18n="admin.sync.title">インターネット公開・共有</div>
+        <div class="hint" style="margin-bottom:6px" data-i18n="admin.sync.hint">Global Backend URL が設定されている場合、許可ユーザーリストをバックエンドに保存します。</div>
+        <button id="btnSyncAuth" style="height:34px;font-size:12px" data-i18n="btn.syncauth">☁️ バックエンドに同期</button>
       </div>
     </div>
   </div>

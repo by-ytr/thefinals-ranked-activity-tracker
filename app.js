@@ -138,10 +138,11 @@ const fmtTs=(ms)=>{
 const fmtAgo=(ms)=>{
   if(!ms)return"—";
   const min=Math.floor((Date.now()-ms)/60000);
-  if(min<1)return"< 1m前";
-  if(min<60)return`${min}m前`;
+  const ago=typeof t==="function"?t("time.ago"):"ago";
+  if(min<1)return`< 1m ${ago}`;
+  if(min<60)return`${min}m ${ago}`;
   const h=Math.floor(min/60),m=min%60;
-  return m>0?`${h}h ${m}m前`:`${h}h前`;
+  return m>0?`${h}h ${m}m ${ago}`:`${h}h ${ago}`;
 };
 const clamp01=(x)=>Math.max(0,Math.min(1,x));
 
@@ -290,7 +291,7 @@ function updateLoginStatus(){
     else{
       bar.style.display="flex";
       document.getElementById("loginStatusText").textContent=
-        currentUser?"✅ ログイン中: "+currentUser.id:"🔒 ログインが必要です（追加するにはログイン）";
+        currentUser?t("login.status.in")+currentUser.id:t("login.status.req");
       const logoutBtn=document.getElementById("btnLogout");
       if(logoutBtn)logoutBtn.style.display=currentUser?"":"none";
     }
@@ -500,19 +501,19 @@ function findByAltNames(altNames){
   }
   return null;
 }
-const STATE_LABEL={
-  POST_MATCH_WAIT:    "Lobby",
-  LOBBY:              "Lobby",
-  IN_MATCH:           "In Match (Est. R1)",
-  IN_TOURNAMENT_DEEP: "In Match (Est. R2)",
-  RETURNING:          "Final Round",
-  OFFLINE:            "Offline",
-  UNKNOWN:            "Unknown",
-  NOT_FOUND:          "Missing",
-  BANNED:             "Banned",
-  NAME_CHANGED:       "Name Changed",
+const STATE_I18N_KEY={
+  POST_MATCH_WAIT:    "state.LOBBY",
+  LOBBY:              "state.LOBBY",
+  IN_MATCH:           "state.IN_MATCH_R1",
+  IN_TOURNAMENT_DEEP: "state.IN_MATCH_R2",
+  RETURNING:          "state.FINAL",
+  OFFLINE:            "state.OFFLINE",
+  UNKNOWN:            "state.UNKNOWN",
+  NOT_FOUND:          "state.NOT_FOUND",
+  BANNED:             "state.BANNED",
+  NAME_CHANGED:       "state.NAME_CHANGED",
 };
-function stateLabel(s){return STATE_LABEL[s]||s;}
+function stateLabel(s){return(typeof t==="function"?t(STATE_I18N_KEY[s]||"state.UNKNOWN"):s)||s;}
 function renderBadge(rank,league){
   const tier=league||inferLeagueFromRank(rank);
   const rankStr=rank?"#"+rank.toLocaleString():"—";
@@ -642,7 +643,7 @@ function renderTable(rows){
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
       <td class="num">${(r.delta==null)?"—":(r.delta>=0?("+"+r.delta):r.delta)}</td>
-      <td class="tsCell">${fmtAgo(r.lastChangeAt)}</td>
+      <td class="tsCell">${fmtAgo(r.lastRealChangeAt)}</td>
       <td><span class="state ${displayState}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
@@ -747,6 +748,7 @@ async function pollOnce(names,settings){
     }
     let delta=null;
     let lastChangeAt=prev.lastChangeAt??null;
+    let lastRealChangeAt=prev.lastRealChangeAt??null; // 実際のポイント変動のみ記録（表示用）
     let manualEvent=prev.manualEvent??null; // 手動遭遇記録
     let currentPoints=prev.points??null;
     let lastOkAt=prev.lastOkAt??null;
@@ -773,7 +775,7 @@ async function pollOnce(names,settings){
       notFoundCount=0;lastFoundAt=now;banNotified=false;suspectedReason=null;suspectedNewName=null;
       if(typeof prev.points==="number"){
         delta=currentPoints-prev.points;
-        if(delta!==0){lastChangeAt=now;pushEvent({ts:now,name,points:currentPoints,delta,inferred_state:null},settings.maxEvents);}
+        if(delta!==0){lastChangeAt=now;lastRealChangeAt=now;pushEvent({ts:now,name,points:currentPoints,delta,inferred_state:null},settings.maxEvents);}
         // RS急落アラート
         if(delta<=-settings.rsDropThreshold){
           const prevRk=prev.leaderboardRank;
@@ -807,12 +809,12 @@ async function pollOnce(names,settings){
     if(!manualActive)manualEvent=null;
     const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:lastChangeAt;
     const region=prev.region??"";
-    snapshots[key]={points:currentPoints,lastChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region,...(manualEvent?{manualEvent}:{})};
+    snapshots[key]={points:currentPoints,lastChangeAt,lastRealChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region,...(manualEvent?{manualEvent}:{})};
     const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
     // 状態変化をログ記録
     const prevRowState=lastRows.find(r=>r.name.toLowerCase()===key)?.state;
     if(prevRowState && prevRowState!==inf.state) pushStateLog({ts:now,name,from:prevRowState,to:inf.state,points:currentPoints,delta});
-    rows.push({name,points:currentPoints,delta,lastChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
+    rows.push({name,points:currentPoints,delta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
   // グローバルモード: スナップショットをバックエンドに送信（他ユーザーと共有）
@@ -1353,7 +1355,7 @@ async function init(){
   });
   document.getElementById("btnLoginCancel").addEventListener("click",hideLoginModal);
   document.getElementById("loginPassword").addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("btnLoginSubmit").click();});
-  document.getElementById("btnLogout").addEventListener("click",()=>{setCurrentUser(null);toast("ログアウトしました");});
+  document.getElementById("btnLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
   // モーダル背景クリックで閉じる
   document.getElementById("loginModal").addEventListener("click",(e)=>{if(e.target===e.currentTarget)hideLoginModal();});
 
@@ -1451,7 +1453,7 @@ async function init(){
 
   // ── ヘッダー認証ボタン ──
   document.getElementById("btnHeaderLogin").addEventListener("click",()=>showLoginModal());
-  document.getElementById("btnHeaderLogout").addEventListener("click",()=>{setCurrentUser(null);toast("ログアウトしました");});
+  document.getElementById("btnHeaderLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
   document.getElementById("btnHeaderAdmin").addEventListener("click",()=>{document.getElementById("adminModal").style.display="flex";});
   document.getElementById("btnAdminModalClose").addEventListener("click",()=>{document.getElementById("adminModal").style.display="none";});
 
@@ -1461,7 +1463,7 @@ async function init(){
   if(_initSettings.globalUrl)fetchAuthConfig(_initSettings.globalUrl);
 
   setRunning(false);
-  toast("Ready. 名前を検索して Add するだけ。Share link で他人にも同じ監視を渡せます。");
+  toast(t("toast.ready"));
 }
 init();
 

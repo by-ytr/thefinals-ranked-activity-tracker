@@ -264,6 +264,11 @@ th .thHelpTip{display:none!important}
 .tsCell{font-size:12px;color:#8ea0b7;white-space:nowrap}
 .errCell{font-size:11px;color:#8ea0b7;max-width:140px;overflow:hidden;text-overflow:ellipsis}
 .actCell{white-space:nowrap}
+/* ── 言語切り替え ── */
+.langSwitcher{display:flex;gap:4px;align-items:center;margin-top:4px}
+.langBtn{padding:3px 10px;font-size:11px;border-radius:999px;border:1px solid #1e2e40;background:#0d1520;color:#5a7aaa;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.langBtn:hover{background:#162035;color:#8ea0b7}
+.langBtn.active{background:#1a3a6e;color:#7eb8ff;border-color:#2a5a9e;font-weight:700}
 /* ── ヘッダー認証ボタン ── */
 .headerAuthBtn{padding:5px 14px;font-size:12px;border-radius:999px;height:30px;white-space:nowrap}
 /* ── サイトフッター ── */
