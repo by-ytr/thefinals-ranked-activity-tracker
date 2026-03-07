@@ -47,7 +47,7 @@
 
     <!-- ② Live table -->
     <section class="card">
-      <div class="row between">
+      <div class="row between" style="margin-bottom:8px">
         <div>
           <div class="h2">Live table</div>
           <div class="hint">points が N/A：leaderboard にいない / season違い / CORS。</div>
@@ -55,6 +55,10 @@
         <div class="row tight">
           <button id="btnClear" class="danger">Clear local data</button>
         </div>
+      </div>
+      <div class="modeTabs" style="margin-bottom:10px">
+        <button id="liveTabPersonal" class="modeTab active">👤 自分のリスト</button>
+        <button id="liveTabGlobal" class="modeTab">🌐 グローバルリスト</button>
       </div>
       <div class="tableWrap">
         <table id="tbl">
@@ -320,7 +324,16 @@ playerB#5678"></textarea>
 
   </main>
 
-  <footer class="foot">Data source: the-finals-leaderboard API (via proxy if needed).</footer>
+  <footer class="siteFooter">
+    <div class="footerTitle">Feedback / Bug Report</div>
+    <div class="footerContacts">
+      <span>🇬🇧 Found a bug or have feedback? Contact: <strong>Discord: yatoru</strong></span>
+      <span>🇯🇵 バグ報告・フィードバックはこちら: <strong>Discord: yatoru</strong></span>
+      <span>🇰🇷 버그 제보 및 피드백: <strong>Discord: yatoru</strong></span>
+      <span>🇨🇳 错误报告或反馈请联系: <strong>Discord: yatoru</strong></span>
+    </div>
+    <div class="footerSub">Data source: the-finals-leaderboard API (via proxy if needed).</div>
+  </footer>
   <div id="globalTooltip" class="globalTooltip" role="tooltip" aria-hidden="true"></div>
 
   <!-- ── ログインモーダル ── -->

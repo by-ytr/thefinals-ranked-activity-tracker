@@ -800,6 +800,8 @@ async function pollOnce(names,settings){
     rows.push({name,points:currentPoints,delta,lastChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
+  // グローバルモード: スナップショットをバックエンドに送信（他ユーザーと共有）
+  if(viewMode==="global"){const _gs=getUiSettings();if(_gs.globalUrl){Object.entries(snapshots).forEach(([k,s])=>submitSnapshotToGlobal(_gs.globalUrl,k,s));}}
   rows.sort((a,b)=>{
     const ta=a.lastChangeAt?(now-a.lastChangeAt):1e18;
     const tb=b.lastChangeAt?(now-b.lastChangeAt):1e18;
@@ -965,10 +967,26 @@ function doStart(){
   pollLeaderboardEstimator(settings);
   timer=setInterval(()=>{pollOnce(getActiveNames(),settings);pollLeaderboardEstimator(settings);},settings.pollIntervalSec*1000);
 }
+// グローバルモード: バックエンドのスナップショットを取得してテーブルに先行表示
+async function preloadRemoteSnapshots(settings){
+  const remote=await fetchGlobalSnapshots(settings.globalUrl);
+  if(!remote||typeof remote!=="object")return;
+  const names=getActiveNames();
+  const now=Date.now();
+  const rows=names.map(name=>{
+    const snap=remote[name.toLowerCase()];
+    if(!snap||snap.points==null)return null;
+    const inf=inferState(now,snap.lastChangeAt,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,false);
+    return {name,points:snap.points,delta:null,lastChangeAt:snap.lastChangeAt,effectiveLCA:snap.lastChangeAt,manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt,leaderboardRank:snap.leaderboardRank,league:snap.league,region:snap.region,notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
+  }).filter(Boolean);
+  if(rows.length>0&&lastRows.length===0){lastRows=rows;renderTable(rows);renderSpark(rows);}
+}
 async function switchToGlobal(){
   viewMode="global";
   document.getElementById("tabPersonal").classList.remove("active");
   document.getElementById("tabGlobal").classList.add("active");
+  document.getElementById("liveTabPersonal")?.classList.remove("active");
+  document.getElementById("liveTabGlobal")?.classList.add("active");
   document.getElementById("namesBox").closest("section").querySelector(".personalView").style.display="none";
   document.getElementById("globalListView").style.display="";
   const settings=getUiSettings();
@@ -983,12 +1001,15 @@ async function switchToGlobal(){
   document.getElementById("globalStatus").textContent=
     total===0?"ℹ️ まだ登録がありません。下のフォームから追加してください"
     :`🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
+  if(settings.globalUrl) preloadRemoteSnapshots(settings);
   if(filtered>0)doStart();
 }
 function switchToPersonal(){
   viewMode="personal";globalNames=[];
   document.getElementById("tabGlobal").classList.remove("active");
   document.getElementById("tabPersonal").classList.add("active");
+  document.getElementById("liveTabGlobal")?.classList.remove("active");
+  document.getElementById("liveTabPersonal")?.classList.add("active");
   document.getElementById("namesBox").closest("section").querySelector(".personalView").style.display="";
   document.getElementById("globalListView").style.display="none";
   doStart();
@@ -1378,6 +1399,10 @@ async function init(){
       toast("❌ 同期に失敗しました（URL・パスワードを確認してください）");
     }
   });
+
+  // ── Live tableソース切替タブ ──
+  document.getElementById("liveTabPersonal").addEventListener("click",()=>{if(viewMode!=="personal")switchToPersonal();});
+  document.getElementById("liveTabGlobal").addEventListener("click",()=>{if(viewMode!=="global")switchToGlobal();});
 
   // ── ヘッダー認証ボタン ──
   document.getElementById("btnHeaderLogin").addEventListener("click",()=>showLoginModal());
