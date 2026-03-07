@@ -56,9 +56,20 @@
           <button id="btnClear" class="danger">Clear local data</button>
         </div>
       </div>
-      <div class="modeTabs" style="margin-bottom:10px">
+      <div class="modeTabs" style="margin-bottom:6px">
         <button id="liveTabPersonal" class="modeTab active">👤 自分のリスト</button>
         <button id="liveTabGlobal" class="modeTab">🌐 グローバルリスト</button>
+        <button id="liveTabPickup" class="modeTab">⭐ 注目</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="regionTabs" id="liveRegionTabs" style="margin:0">
+          <button class="liveRegionTab regionTab active" data-lregion="all">🌐 全て</button>
+          <button class="liveRegionTab regionTab" data-lregion="AS">🌏 AS</button>
+          <button class="liveRegionTab regionTab" data-lregion="EU">🌍 EU</button>
+          <button class="liveRegionTab regionTab" data-lregion="NA">🌎 NA</button>
+        </div>
+        <input id="liveSearch" type="text" placeholder="🔍 名前で絞り込み…" autocomplete="off" spellcheck="false"
+          style="flex:1;min-width:140px;max-width:240px;height:28px;font-size:12px;padding:0 10px;border-radius:999px;border:1px solid #1e2e40;background:#0d1520;color:#cfe0ff" />
       </div>
       <div class="tableWrap">
         <table id="tbl">
@@ -68,7 +79,7 @@
               <th>rank</th>
               <th class="num">points</th>
               <th class="num">delta</th>
-              <th>last_change_at</th>
+              <th>変動</th>
               <th>inferred_state <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip"><div class="thHelpRow"><span class="thHelpState" style="color:#5b9cf6">Lobby</span><span>試合終了後 or キュー待機中。<b style="color:#5b9cf6">遭遇確率が上昇中</b>。まもなく次の試合へ。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#39d98a">In Match (Est. R1)</span><span>R1試合中と推定。試合終了まで<b>しばらく待機</b>。遭遇は次の Lobby まで。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#39d98a">In Match (Est. R2)</span><span>R2以降と推定（Match+Jitter 超過）。引き続き試合継続中。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#c77dff">Final Round</span><span>Tournament 時間超過後の猶予期間。FINAL終了 or まもなくオフライン。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#8ea0b7">Offline</span><span>最新バッチでポイント変動なし。<b style="color:#8ea0b7">ゲームオフ</b>と判断。遭遇不可。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#5a7aaa">Unknown</span><span>初回ポーリング待ち。データ未取得の初期状態。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#ff9944">Missing</span><span>LBから連続3回以上消失。BAN または名前変更の可能性。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#ff4444">Banned</span><span>LBから完全消去。<b style="color:#ff4444">BAN 判定</b>。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#6de9ff">Name Changed</span><span>Alt名で別エントリーと照合済み。<b style="color:#6de9ff">名前変更</b>の可能性。</span></div><div class="thHelpNote">📌 バッジ表示中 = 手動遭遇記録が状態予測より優先</div></span></span></th>
               <th class="num">next_match%</th>
               <th>last_poll</th>
@@ -81,19 +92,6 @@
       </div>
     </section>
 
-    <!-- ③ Hot window -->
-    <section class="card">
-      <div class="row between" style="margin-bottom:8px;">
-        <div>
-          <div class="h2">🎯 試合開始予測（今後30分）</div>
-          <div class="hint">バーが高い時間帯ほど、監視中のプレイヤーが次の試合を開始しやすい</div>
-        </div>
-        <div id="sparkHotCount" class="sparkHotCount"></div>
-      </div>
-      <div id="sparkWrap" class="sparkWrap"></div>
-      <div id="sparkAxis" class="sparkAxis"></div>
-      <div id="sparkSummary" class="sparkSummary"></div>
-    </section>
 
     <!-- ③.5 Pickup グラフ（★ ピックアップ時のみ表示） -->
     <section class="card" id="pickupSection" style="display:none">

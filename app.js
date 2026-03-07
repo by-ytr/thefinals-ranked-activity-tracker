@@ -7,6 +7,9 @@ let pendingScrollY=null; // リロード後スクロール位置復元用
 let lastRows=[]; // 最後に描画した行データ（遭遇ボタン即時再描画用）
 let pickedUp=new Set(); // pickup（大型グラフ対象）
 let personalRegionFilter="all"; // 自分のリスト サーバーフィルター
+let liveRegionFilter="all";    // Live tableリージョンフィルター
+let liveTabMode="personal";    // "personal" | "global" | "pickup"
+let liveSearchQuery="";        // Live table検索
 function buildPlayerSparkEl(row){
   const slots=30,slotMin=1,now=nowMs();
   const lca=row.effectiveLCA??row.lastChangeAt;
@@ -131,6 +134,14 @@ const fmtTs=(ms)=>{
   if(min<60)return`${min}m (${t})`;
   const h=Math.floor(min/60);
   return`${h}h${min%60|0}m (${t})`;
+};
+const fmtAgo=(ms)=>{
+  if(!ms)return"—";
+  const min=Math.floor((Date.now()-ms)/60000);
+  if(min<1)return"< 1m前";
+  if(min<60)return`${min}m前`;
+  const h=Math.floor(min/60),m=min%60;
+  return m>0?`${h}h ${m}m前`:`${h}h前`;
 };
 const clamp01=(x)=>Math.max(0,Math.min(1,x));
 
@@ -597,7 +608,11 @@ async function fetchPlayer(proxyBase,leaderboardId,platform,name){
 }
 function renderTable(rows){
   const tbody=document.getElementById("tbody");tbody.innerHTML="";
-  const filtered=personalRegionFilter==="all"?rows:rows.filter(r=>(r.region||"")===personalRegionFilter);
+  let filtered=rows;
+  if(liveTabMode==="pickup") filtered=filtered.filter(r=>pickedUp.has(r.name.toLowerCase()));
+  if(liveRegionFilter!=="all") filtered=filtered.filter(r=>(r.region||"")===liveRegionFilter);
+  if(liveSearchQuery) filtered=filtered.filter(r=>r.name.toLowerCase().includes(liveSearchQuery));
+  personalRegionFilter=liveRegionFilter;
   for(const r of filtered){
     const isMissing=r.notFoundCount>=3&&r.lastFoundAt;
     const isBan=isMissing&&r.suspectedReason==="BAN";
@@ -627,7 +642,7 @@ function renderTable(rows){
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
       <td class="num">${(r.delta==null)?"—":(r.delta>=0?("+"+r.delta):r.delta)}</td>
-      <td class="tsCell">${r.lastChangeAt?fmtTs(r.lastChangeAt):"—"}</td>
+      <td class="tsCell">${fmtAgo(r.lastChangeAt)}</td>
       <td><span class="state ${displayState}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
@@ -643,7 +658,7 @@ function renderTable(rows){
   }
 }
 function renderSpark(rows){
-  const wrap=document.getElementById("sparkWrap");wrap.innerHTML="";
+  const wrap=document.getElementById("sparkWrap");if(!wrap)return;wrap.innerHTML="";
   const axis=document.getElementById("sparkAxis");if(axis)axis.innerHTML="";
   const summary=document.getElementById("sparkSummary");if(summary)summary.innerHTML="";
   const activeRows=rows.filter(r=>r.lastChangeAt&&!(r.notFoundCount>=3&&r.lastFoundAt));
@@ -964,8 +979,7 @@ function doStart(){
   currentSettings=settings;
   setRunning(true);
   pollOnce(names,settings);
-  pollLeaderboardEstimator(settings);
-  timer=setInterval(()=>{pollOnce(getActiveNames(),settings);pollLeaderboardEstimator(settings);},settings.pollIntervalSec*1000);
+  timer=setInterval(()=>{pollOnce(getActiveNames(),settings);},settings.pollIntervalSec*1000);
 }
 // グローバルモード: バックエンドのスナップショットを取得してテーブルに先行表示
 async function preloadRemoteSnapshots(settings){
@@ -1401,8 +1415,39 @@ async function init(){
   });
 
   // ── Live tableソース切替タブ ──
-  document.getElementById("liveTabPersonal").addEventListener("click",()=>{if(viewMode!=="personal")switchToPersonal();});
-  document.getElementById("liveTabGlobal").addEventListener("click",()=>{if(viewMode!=="global")switchToGlobal();});
+  document.getElementById("liveTabPersonal").addEventListener("click",()=>{
+    liveTabMode="personal";
+    document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
+    document.getElementById("liveTabPersonal").classList.add("active");
+    if(viewMode!=="personal")switchToPersonal(); else renderTable(lastRows);
+  });
+  document.getElementById("liveTabGlobal").addEventListener("click",()=>{
+    liveTabMode="global";
+    document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
+    document.getElementById("liveTabGlobal").classList.add("active");
+    if(viewMode!=="global")switchToGlobal(); else renderTable(lastRows);
+  });
+  document.getElementById("liveTabPickup").addEventListener("click",()=>{
+    liveTabMode="pickup";
+    document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
+    document.getElementById("liveTabPickup").classList.add("active");
+    renderTable(lastRows);
+  });
+  // ── Live tableリージョンフィルター ──
+  document.querySelectorAll(".liveRegionTab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      liveRegionFilter=btn.dataset.lregion;
+      document.querySelectorAll(".liveRegionTab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      renderTable(lastRows);
+    });
+  });
+
+  // ── Live table 検索 ──
+  document.getElementById("liveSearch").addEventListener("input",e=>{
+    liveSearchQuery=e.target.value.trim().toLowerCase();
+    renderTable(lastRows);
+  });
 
   // ── ヘッダー認証ボタン ──
   document.getElementById("btnHeaderLogin").addEventListener("click",()=>showLoginModal());
