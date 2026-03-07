@@ -1,4 +1,4 @@
-const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1"};
+const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
 let timer=null,running=false,currentSettings=null;
 let viewMode="personal",globalNames=[],globalFilter="all";
@@ -241,6 +241,10 @@ async function submitSnapshotToGlobal(globalUrl,name,snap){
 async function addNameToGlobal(globalUrl,name){
   try{await fetch(globalUrl.replace(/\/$/,"")+"/names",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});}catch{}
 }
+// コミュニティエントリをバックエンドの /community に送信（他ユーザーへ即時反映）
+async function submitCommunityEntryToGlobal(globalUrl,entry){
+  try{await fetch(globalUrl.replace(/\/$/,"")+"/community",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...entry,addedAt:entry.addedAt||Date.now()})});}catch{}
+}
 // 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
 const ENCOUNTER_TYPES=[
   {key:"won",       label:"🏆 勝利",     desc:"試合に勝利した（即ロビーへ）",     getOffset:s=>0},
@@ -290,7 +294,13 @@ let currentUser=null; // {id:string} | null
 function isLoggedIn(){return currentUser!==null;}
 function setCurrentUser(id){
   currentUser=id?{id}:null;
+  if(id)localStorage.setItem(LS.session,id);
+  else localStorage.removeItem(LS.session);
   updateLoginStatus();
+}
+function restoreSession(){
+  const saved=localStorage.getItem(LS.session);
+  if(saved)currentUser={id:saved};
 }
 function updateLoginStatus(){
   // グローバルリスト内のステータスバー
@@ -333,6 +343,10 @@ async function fetchAuthConfig(globalUrl){
     const d=await r.json();
     if(Array.isArray(d.allowedUsers)){
       _backendAllowedUsers=d.allowedUsers;
+      // 復元したセッションのユーザーが削除されていたら自動ログアウト
+      if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>u.id.toLowerCase()===currentUser.id.toLowerCase())){
+        setCurrentUser(null);
+      }
       updateLoginStatus(); // バックエンドリストで状態を更新
     }
   }catch{}
@@ -1295,9 +1309,9 @@ async function init(){
     document.getElementById("communityName").value="";
     document.getElementById("communityNote").value="";
     toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
-    // バックエンドにも送信（設定済みなら）
+    // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
     const settings=getUiSettings();
-    if(settings.globalUrl)await addNameToGlobal(settings.globalUrl,name);
+    if(settings.globalUrl)await submitCommunityEntryToGlobal(settings.globalUrl,entry);
     renderGlobalPlayerList();
     const total=getCommunityList().length;
     document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
@@ -1319,14 +1333,22 @@ async function init(){
     });
   });
   // 自分のリスト → グローバルにコピー
-  document.getElementById("btnCopyToGlobal")?.addEventListener("click",()=>{
+  document.getElementById("btnCopyToGlobal")?.addEventListener("click",async()=>{
     const names=parseNames(document.getElementById("namesBox").value);
     if(!names.length){toast("リストが空です");return;}
+    const settings=getUiSettings();
     let added=0;
+    const newEntries=[];
     for(const name of names){
       if(!getCommunityList().find(e=>e.name.toLowerCase()===name.toLowerCase())){
-        addCommunityEntry({name,region:"",category:"notable",note:""});added++;
+        const entry={name,region:"",category:"notable",note:""};
+        addCommunityEntry(entry);
+        newEntries.push(entry);
+        added++;
       }
+    }
+    if(settings.globalUrl){
+      await Promise.all(newEntries.map(e=>submitCommunityEntryToGlobal(settings.globalUrl,e)));
     }
     toast(`🌐 <b>${added}人</b> をグローバルリストにコピーしました`);
     if(viewMode==="global")renderGlobalPlayerList();
@@ -1484,6 +1506,7 @@ async function init(){
   document.getElementById("btnAdminModalClose").addEventListener("click",()=>{document.getElementById("adminModal").style.display="none";});
 
   // ── 初期ログイン状態を反映 + globalUrl があればバックエンドから取得 ──
+  restoreSession(); // ページリロード後もログイン状態を復元
   updateLoginStatus();
   const _initSettings=getUiSettings();
   if(_initSettings.globalUrl)fetchAuthConfig(_initSettings.globalUrl);
