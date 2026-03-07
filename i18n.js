@@ -253,10 +253,10 @@ const LANGS = {
 
 // URLクエリパラメータ ?lang=ja/ko/en を優先
 const _urlLang = new URLSearchParams(location.search).get("lang");
-let currentLang = (LANGS[_urlLang] ? _urlLang : null) || localStorage.getItem("finals_lang") || "ja";
+let currentLang = (LANGS[_urlLang] ? _urlLang : null) || localStorage.getItem("finals_lang") || "en";
 
 function t(key) {
-  return (LANGS[currentLang] || LANGS.ja)[key] || LANGS.ja[key] || key;
+  return (LANGS[currentLang] || LANGS.en)[key] || LANGS.en[key] || key;
 }
 
 function setLang(lang) {
