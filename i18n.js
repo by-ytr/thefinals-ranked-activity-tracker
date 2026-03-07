@@ -251,7 +251,9 @@ const LANGS = {
   }
 };
 
-let currentLang = localStorage.getItem("finals_lang") || "ja";
+// URLクエリパラメータ ?lang=ja/ko/en を優先
+const _urlLang = new URLSearchParams(location.search).get("lang");
+let currentLang = (LANGS[_urlLang] ? _urlLang : null) || localStorage.getItem("finals_lang") || "ja";
 
 function t(key) {
   return (LANGS[currentLang] || LANGS.ja)[key] || LANGS.ja[key] || key;
