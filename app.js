@@ -619,13 +619,14 @@ function renderTable(rows){
     const isBan=isMissing&&r.suspectedReason==="BAN";
     const isNameChange=isMissing&&r.suspectedReason==="NAME_CHANGE";
     const displayState=isBan?"BANNED":isNameChange?"NAME_CHANGED":isMissing?"NOT_FOUND":r.state;
-    const missingBadge=isBan
-      ?'<span class="badge" style="background:#2a0808;color:#ff5555;border-color:#7a1a1a;">⛔ BAN</span>'
+    const statusBadge=isBan
+      ?'<span class="badge" style="background:#2a0808;color:#ff5555;border-color:#7a1a1a;margin:0 5px 0 2px">⛔ BAN</span>'
       :isNameChange
-        ?'<span class="badge" style="background:#082030;color:#6de9ff;border-color:#1e5a8a;">🔵 Name Changed</span>'
-        :isMissing
-          ?'<span class="badge" style="background:#2a1200;color:#ff9944;border-color:#7a3800;">🟠 Missing</span>'
-          :"";
+        ?'<span class="badge" style="background:#082030;color:#6de9ff;border-color:#1e5a8a;margin:0 5px 0 2px">🔵 NC</span>'
+        :"";
+    const missingBadge=(!isBan&&!isNameChange&&isMissing)
+      ?'<span class="badge" style="background:#2a1200;color:#ff9944;border-color:#7a3800;">🟠 Missing</span>'
+      :"";
     const regionBadge=r.region?`<span class="regionTag regionTag-${r.region}">${r.region}</span>`:"";
     const key=r.name.toLowerCase();
     const isExpanded=expandedRows.has(key);
@@ -639,7 +640,7 @@ function renderTable(rows){
     if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
     else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
     tr.innerHTML=`
-      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="ピックアップ（大型グラフに追加）">★</button>${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
+      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="ピックアップ（大型グラフに追加）">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
       <td class="num">${(r.delta==null)?"—":(r.delta>=0?("+"+r.delta):r.delta)}</td>
