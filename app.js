@@ -272,14 +272,33 @@ function setCurrentUser(id){
   updateLoginStatus();
 }
 function updateLoginStatus(){
+  // グローバルリスト内のステータスバー
   const bar=document.getElementById("loginStatusBar");
-  if(!bar)return;
-  if(getEffectiveAllowedUsers().length===0){bar.style.display="none";return;}
-  bar.style.display="flex";
-  document.getElementById("loginStatusText").textContent=
-    currentUser?"✅ ログイン中: "+currentUser.id:"🔒 ログインが必要です（追加するにはログイン）";
-  const logoutBtn=document.getElementById("btnLogout");
-  if(logoutBtn)logoutBtn.style.display=currentUser?"":"none";
+  if(bar){
+    if(getEffectiveAllowedUsers().length===0){bar.style.display="none";}
+    else{
+      bar.style.display="flex";
+      document.getElementById("loginStatusText").textContent=
+        currentUser?"✅ ログイン中: "+currentUser.id:"🔒 ログインが必要です（追加するにはログイン）";
+      const logoutBtn=document.getElementById("btnLogout");
+      if(logoutBtn)logoutBtn.style.display=currentUser?"":"none";
+    }
+  }
+  // ヘッダーのログインボタン
+  const headerUserInfo=document.getElementById("headerUserInfo");
+  const btnHeaderLogout=document.getElementById("btnHeaderLogout");
+  const btnHeaderLogin=document.getElementById("btnHeaderLogin");
+  if(!headerUserInfo)return;
+  if(currentUser){
+    headerUserInfo.textContent="👤 "+currentUser.id;
+    headerUserInfo.style.display="";
+    btnHeaderLogout.style.display="";
+    btnHeaderLogin.style.display="none";
+  }else{
+    headerUserInfo.style.display="none";
+    btnHeaderLogout.style.display="none";
+    btnHeaderLogin.style.display="";
+  }
 }
 
 // ── バックエンド認証同期 ──────────────────────────────────────────
@@ -1359,6 +1378,12 @@ async function init(){
       toast("❌ 同期に失敗しました（URL・パスワードを確認してください）");
     }
   });
+
+  // ── ヘッダー認証ボタン ──
+  document.getElementById("btnHeaderLogin").addEventListener("click",()=>showLoginModal());
+  document.getElementById("btnHeaderLogout").addEventListener("click",()=>{setCurrentUser(null);toast("ログアウトしました");});
+  document.getElementById("btnHeaderAdmin").addEventListener("click",()=>{document.getElementById("adminModal").style.display="flex";});
+  document.getElementById("btnAdminModalClose").addEventListener("click",()=>{document.getElementById("adminModal").style.display="none";});
 
   // ── 初期ログイン状態を反映 + globalUrl があればバックエンドから取得 ──
   updateLoginStatus();

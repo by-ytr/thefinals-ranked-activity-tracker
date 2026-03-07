@@ -21,6 +21,12 @@
         <span id="lastPoll">—</span>
       </div>
       <div class="meta2"><span id="netHint" class="hintTop"></span></div>
+      <div id="headerAuthBtns" style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+        <span id="headerUserInfo" style="display:none;font-size:12px;color:#7eb8ff;font-weight:600;"></span>
+        <button id="btnHeaderLogout" class="headerAuthBtn" style="display:none;">ログアウト</button>
+        <button id="btnHeaderLogin" class="headerAuthBtn">ログイン</button>
+        <button id="btnHeaderAdmin" class="headerAuthBtn primary">アカウント作成</button>
+      </div>
     </div>
   </header>
 
@@ -228,35 +234,10 @@
           </div>
         </div>
 
-        <!-- ── アクセス管理（グローバルリスト書き込み制限） ── -->
+        <!-- ── アクセス管理（右上ボタンから開くモーダルに移動） ── -->
         <div class="advSection">
-          <div class="advLabel">🔐 アクセス管理（グローバルリスト書き込み制限）</div>
-          <details>
-            <summary class="communityAddSummary" style="font-size:12px;color:#8ea0b7;padding:6px 0;cursor:pointer;">ユーザー管理（アドミン専用）</summary>
-            <div style="padding:10px 0 4px">
-              <div class="row tight" style="margin-bottom:8px">
-                <input id="adminPasswordInput" type="password" placeholder="アドミンパスワード（未設定なら新規設定）" style="flex:1;height:34px;font-size:12px" />
-                <button id="btnAdminUnlock" style="height:34px;font-size:12px">🔓 解除 / 設定</button>
-              </div>
-              <div id="adminPanel" style="display:none">
-                <div class="sectionLabel" style="margin-top:6px">許可ユーザー一覧</div>
-                <div id="allowedUserList"></div>
-                <div class="row tight" style="margin-top:8px">
-                  <input id="newUserId" type="text" placeholder="新しいID" style="flex:1;height:34px;font-size:12px" autocomplete="off" />
-                  <input id="newUserPassword" type="password" placeholder="パスワード" style="flex:1;height:34px;font-size:12px" />
-                  <button id="btnAddUser" class="primary" style="height:34px;font-size:12px">追加</button>
-                </div>
-                <div class="sectionLabel" style="margin-top:12px">アドミンパスワード変更</div>
-                <div class="row tight">
-                  <input id="newAdminPassword" type="password" placeholder="新しいアドミンパスワード" style="flex:1;height:34px;font-size:12px" />
-                  <button id="btnChangeAdminPassword" style="height:34px;font-size:12px">変更</button>
-                </div>
-                <div class="sectionLabel" style="margin-top:12px">インターネット公開・共有</div>
-                <div class="hint" style="margin-bottom:6px">Global Backend URL が設定されている場合、許可ユーザーリストをバックエンドに保存します。他のブラウザからも同じ認証設定が使えます。</div>
-                <button id="btnSyncAuth" style="height:34px;font-size:12px">☁️ バックエンドに同期</button>
-              </div>
-            </div>
-          </details>
+          <div class="advLabel">🔐 アクセス管理</div>
+          <button onclick="document.getElementById('adminModal').style.display='flex'" style="margin-top:6px;font-size:12px;">アカウント管理を開く →</button>
         </div>
       </details>
 
@@ -360,6 +341,37 @@ playerB#5678"></textarea>
       <div class="loginModalBtns">
         <button id="btnLoginCancel">キャンセル</button>
         <button id="btnLoginSubmit" class="primary">ログイン</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- アカウント管理モーダル -->
+  <div id="adminModal" class="loginModalOverlay" style="display:none;" role="dialog" aria-modal="true">
+    <div class="loginModalBox" style="max-width:460px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div class="loginModalTitle">🔐 アカウント管理</div>
+        <button id="btnAdminModalClose" style="background:none;border:none;color:#b8c4d6;font-size:20px;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div class="row tight" style="margin-bottom:8px">
+        <input id="adminPasswordInput" type="password" placeholder="アドミンパスワード（未設定なら新規設定）" style="flex:1;height:34px;font-size:12px" />
+        <button id="btnAdminUnlock" style="height:34px;font-size:12px">🔓 解除 / 設定</button>
+      </div>
+      <div id="adminPanel" style="display:none">
+        <div class="sectionLabel" style="margin-top:6px">許可ユーザー一覧</div>
+        <div id="allowedUserList"></div>
+        <div class="row tight" style="margin-top:8px">
+          <input id="newUserId" type="text" placeholder="新しいID" style="flex:1;height:34px;font-size:12px" autocomplete="off" />
+          <input id="newUserPassword" type="password" placeholder="パスワード" style="flex:1;height:34px;font-size:12px" />
+          <button id="btnAddUser" class="primary" style="height:34px;font-size:12px">追加</button>
+        </div>
+        <div class="sectionLabel" style="margin-top:12px">アドミンパスワード変更</div>
+        <div class="row tight">
+          <input id="newAdminPassword" type="password" placeholder="新しいアドミンパスワード" style="flex:1;height:34px;font-size:12px" />
+          <button id="btnChangeAdminPassword" style="height:34px;font-size:12px">変更</button>
+        </div>
+        <div class="sectionLabel" style="margin-top:12px">インターネット公開・共有</div>
+        <div class="hint" style="margin-bottom:6px">Global Backend URL が設定されている場合、許可ユーザーリストをバックエンドに保存します。</div>
+        <button id="btnSyncAuth" style="height:34px;font-size:12px">☁️ バックエンドに同期</button>
       </div>
     </div>
   </div>
