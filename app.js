@@ -785,9 +785,8 @@ async function pollOnce(names,settings){
           toast("📉 <b>"+name+"</b> RS急減: "+prev.points.toLocaleString()+" → "+currentPoints.toLocaleString()+" (<b>"+delta+"</b>)"+rankPart);
         }
       }else if(prev.points==null){
-        // 初回観測：prev.lastChangeAt がなければ lastBatchAt か now で設定
-        // （prev.lastChangeAt がある場合は上書きしない→追加後オフライン判定を正常化）
-        if(!lastChangeAt) lastChangeAt=estimator.lastBatchAt??now;
+        // 初回観測：lastBatchAt が判明している場合のみ設定。不明な場合は null のまま (→ UNKNOWN) にしてユーザー間のズレを防ぐ
+        if(!lastChangeAt && estimator.lastBatchAt) lastChangeAt=estimator.lastBatchAt;
       }
     }else if(!isCorsLikeError(errMsg)){
       notFoundCount++;
@@ -988,6 +987,19 @@ function doStart(){
 async function preloadRemoteSnapshots(settings){
   const remote=await fetchGlobalSnapshots(settings.globalUrl);
   if(!remote||typeof remote!=="object")return;
+  // リモートの lastChangeAt をローカルスナップショットにマージ（初回観測時のズレ防止）
+  const localSnaps=getSnapshots();
+  let snapshotsMerged=false;
+  for(const [key,remSnap] of Object.entries(remote)){
+    if(remSnap&&remSnap.lastChangeAt){
+      if(!localSnaps[key])localSnaps[key]={points:null,lastChangeAt:null};
+      if(!localSnaps[key].lastChangeAt){
+        localSnaps[key]={...localSnaps[key],lastChangeAt:remSnap.lastChangeAt,lastRealChangeAt:remSnap.lastRealChangeAt??remSnap.lastChangeAt};
+        snapshotsMerged=true;
+      }
+    }
+  }
+  if(snapshotsMerged)saveSnapshots(localSnaps);
   const names=getActiveNames();
   const now=Date.now();
   const rows=names.map(name=>{
