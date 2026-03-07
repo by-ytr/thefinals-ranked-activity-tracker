@@ -171,6 +171,15 @@ function pushEvent(ev,maxEvents){
   const trimmed=events.slice(Math.max(0,events.length-maxEvents));
   localStorage.setItem(LS.events,JSON.stringify(trimmed));
 }
+// イベント履歴から指定プレイヤーの最後のポイント変動時刻を取得
+function getLastChangeAtFromEvents(key){
+  const events=getEvents();
+  for(let i=events.length-1;i>=0;i--){
+    const e=events[i];
+    if(e.name&&e.name.toLowerCase()===key&&e.delta&&e.delta!==0)return e.ts;
+  }
+  return null;
+}
 function parseNames(text){
   const parts=(text||"").split(/[\n,]/g).map(s=>s.trim()).filter(Boolean);
   const seen=new Set();const out=[];
@@ -785,8 +794,12 @@ async function pollOnce(names,settings){
           toast("📉 <b>"+name+"</b> RS急減: "+prev.points.toLocaleString()+" → "+currentPoints.toLocaleString()+" (<b>"+delta+"</b>)"+rankPart);
         }
       }else if(prev.points==null){
-        // 初回観測：lastBatchAt が判明している場合のみ設定。不明な場合は null のまま (→ UNKNOWN) にしてユーザー間のズレを防ぐ
-        if(!lastChangeAt && estimator.lastBatchAt) lastChangeAt=estimator.lastBatchAt;
+        // 初回観測：優先順位: イベント履歴 → lastBatchAt → null(UNKNOWN)
+        if(!lastChangeAt){
+          const fromHistory=getLastChangeAtFromEvents(key);
+          if(fromHistory) lastChangeAt=fromHistory;
+          else if(estimator.lastBatchAt) lastChangeAt=estimator.lastBatchAt;
+        }
       }
     }else if(!isCorsLikeError(errMsg)){
       notFoundCount++;
