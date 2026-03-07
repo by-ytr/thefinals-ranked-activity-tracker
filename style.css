@@ -1,0 +1,266 @@
+*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP","Noto Sans",sans-serif;background:#0b0f14;color:#e7edf5}
+
+.bar{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 16px;background:#0f1622;border-bottom:1px solid #1e2a3a;position:sticky;top:0;z-index:10;gap:12px}
+.left{display:flex;flex-direction:column;gap:2px}
+.title{font-weight:900;letter-spacing:.2px}
+.sub{font-size:12px;color:#8ea0b7}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.meta{display:flex;align-items:center;gap:8px;color:#b8c4d6;font-size:12px;flex-wrap:wrap;justify-content:flex-end}
+.meta2{color:#8ea0b7;font-size:12px}
+.sep{opacity:.5}
+.dot{width:10px;height:10px;border-radius:999px;display:inline-block;background:#666}
+.dot.on{background:#39d98a}
+.dot.off{background:#f05d5e}
+.wrap{max-width:1600px;margin:16px auto;padding:0 12px;display:flex;flex-direction:column;gap:12px}
+.card{background:#0f1622;border:1px solid #1e2a3a;border-radius:14px;padding:12px}
+.hero{padding:10px 14px}
+.heroTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.heroBtns{display:flex;gap:8px;flex-wrap:wrap}
+.ctrlRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctrlSep{flex:1}
+.ctrlLabel{font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.settingsCard{padding:10px 14px}
+.pill.sm{padding:4px 10px;border-radius:999px}
+.pill.sm span{font-size:11px;color:#8ea0b7}
+.pill.sm input{height:26px;width:44px;padding:0 6px;font-size:12px;text-align:center;border-radius:7px}
+.pill.sm select{height:26px;padding:0 6px;font-size:12px;border-radius:7px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row.tight{gap:8px}
+.between{justify-content:space-between;align-items:center}
+.field{flex:1;min-width:240px}
+label{display:block;font-size:12px;color:#b8c4d6;margin-bottom:6px}
+input,select,textarea{padding:10px 10px;border-radius:12px;border:1px solid #223249;background:#0b101a;color:#e7edf5;outline:none}
+textarea{width:100%;min-height:120px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;margin-top:10px}
+select,input{height:40px}
+.hint{font-size:12px;color:#8ea0b7;margin-top:6px}
+.hintTop{font-size:12px;color:#8ea0b7}
+.h2{font-weight:900;margin-bottom:6px}
+button{padding:10px 12px;border-radius:12px;border:1px solid #223249;background:#0b101a;color:#e7edf5;cursor:pointer;white-space:nowrap}
+button:hover{border-color:#2f4666}
+button.primary{background:#184dff;border-color:#184dff}
+button.danger{background:#2a0f12;border-color:#5b1e25}
+.pill{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #223249;border-radius:999px;background:#0b101a}
+.pill span{color:#b8c4d6;font-size:12px}
+.pill button{padding:8px 10px;border-radius:999px}
+.advanced{margin-top:12px}
+.tableWrap{overflow:auto;border-radius:12px;border:1px solid #223249;margin-top:10px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:11px 14px;border-bottom:1px solid #131d2b;font-size:13px;white-space:nowrap;vertical-align:middle}
+th{position:sticky;top:0;background:#0d1520;text-align:left;color:#7a9ab8;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e2a3a}
+td.num,th.num{text-align:right}
+tbody tr:nth-child(even){background:rgba(255,255,255,.018)}
+tbody tr:hover{background:rgba(24,77,255,.07)}
+tbody tr td:first-child{font-weight:600;color:#cfe0ff}
+.state{font-weight:700;font-size:13px}
+.state.IN_MATCH{color:#39d98a}
+.state.POST_MATCH_WAIT,.state.LOBBY{color:#5b9cf6}
+.state.IN_TOURNAMENT_DEEP,.state.RETURNING{color:#c77dff}
+.state.OFFLINE{color:#8ea0b7}
+.state.BANNED{color:#ff4444}
+.state.NOT_FOUND{color:#ff9944}
+.state.NAME_CHANGED{color:#6de9ff}
+.state.UNKNOWN{color:#5a7aaa}
+.foot{color:#8ea0b7;font-size:12px;padding:16px;text-align:center}
+.sparkWrap{display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.sparkBar{width:9px;border-radius:6px;background:#184dff;opacity:.85;transition:opacity .2s}
+.sparkBar.low{opacity:.2}
+.sparkBar.mid{opacity:.5}
+.sparkBar.peak{background:#39d98a;opacity:1;box-shadow:0 0 8px rgba(57,217,138,.5)}
+.sparkHotCount{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.psItem{background:#0b101a;border:1px solid #1e2a3a;border-radius:10px;padding:10px 12px}
+.psHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.psName{font-weight:700;color:#cfe0ff;font-size:13px}
+.psTag{color:#5a7aaa;font-weight:400;font-size:11px}
+.psPct{font-size:16px;font-weight:900}
+.psGraph{display:flex;flex-direction:column;gap:3px}
+.psBars{display:flex;align-items:flex-end;gap:3px}
+.psAxis{display:flex;justify-content:space-between;padding:0 1px;margin-top:3px}
+.psAxis span{font-size:10px;color:#5a7aaa}
+.psEmpty{color:#5a7aaa;font-size:13px;padding:16px 0;text-align:center}
+.nameCell{cursor:pointer;user-select:none}
+.nameCell:hover .expandCaret{color:#b8c4d6}
+.expandCaret{font-size:9px;color:#5a7aaa;margin-left:5px;vertical-align:middle}
+.expandRow .expandCell{padding:8px 16px 12px!important;background:#090d14;border-top:none}
+.toast{position:fixed;right:16px;bottom:16px;max-width:560px;padding:10px 12px;border-radius:12px;border:1px solid #223249;background:#0f1622;color:#e7edf5;display:none;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.toast.show{display:block}
+.toast b{color:#cfe0ff}
+code{background:#0b101a;border:1px solid #223249;padding:2px 6px;border-radius:8px}
+
+.checkbox{display:flex;align-items:center;gap:8px;user-select:none}
+.sectionLabel{font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.6px;margin-top:14px;margin-bottom:6px}
+.matchTimeRow{margin-bottom:4px}
+.advSection{margin-top:14px;padding-top:12px;border-top:1px solid #1e2a3a}
+.advLabel{font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.muted{font-size:12px;color:#8ea0b7}
+.advanced summary{cursor:pointer;color:#b8c4d6;font-weight:700;padding:10px 0 4px;font-size:13px}
+.advanced summary:hover{color:#e7edf5}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+.rankCell{white-space:nowrap}
+.rankNum{font-variant-numeric:tabular-nums;font-size:12px;color:#8ea0b7;margin-left:4px}
+.badge{display:inline-block;font-size:10px;font-weight:900;padding:2px 7px;border-radius:999px;letter-spacing:.3px;text-transform:uppercase;vertical-align:middle}
+.badge-ruby{background:#3d0f1a;color:#ff6b8a;border:1px solid #8a1f35}
+.badge-diamond{background:#0f2a3d;color:#6de9ff;border:1px solid #1e5a7a}
+.badge-platinum{background:#1a2535;color:#c0d8e8;border:1px solid #3a5070}
+.badge-gold{background:#2d2200;color:#f5c842;border:1px solid #6a5000}
+.badge-silver{background:#1e2530;color:#a8b8c8;border:1px solid #3a4a5a}
+.badge-bronze{background:#2a1800;color:#c48a4a;border:1px solid #5a3a10}
+.searchHero{padding:20px 0 8px}
+.searchHint{font-size:12px;color:#5a7aaa;text-align:center;margin-top:8px}
+.bigSearchWrap{position:relative;max-width:860px;margin:0 auto}
+.bigSearchBar{display:flex;align-items:center;gap:12px;background:#0f1622;border:1px solid #223249;border-radius:16px;padding:10px 10px 10px 20px;transition:border-color .2s;box-shadow:0 4px 24px rgba(0,0,0,.35)}
+.bigSearchBar:focus-within{border-color:#3a5580;box-shadow:0 4px 32px rgba(24,77,255,.15)}
+.searchIcon{color:#5a7aaa;flex-shrink:0}
+.bigSearchBar input{flex:1;border:none;background:transparent;color:#e7edf5;font-size:16px;height:40px;outline:none;min-width:0}
+.bigSearchBar input::placeholder{color:#5a7aaa;font-size:15px}
+.bigSearchBar #btnAdd{padding:10px 28px;border-radius:12px;font-size:14px;font-weight:700;flex-shrink:0}
+.suggestions{position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:100;background:#162030;border:1px solid #3a5580;border-radius:10px;overflow:hidden;display:none;box-shadow:0 8px 32px rgba(0,0,0,.7)}
+.suggestions.open{display:block}
+.suggItem{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #1e2a3a}
+.suggItem:last-child{border-bottom:none}
+.suggItem:hover{background:#1e3050}
+.suggRank{color:#5a7aaa;font-size:11px;min-width:42px;font-variant-numeric:tabular-nums}
+.suggName{color:#e7edf5;font-weight:700;flex:1}
+.suggAlt{color:#8ea0b7;font-size:11px}
+.checkbox input{transform:translateY(1px)}
+.state.NOT_FOUND{color:#ff9944}
+.state.BANNED{color:#ff5555}
+.state.NAME_CHANGED{color:#6de9ff}
+.modeTabs{display:flex;gap:6px;margin-bottom:12px}
+.modeTab{padding:6px 18px;border-radius:999px;font-size:12px;font-weight:700;color:#8ea0b7}
+.modeTab.active{background:#184dff;border-color:#184dff;color:#fff}
+.resetBtn{padding:3px 8px;font-size:11px;border-radius:8px;opacity:.55;line-height:1}
+.resetBtn:hover{opacity:1;color:#ffcf5c;border-color:#ffcf5c}
+.deleteBtn{padding:3px 8px;font-size:11px;border-radius:8px;opacity:.35;line-height:1;margin-left:4px}
+.deleteBtn:hover{opacity:1;color:#ff5555;border-color:#7a1a1a;background:#2a0808}
+.globalPlayerList{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:220px;overflow-y:auto}
+.globalPlayerItem{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #1e2a3a;border-radius:8px;font-size:13px;background:#0b101a}
+.globalPlayerName{flex:1;font-weight:600;color:#cfe0ff}
+.globalAddBtn{padding:3px 10px;font-size:11px;border-radius:999px;color:#39d98a;border-color:#1e5a1e;background:#0d2a0d}
+.globalAddBtn:hover{background:#1a4a1a}
+.regionTabs{display:flex;gap:5px;flex-wrap:wrap}
+.regionTab{padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;color:#8ea0b7}
+.regionTab.active{background:#223249;border-color:#3a5580;color:#e7edf5}
+.regionGroupLabel{font-size:10px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;padding-left:2px}
+.catBadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;flex-shrink:0}
+.catCheater{background:#2a0808;color:#ff5555;border:1px solid #7a1a1a}
+.catSuspicious{background:#2a1a00;color:#ffaa44;border:1px solid #7a4a00}
+.catNotable{background:#0a1a2a;color:#6de9ff;border:1px solid #1e4a6a}
+.communityNote{font-size:11px;color:#8ea0b7;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.communityDelBtn{padding:2px 7px;font-size:11px;border-radius:6px;color:#666;border-color:#333;opacity:.6;margin-left:auto}
+.communityDelBtn:hover{opacity:1;color:#ff5555;border-color:#7a1a1a}
+.communityAddWrap{border:1px solid #1e2a3a;border-radius:10px;overflow:hidden}
+.communityAddSummary{cursor:pointer;padding:8px 12px;font-size:12px;font-weight:700;color:#8ea0b7;background:#0b101a;list-style:none}
+.communityAddSummary:hover{color:#e7edf5}
+.communityAddForm{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;background:#090d14;align-items:center}
+.communityAddForm input{flex:1;min-width:120px;height:34px;font-size:12px}
+.communityAddForm select{height:34px;font-size:12px;flex-shrink:0}
+.communityAddForm button{height:34px;flex-shrink:0}
+.banAlertList{margin-top:14px}
+.banAlertTitle{font-size:11px;font-weight:700;color:#ff9944;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:10px}
+.banAlertTitle:first-child{margin-top:0}
+.banAlertTitle.banTitleBan{color:#ff4444}
+.banAlertTitle.banTitleNameChange{color:#6de9ff}
+.banAlertItem{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#1e1000;border:1px solid #5a3000;margin-bottom:4px;flex-wrap:wrap}
+.banAlertItem:last-child{margin-bottom:0}
+.banAlertBan{background:#1e0808;border-color:#7a1a1a}
+.banAlertNameChange{background:#071520;border-color:#1e5a8a}
+.banAlertIcon{font-size:14px;flex-shrink:0}
+.banAlertName{font-weight:700;color:#ffb84d;flex-shrink:0}
+.banAlertBan .banAlertName{color:#ff7777}
+.banAlertNameChange .banAlertName{color:#6de9ff}
+.banAlertReason{font-size:12px;color:#c09060;font-weight:600;flex:1}
+.banAlertNameChange .banAlertReason{color:#6de9ff}
+.banAlertMeta{font-size:11px;color:#9a7040;flex-basis:100%}
+.encounterPanel{display:flex;flex-direction:column;gap:6px;padding:8px 0 10px;border-bottom:1px solid #1e2a3a;margin-bottom:10px}
+.encounterLabel{font-size:11px;font-weight:700;color:#8ea0b7;text-transform:uppercase;letter-spacing:.5px}
+.encounterBtns{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
+.encounterBtn{padding:5px 13px;font-size:12px;border-radius:8px;opacity:.7;cursor:pointer}
+.encounterBtn:hover{opacity:1;border-color:#ffcf5c;color:#ffcf5c}
+.encounterGroup{display:inline-flex;flex-direction:column;gap:3px;position:relative}
+.encounterGroupBtn{white-space:nowrap}
+.groupCaret{font-size:9px;margin-left:3px}
+.encounterSubPanel{display:none;gap:4px}
+.encounterSubPanel.open{display:flex;flex-wrap:wrap;position:absolute;left:0;top:calc(100% + 3px);z-index:20;background:#0f1622;border:1px solid #223249;border-radius:8px;padding:6px;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,.6);}
+.encounterSubBtn{padding:4px 12px;font-size:12px;border-radius:7px;cursor:pointer;background:#0b101a;border:1px solid #2a3a50;color:#b8c4d6}
+.encounterSubBtn:hover{border-color:#ff9944;color:#ff9944}
+.encounterActive{font-size:11px;color:#39d98a;background:#0d2a1a;border:1px solid #1e5a2a;border-radius:6px;padding:4px 10px;margin-top:2px;display:inline-block}
+.manualBadge{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:#2a0a0a;color:#ff6666;border:1px solid #7a1a1a;margin-left:5px;vertical-align:middle}
+/* ── 遭遇中 danger スタイル ── */
+tbody tr.tr--danger td:first-child{border-left:3px solid #ff3333}
+tbody tr.tr--danger{background:rgba(255,51,51,.07)!important}
+tbody tr.tr--danger:hover{background:rgba(255,51,51,.14)!important}
+.psItem--danger{border-color:#7a1a1a!important;box-shadow:0 0 12px rgba(255,51,51,.3);animation:dangerPulse 2s ease-in-out infinite}
+@keyframes dangerPulse{0%,100%{box-shadow:0 0 8px rgba(255,51,51,.25)}50%{box-shadow:0 0 18px rgba(255,51,51,.55)}}
+.psDangerBadge{font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;background:#3a0808;color:#ff6666;border:1px solid #7a1a1a;margin:0 4px}
+.dangerCount{color:#ff4444;font-weight:900;font-size:18px;margin-right:8px;animation:dangerPulse 1.5s ease-in-out infinite}
+.hotCount{color:#39d98a;font-weight:900;font-size:14px}
+/* 遭遇中グラフバー（danger カラー）*/
+.sparkBar.d-low{background:#7a2020;opacity:.5}
+.sparkBar.d-mid{background:#cc4422;opacity:.75}
+.sparkBar.d-high{background:#ff3333;opacity:.9}
+.sparkBar.d-high.peak{background:#ff0000;box-shadow:0 0 10px rgba(255,0,0,.7);opacity:1}
+.psGraph--danger .psAxis span{color:#ff6666}
+/* オフラインボタン専用（グレー系） */
+.encounterBtn--offline{border-color:#333;color:#7a8a9a;opacity:.65}
+.encounterBtn--offline:hover{border-color:#888;color:#c0c8d0;opacity:1}
+/* ── 遭遇記録（勝利/FINAL終了）watching スタイル ── */
+tbody tr.tr--watching td:first-child{border-left:3px solid #9b5de5}
+tbody tr.tr--watching{background:rgba(155,93,229,.07)!important}
+tbody tr.tr--watching:hover{background:rgba(155,93,229,.14)!important}
+/* ── pickup ★ ボタン ── */
+.pickupBtn{padding:2px 5px;font-size:11px;border-radius:6px;opacity:.35;line-height:1;margin-right:4px;background:transparent;border-color:transparent;color:#e7edf5}
+.pickupBtn:hover{opacity:.8;color:#ffcf5c}
+.pickupBtn.pickupOn{opacity:1;color:#ffcf5c;border-color:#7a5a00;background:#2a1e00}
+/* ── pickup グラフ ── */
+.pickupBars{display:flex;align-items:flex-end;gap:3px;height:108px;padding:4px 0}
+.pickupBar{width:12px;border-radius:6px;background:#184dff;opacity:.75;transition:height .3s}
+.pickupBarPeak{background:#ffcf5c;opacity:1;box-shadow:0 0 10px rgba(255,207,92,.5)}
+.pickupAxis{display:flex;justify-content:space-between;padding:0 1px;margin-top:4px}
+.pickupAxis span{font-size:10px;color:#5a7aaa}
+.pickupNames{font-size:11px;color:#8ea0b7;margin-top:6px}
+/* ── state log ── */
+.logList{display:flex;flex-direction:column;gap:3px;max-height:260px;overflow-y:auto;margin-top:8px}
+.logEntry{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;font-size:12px;background:#0b101a;border:1px solid #131d2b}
+.logTime{color:#5a7aaa;font-family:ui-monospace,monospace;font-size:11px;min-width:52px}
+.logName{font-weight:700;color:#cfe0ff;min-width:80px;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.logFrom{color:#8ea0b7}
+.logArrow{color:#5a7aaa}
+.logTo{font-weight:700}
+.logDelta{font-family:ui-monospace,monospace;font-size:11px;margin-left:2px}
+/* ── region タグ ── */
+.regionTag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;vertical-align:middle;margin-left:4px}
+.regionTag-AS{background:#0d2030;color:#6de9ff;border:1px solid #1e5a8a}
+.regionTag-EU{background:#1a2010;color:#7fff6e;border:1px solid #3a6a1a}
+.regionTag-NA{background:#2a1a00;color:#ffaa44;border:1px solid #7a4a00}
+/* ── th ヘルプツールチップ ── */
+.thHelp{position:relative;display:inline-block;vertical-align:middle}
+.thHelpIcon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:999px;background:#223249;color:#8ea0b7;font-size:10px;font-weight:700;cursor:help;margin-left:4px;line-height:1;vertical-align:middle;border:1px solid #2f4666}
+.thHelpIcon:hover{background:#2f4666;color:#e7edf5}
+/* settingsエリア用: CSS ホバーでそのまま下に表示 */
+.thHelpTip{display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:200;background:#0f1622;border:1px solid #223249;border-radius:10px;padding:10px 12px;min-width:220px;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.75);font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:#b8c4d6;white-space:normal;line-height:1.6;pointer-events:none}
+.thHelp:hover .thHelpTip{display:block}
+/* th 内のツールチップは JS グローバル版を使うので CSS ホバーを無効化 */
+th .thHelpTip{display:none!important}
+/* グローバル fixed ツールチップ（テーブルヘッダー用）*/
+.globalTooltip{display:none;position:fixed;z-index:9999;background:#0f1622;border:1px solid #3a5580;border-radius:10px;padding:10px 14px;min-width:240px;max-width:360px;box-shadow:0 12px 40px rgba(0,0,0,.9),0 0 0 1px rgba(24,77,255,.12);font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:#b8c4d6;white-space:normal;line-height:1.6;pointer-events:none}
+.globalTooltip.show{display:block}
+.thHelpRow{display:flex;gap:8px;margin-bottom:6px;align-items:baseline}
+.thHelpRow:last-child{margin-bottom:0}
+.thHelpState{font-weight:700;min-width:138px;flex-shrink:0;font-size:11px}
+.thHelpRow span:last-child{color:#8ea0b7;font-size:11px}
+.thHelpRow span:last-child b{font-weight:700}
+.thHelpNote{border-top:1px solid #223249;margin-top:8px;padding-top:6px;color:#5a7aaa;font-size:10px}
+/* ── ログインモーダル ── */
+.loginModalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;display:flex;align-items:center;justify-content:center}
+.loginModalBox{background:#0f1622;border:1px solid #3a5580;border-radius:14px;padding:24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.9)}
+.loginModalTitle{font-weight:900;font-size:15px;color:#e7edf5}
+.loginError{color:#ff5555;font-size:12px;min-height:16px}
+.loginModalBtns{display:flex;gap:8px;justify-content:flex-end}
+/* ── 許可ユーザー行 ── */
+.allowedUserRow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #131d2b}
+.allowedUserRow:last-child{border-bottom:none}
+.allowedUserId{flex:1;color:#cfe0ff;font-weight:600;font-size:13px}
+/* ── table cell sizing ── */
+.tsCell{font-size:12px;color:#8ea0b7;white-space:nowrap}
+.errCell{font-size:11px;color:#8ea0b7;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.actCell{white-space:nowrap}

@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>THE FINALS - Ranked Points Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="bar">
+    <div class="left">
+      <div class="title">THE FINALS – Ranked Points Tracker</div>
+      <div class="sub">外部リーダーボードの更新から活動状態を推定します。</div>
+    </div>
+    <div class="right">
+      <div class="meta">
+        <span id="statusDot" class="dot off"></span>
+        <span id="runState">stopped</span>
+        <span class="sep">·</span>
+        <span>last poll:</span>
+        <span id="lastPoll">—</span>
+      </div>
+      <div class="meta2"><span id="netHint" class="hintTop"></span></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- ① Search hero -->
+    <div class="searchHero">
+      <div class="bigSearchWrap">
+        <div class="bigSearchBar">
+          <svg class="searchIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="playerSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Search players... (Embark / Steam / PSN / Xbox)" />
+          <button id="btnAdd" class="primary">Add</button>
+        </div>
+        <div id="searchDropdown" class="suggestions"></div>
+      </div>
+      <div class="searchHint">Embark ID &nbsp;·&nbsp; Steam &nbsp;·&nbsp; PSN &nbsp;·&nbsp; Xbox &nbsp;に対応。追加すると自動で監視開始。</div>
+    </div>
+
+    <!-- ② Live table -->
+    <section class="card">
+      <div class="row between">
+        <div>
+          <div class="h2">Live table</div>
+          <div class="hint">points が N/A：leaderboard にいない / season違い / CORS。</div>
+        </div>
+        <div class="row tight">
+          <button id="btnClear" class="danger">Clear local data</button>
+        </div>
+      </div>
+      <div class="tableWrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>name</th>
+              <th>rank</th>
+              <th class="num">points</th>
+              <th class="num">delta</th>
+              <th>last_change_at</th>
+              <th>inferred_state <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip"><div class="thHelpRow"><span class="thHelpState" style="color:#5b9cf6">Lobby</span><span>試合終了後 or キュー待機中。<b style="color:#5b9cf6">遭遇確率が上昇中</b>。まもなく次の試合へ。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#39d98a">In Match (Est. R1)</span><span>R1試合中と推定。試合終了まで<b>しばらく待機</b>。遭遇は次の Lobby まで。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#39d98a">In Match (Est. R2)</span><span>R2以降と推定（Match+Jitter 超過）。引き続き試合継続中。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#c77dff">Final Round</span><span>Tournament 時間超過後の猶予期間。FINAL終了 or まもなくオフライン。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#8ea0b7">Offline</span><span>最新バッチでポイント変動なし。<b style="color:#8ea0b7">ゲームオフ</b>と判断。遭遇不可。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#5a7aaa">Unknown</span><span>初回ポーリング待ち。データ未取得の初期状態。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#ff9944">Missing</span><span>LBから連続3回以上消失。BAN または名前変更の可能性。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#ff4444">Banned</span><span>LBから完全消去。<b style="color:#ff4444">BAN 判定</b>。</span></div><div class="thHelpRow"><span class="thHelpState" style="color:#6de9ff">Name Changed</span><span>Alt名で別エントリーと照合済み。<b style="color:#6de9ff">名前変更</b>の可能性。</span></div><div class="thHelpNote">📌 バッジ表示中 = 手動遭遇記録が状態予測より優先</div></span></span></th>
+              <th class="num">next_match%</th>
+              <th>last_poll</th>
+              <th>error</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ③ Hot window -->
+    <section class="card">
+      <div class="row between" style="margin-bottom:8px;">
+        <div>
+          <div class="h2">🎯 試合開始予測（今後30分）</div>
+          <div class="hint">バーが高い時間帯ほど、監視中のプレイヤーが次の試合を開始しやすい</div>
+        </div>
+        <div id="sparkHotCount" class="sparkHotCount"></div>
+      </div>
+      <div id="sparkWrap" class="sparkWrap"></div>
+      <div id="sparkAxis" class="sparkAxis"></div>
+      <div id="sparkSummary" class="sparkSummary"></div>
+    </section>
+
+    <!-- ③.5 Pickup グラフ（★ ピックアップ時のみ表示） -->
+    <section class="card" id="pickupSection" style="display:none">
+      <div class="row between" style="margin-bottom:8px;">
+        <div>
+          <div class="h2">⭐ Pickup グラフ（合算・30分）</div>
+          <div class="hint">★ でピックアップしたプレイヤーの合算遭遇確率（1 - ∏(1-pᵢ)）</div>
+        </div>
+        <div id="pickupPeak" class="psPct" style="color:#ffcf5c;font-size:14px;"></div>
+      </div>
+      <div id="pickupBars" class="pickupBars"></div>
+      <div id="pickupAxis" class="pickupAxis"></div>
+      <div id="pickupNames" class="pickupNames"></div>
+    </section>
+
+    <!-- ④ 設定 (controls + advanced) -->
+    <section class="card settingsCard">
+      <div class="ctrlRow">
+        <span class="ctrlLabel">マッチ設定</span>
+        <div class="pill sm">
+          <span>Wait <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">キューに入ってから次の試合が開始するまでの待ち時間（分）。<br>ポイント変動後この時間は <b>Lobby</b> ステートと推定します。<br>目安：約5分</span></span></span>
+          <input id="matchWait" type="number" min="0" max="30" step="1" value="5" />
+          <span>m</span>
+        </div>
+        <div class="pill sm">
+          <span>Match <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">1ラウンド（R1）の平均所要時間（分）。<br>Lobby 終了からこの時間内は <b>In Match (R1)</b> と推定します。<br>※1試合 = R1+R2+Final の全体。このMatch値はR1基準。<br>目安：約31分</span></span></span>
+          <input id="matchAvg" type="number" min="20" max="60" step="1" value="31" />
+          <span>m</span>
+        </div>
+        <div class="pill sm">
+          <span>+jitter <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">試合時間の誤差マージン（分）。<br>Match+jitter を超えると <b>In Match (R2)</b> 推定に移行します。<br>試合が長引いた際のバッファとして機能します。</span></span></span>
+          <input id="matchJitter" type="number" min="0" max="10" step="1" value="3" />
+          <span>m</span>
+        </div>
+        <div class="ctrlSep"></div>
+        <button id="btnStop">Stop</button>
+        <button id="btnShare">Share</button>
+      </div>
+
+      <details class="advanced" id="advancedDetails">
+        <summary>Advanced 設定</summary>
+
+        <div class="advSection">
+          <div class="advLabel">リーダーボード <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">Embark 公式リーダーボードAPIの取得設定です。</span></span></div>
+          <div class="row tight">
+            <div class="pill sm">
+              <span>Season <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">取得するリーダーボードのシーズン。<br>S9 = 現行シーズン。シーズンが変わったら更新してください。</span></span></span>
+              <select id="leaderboardId">
+                <option value="s9" selected>S9</option>
+                <option value="s8">S8</option>
+                <option value="s7">S7</option>
+              </select>
+            </div>
+            <div class="pill sm">
+              <span>Platform <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">プラットフォーム別のリーダーボードを選択。<br><b>crossplay</b>：全プラットフォーム統合（推奨）<br>steam / psn / xbox：各プラットフォーム専用</span></span></span>
+              <select id="platform">
+                <option value="crossplay" selected>crossplay</option>
+                <option value="steam">steam</option>
+                <option value="psn">psn</option>
+                <option value="xbox">xbox</option>
+              </select>
+            </div>
+            <div class="pill sm">
+              <span>Interval <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">APIポーリング間隔（秒）。<br>短いほどリアルタイムですが API 負荷が増えます。<br>推奨：60秒</span></span></span>
+              <select id="pollInterval">
+                <option value="30">30s</option>
+                <option value="60" selected>60s</option>
+                <option value="120">120s</option>
+              </select>
+            </div>
+            <div class="pill sm">
+              <span>Reflect X <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">ゲーム内でポイント変動してからAPIに反映されるまでの遅延時間（分）。<br>ポイント変動後この時間は <b>POST_MATCH_WAIT</b> 状態と推定。<br>Update Estimator が自動検出して更新します。目安：8分</span></span></span>
+              <input id="reflectDelay" type="number" min="1" max="30" step="1" value="8" />
+              <span>m</span>
+            </div>
+            <div class="pill sm">
+              <span>Tournament <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">1大会全体の想定時間（分）。<br>全ラウンドの合計時間。この時間を超えると <b>Final Round → Offline</b> に移行します。<br>目安：45分（Wait+Match×1〜2R）</span></span></span>
+              <input id="tournamentTotal" type="number" min="10" max="120" step="1" value="45" />
+              <span>m</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="advSection">
+          <div class="advLabel">RS変動アラート <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">ポーリングごとにRSの急落を検出して通知します。BANや大量RS喪失の早期発見に使えます。</span></span></div>
+          <div class="row tight">
+            <div class="pill sm">
+              <span>📉 急落しきい値 <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">1回のポーリングでこの値以上RSが減少した場合にトースト通知。<br>例：1000 → 1000RS以上の減少で通知<br>BANを受けると数千RS喪失することが多い。</span></span></span>
+              <input id="rsDropThreshold" type="number" min="100" max="10000" step="100" value="1000" />
+              <span>RS以上の減少で即通知</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="advSection">
+          <div class="advLabel">Update Estimator <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">Embarkのリーダーボードはバッチ処理で更新されます（約48分周期）。<br>このツールはそのタイミングを自動検出し、Reflect X を自動更新します。<br>3回以上バッチを観測すると精度が上がります。</span></span></div>
+          <div class="row tight" style="margin-bottom:6px;">
+            <label class="checkbox"><input type="checkbox" id="enableEstimator" checked /> Enable</label>
+            <span class="muted">バッチ更新間隔を自動検出・Reflect X を自動更新</span>
+          </div>
+          <div class="row tight">
+            <div class="pill sm"><span>Window start <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">バッチ検出に使うリーダーボードの開始順位。<br>例：2000 → 2001位以降を監視。<br>上位すぎると試合中のポイント変動と区別しにくくなります。</span></span></span><input id="estWindowStart" type="number" min="0" max="200000" step="1" value="2000" /></div>
+            <div class="pill sm"><span>Window size <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">バッチ検出に使う件数。<br>例：500 → 500件を監視。多いほどバッチ検出が安定します。</span></span></span><input id="estWindowSize" type="number" min="50" max="2000" step="50" value="500" /></div>
+            <div class="pill sm"><span>Cache <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">リーダーボードAPIのキャッシュ有効期間（秒）。<br>Interval より短い値にすると毎回新鮮なデータを取得できます。</span></span></span><input id="estCacheSec" type="number" min="10" max="300" step="10" value="30" /><span>s</span></div>
+          </div>
+          <div class="row tight" style="margin-top:6px;">
+            <div class="pill sm"><span>Last batch</span><span id="estLastBatch" class="mono">-</span></div>
+            <div class="pill sm"><span id="estReflectHint" style="color:#39d98a;font-size:11px;"></span></div>
+            <div class="pill sm"><span>Mean</span><span id="estMean" class="mono">-</span></div>
+            <div class="pill sm"><span>Median</span><span id="estMedian" class="mono">-</span></div>
+            <div class="pill sm"><span>P90</span><span id="estP90" class="mono">-</span></div>
+            <div class="pill sm"><span>Changed</span><span id="estChanged" class="mono">-</span></div>
+          </div>
+        </div>
+
+        <div class="advSection">
+          <div class="advLabel">Proxy / その他 <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip">ブラウザから直接APIを叩くとCORSエラーになる場合があります。<br>Cloudflare Worker 等にプロキシをデプロイしてURLを設定してください。</span></span></div>
+          <div class="row tight" style="flex-wrap:wrap;gap:10px;">
+            <div class="field" style="min-width:200px;">
+              <label>Proxy Base URL</label>
+              <input id="proxyBase" placeholder="https://your-worker.workers.dev" style="width:100%" />
+            </div>
+            <div class="field" style="min-width:200px;">
+              <label>Global Backend URL</label>
+              <input id="globalUrl" placeholder="https://your-global-backend.workers.dev" style="width:100%" />
+            </div>
+            <div class="field" style="min-width:120px;flex:0 1 auto;">
+              <label>Max events</label>
+              <input id="maxEvents" type="number" min="200" max="20000" step="100" value="5000" style="width:100px" />
+            </div>
+            <div class="field" style="flex:0 1 auto;">
+              <label>Test</label>
+              <button id="btnTest">Test first player</button>
+            </div>
+            <div class="field" style="flex:0 1 auto;">
+              <label>Export</label>
+              <div style="display:flex;gap:6px;">
+                <button id="btnExportCsv">CSV</button>
+                <button id="btnExportJsonl">JSONL</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── アクセス管理（グローバルリスト書き込み制限） ── -->
+        <div class="advSection">
+          <div class="advLabel">🔐 アクセス管理（グローバルリスト書き込み制限）</div>
+          <details>
+            <summary class="communityAddSummary" style="font-size:12px;color:#8ea0b7;padding:6px 0;cursor:pointer;">ユーザー管理（アドミン専用）</summary>
+            <div style="padding:10px 0 4px">
+              <div class="row tight" style="margin-bottom:8px">
+                <input id="adminPasswordInput" type="password" placeholder="アドミンパスワード（未設定なら新規設定）" style="flex:1;height:34px;font-size:12px" />
+                <button id="btnAdminUnlock" style="height:34px;font-size:12px">🔓 解除 / 設定</button>
+              </div>
+              <div id="adminPanel" style="display:none">
+                <div class="sectionLabel" style="margin-top:6px">許可ユーザー一覧</div>
+                <div id="allowedUserList"></div>
+                <div class="row tight" style="margin-top:8px">
+                  <input id="newUserId" type="text" placeholder="新しいID" style="flex:1;height:34px;font-size:12px" autocomplete="off" />
+                  <input id="newUserPassword" type="password" placeholder="パスワード" style="flex:1;height:34px;font-size:12px" />
+                  <button id="btnAddUser" class="primary" style="height:34px;font-size:12px">追加</button>
+                </div>
+                <div class="sectionLabel" style="margin-top:12px">アドミンパスワード変更</div>
+                <div class="row tight">
+                  <input id="newAdminPassword" type="password" placeholder="新しいアドミンパスワード" style="flex:1;height:34px;font-size:12px" />
+                  <button id="btnChangeAdminPassword" style="height:34px;font-size:12px">変更</button>
+                </div>
+                <div class="sectionLabel" style="margin-top:12px">インターネット公開・共有</div>
+                <div class="hint" style="margin-bottom:6px">Global Backend URL が設定されている場合、許可ユーザーリストをバックエンドに保存します。他のブラウザからも同じ認証設定が使えます。</div>
+                <button id="btnSyncAuth" style="height:34px;font-size:12px">☁️ バックエンドに同期</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </details>
+
+      <div id="toast" class="toast" aria-live="polite"></div>
+    </section>
+
+    <!-- ④.5 状態変化ログ -->
+    <section class="card">
+      <details>
+        <summary style="cursor:pointer;font-weight:700;color:#b8c4d6;padding:4px 0;font-size:13px;">
+          📋 状態変化ログ <span id="logCount" style="font-weight:400;color:#5a7aaa;font-size:12px;"></span>
+        </summary>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button id="btnExportLogs">CSV エクスポート</button>
+          <button id="btnClearLogs" class="danger">クリア</button>
+          <span class="hint" style="margin:0;">状態遷移（Offline→Lobby など）を自動記録</span>
+        </div>
+        <div id="logList" class="logList"></div>
+      </details>
+    </section>
+
+    <!-- ⑤ 追加されたプレイヤー -->
+    <section class="card">
+      <div class="modeTabs">
+        <button id="tabPersonal" class="modeTab active">👤 自分のリスト</button>
+        <button id="tabGlobal" class="modeTab">🌐 グローバルリスト</button>
+      </div>
+      <div class="personalView">
+        <div class="hint">Embark ID（<b>name#1234</b>）を改行 / カンマ区切りで入力。上の検索バーから追加も可。</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;">
+          <div class="regionTabs">
+            <button class="personalRegionTab regionTab active" data-pregion="all">🌐 全て</button>
+            <button class="personalRegionTab regionTab" data-pregion="AS">🌏 AS</button>
+            <button class="personalRegionTab regionTab" data-pregion="EU">🌍 EU</button>
+            <button class="personalRegionTab regionTab" data-pregion="NA">🌎 NA</button>
+          </div>
+          <button id="btnCopyToGlobal" style="padding:5px 14px;font-size:12px;border-radius:999px;">📋 グローバルにコピー</button>
+        </div>
+        <textarea id="namesBox" spellcheck="false" placeholder="playerA#1234
+playerB#5678"></textarea>
+        <div id="banAlertList" class="banAlertList"></div>
+      </div>
+      <div id="globalListView" style="display:none">
+        <!-- ログイン状態バー -->
+        <div id="loginStatusBar" style="display:none;align-items:center;gap:8px;margin-top:6px;margin-bottom:2px;flex-wrap:wrap;">
+          <span id="loginStatusText" style="font-size:12px;color:#b8c4d6;"></span>
+          <button id="btnLogout" style="display:none;padding:3px 10px;font-size:11px;border-radius:999px;">ログアウト</button>
+        </div>
+        <div id="globalStatus" class="hint" style="margin-top:4px">—</div>
+        <!-- 地域フィルタータブ -->
+        <div class="regionTabs" style="margin-top:10px">
+          <button class="regionTab active" data-region="all">🌐 全て</button>
+          <button class="regionTab" data-region="AS">🌏 AS</button>
+          <button class="regionTab" data-region="EU">🌍 EU</button>
+          <button class="regionTab" data-region="NA">🌎 NA</button>
+        </div>
+        <div id="globalPlayerList" class="globalPlayerList"></div>
+        <!-- 追加フォーム -->
+        <details class="communityAddWrap" style="margin-top:12px">
+          <summary class="communityAddSummary">＋ チーター / 注目プレイヤーを報告・追加</summary>
+          <div class="communityAddForm">
+            <input id="communityName" type="text" placeholder="Embark ID（name#1234）" autocomplete="off" spellcheck="false" />
+            <select id="communityRegion">
+              <option value="AS">🌏 AS（アジア）</option>
+              <option value="EU">🌍 EU</option>
+              <option value="NA">🌎 NA</option>
+              <option value="">🌐 地域不明</option>
+            </select>
+            <select id="communityCategory">
+              <option value="cheater">🚫 チーター</option>
+              <option value="suspicious">⚠️ 疑い</option>
+              <option value="notable">👁 注目</option>
+            </select>
+            <input id="communityNote" type="text" placeholder="メモ（任意）" />
+            <button id="btnCommunityAdd" class="primary">追加</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">Data source: the-finals-leaderboard API (via proxy if needed).</footer>
+  <div id="globalTooltip" class="globalTooltip" role="tooltip" aria-hidden="true"></div>
+
+  <!-- ── ログインモーダル ── -->
+  <div id="loginModal" class="loginModalOverlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
+    <div class="loginModalBox">
+      <div class="loginModalTitle" id="loginModalTitle">🔐 ログイン</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginId">ID</label>
+          <input id="loginId" type="text" placeholder="ユーザーID" autocomplete="username" style="width:100%" />
+        </div>
+        <div>
+          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginPassword">パスワード</label>
+          <input id="loginPassword" type="password" placeholder="パスワード" autocomplete="current-password" style="width:100%" />
+        </div>
+      </div>
+      <div id="loginError" class="loginError"></div>
+      <div class="loginModalBtns">
+        <button id="btnLoginCancel">キャンセル</button>
+        <button id="btnLoginSubmit" class="primary">ログイン</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
