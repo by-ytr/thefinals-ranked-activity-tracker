@@ -420,16 +420,20 @@ async function submitCommunityEntryToGlobal(globalUrl,entry){
 }
 // コミュニティエントリをバックエンドから削除
 async function deleteCommunityEntryFromGlobal(globalUrl,name){
+  // サーバー削除の成否を boolean で返す（呼び出し元がローカル削除を制御するため）
   try{
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/community?name="+encodeURIComponent(name),{method:"DELETE",headers:getWriteHeaders()});
     if(!r.ok){
       const err=await r.json().catch(()=>({}));
       setGlobalSyncStatus("⚠️ 削除失敗: "+(err.error||r.status),true);
       console.error("deleteCommunityEntryFromGlobal HTTP",r.status,err);
+      return false;
     }
+    return true;
   }catch(e){
     setGlobalSyncStatus("⚠️ 削除エラー",true);
     console.error("deleteCommunityEntryFromGlobal:",e);
+    return false;
   }
 }
 // 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
@@ -1313,7 +1317,13 @@ function doStart(){
   const settings=getUiSettings();saveSettings(settings);
   const names=getActiveNames();
   if(names.length===0)return;
-  if(viewMode==="personal"){try{saveNamesToUrl(names);}catch{}saveNamesToLocal(names);}
+  if(viewMode==="personal"){
+    // namesBox の内容だけを保存（community との union を保存すると community players が
+    // namesBox に混入してしまうため、ここでは personal 分のみを対象にする）
+    const personalOnly=parseNames(document.getElementById("namesBox").value);
+    try{saveNamesToUrl(personalOnly);}catch{}
+    saveNamesToLocal(personalOnly);
+  }
   currentSettings=settings;
   setRunning(true);
   (function schedulePoll(){
@@ -1444,9 +1454,15 @@ function renderGlobalPlayerList(){
   el.querySelectorAll(".communityDelBtn").forEach(btn=>{
     btn.addEventListener("click",async()=>{
       if(!confirm(btn.dataset.name+" をリストから削除しますか？"))return;
-      removeCommunityEntry(btn.dataset.name);
       const _ds=getUiSettings();
-      if(_ds.globalUrl)await deleteCommunityEntryFromGlobal(_ds.globalUrl,btn.dataset.name);
+      const _gUrl=effectiveGlobalUrl(_ds);
+      // サーバー削除を先に実行し、成功時のみローカルから除去
+      // （失敗時は UI を変えず、次回 fetchAndMergeCommunity でもサーバーが正として維持される）
+      if(_gUrl){
+        const ok=await deleteCommunityEntryFromGlobal(_gUrl,btn.dataset.name);
+        if(!ok)return;
+      }
+      removeCommunityEntry(btn.dataset.name);
       renderGlobalPlayerList();
       const total=getCommunityList().length;
       document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
@@ -1769,6 +1785,10 @@ async function init(){
     if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast("そのIDは既に登録されています");return;}
     auth.allowedUsers.push({id,passwordHash:await sha256(pw)});
     saveAuthData(auth);
+    // バックエンドキャッシュを無効化してローカルリストにフォールバックさせる。
+    // fetchAuthConfig がページロード時に _backendAllowedUsers=[] をセットしているため、
+    // null に戻さないと作成直後のログイン照合でバックエンドの空リストが使われてしまう。
+    _backendAllowedUsers=null;
     document.getElementById("newUserId").value="";
     document.getElementById("newUserPassword").value="";
     renderAllowedUserList();
