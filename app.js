@@ -329,56 +329,39 @@ async function fetchAndMergeSnapshots(globalUrl){
     if(!remote||typeof remote!=="object")return;
     const local=getSnapshots();
     let changed=false;
+    const now=Date.now();
+    const remoteTs=s=>Math.max(
+      s?.lastOkAt||0,
+      s?.lastRealChangeAt||0,
+      s?.lastChangeAt||0,
+      s?.updatedAt||0,
+      0
+    );
+    const localTs=s=>Math.max(
+      s?.lastOkAt||0,
+      s?.lastRealChangeAt||0,
+      s?.lastChangeAt||0,
+      0
+    );
     for(const [key,remSnap] of Object.entries(remote)){
-      if(!remSnap)continue;
-      const locSnap=local[key];
-      let merged={...(locSnap||{})};
-      let dirty=false;
-
-      // ── lastChangeAt（状態推定タイミング）────────────────────────────
-      // points 等の実値は自分のポーリングが正なので変更しない
-      const remLca=remSnap.lastChangeAt||0;
-      const locLca=merged.lastChangeAt||0;
-      if(remLca>locLca){
-        merged.lastChangeAt=remLca;
-        merged.lastRealChangeAt=remSnap.lastRealChangeAt||remLca;
-        dirty=true;
-      }
-
-      // ── manualEvent（📌タグ・赤行ハイライト）────────────────────────
-      // リモートに有効期限内のイベントがあり、ローカルより新しければ採用する
-      const remMe=remSnap.manualEvent;
-      const locMe=merged.manualEvent;
-      if(remMe&&isManualActive(remMe)){
-        if(!locMe||!isManualActive(locMe)||(remMe.recordedAt>(locMe.recordedAt||0))){
-          merged.manualEvent=remMe;
-          dirty=true;
-        }
-      }
-
-      // ── BAN / NC / Missing バッジ ────────────────────────────────────
-      // notFoundCount: より大きい方を採用（多く確認した側が信頼できる）
-      const remNfc=remSnap.notFoundCount??0;
-      const locNfc=merged.notFoundCount??0;
-      if(remNfc>locNfc){
-        merged.notFoundCount=remNfc;
-        // lastFoundAt も合わせてリモート側に揃える
-        if(remSnap.lastFoundAt&&(remSnap.lastFoundAt>(merged.lastFoundAt||0))){
-          merged.lastFoundAt=remSnap.lastFoundAt;
-        }
-        dirty=true;
-      }
-      // suspectedReason / suspectedNewName: ローカル未確定のときのみリモートを採用
-      if(!merged.suspectedReason&&remSnap.suspectedReason){
-        merged.suspectedReason=remSnap.suspectedReason;
-        merged.suspectedNewName=remSnap.suspectedNewName||null;
-        dirty=true;
-      }
-
-      if(dirty){
-        local[key]=merged;
-        changed=true;
-      }
+      if(!remSnap||typeof remSnap!=="object")continue;
+      const locSnap=local[key]||{};
+      const rts=remoteTs(remSnap);
+      const lts=localTs(locSnap);
+      if(rts<=0)continue;
+      if(rts<lts)continue;
+      const merged={
+        ...locSnap,
+        ...remSnap,
+        // 手動遭遇は自端末の操作を優先
+        ...(locSnap.manualEvent?{manualEvent:locSnap.manualEvent}:{}),
+      };
+      // lastChangeAt が無いデータで current state が落ちるのを防ぐ
+      if(!merged.lastChangeAt&&remSnap.lastChangeAt)merged.lastChangeAt=remSnap.lastChangeAt;
+      if(!merged.lastRealChangeAt&&remSnap.lastRealChangeAt)merged.lastRealChangeAt=remSnap.lastRealChangeAt;
+      if(!merged.lastOkAt&&rts)merged.lastOkAt=rts||now;
+      local[key]=merged;
+      changed=true;
     }
     if(changed)saveSnapshots(local);
   }catch(e){
@@ -422,10 +405,19 @@ function getWriteHeaders(){
 }
 async function submitSnapshotToGlobal(globalUrl,name,snap){
   try{
-    const r=await fetch(globalUrl.replace(/\/$/,"")+"/submit",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name,snapshot:snap})});
-    if(!r.ok)console.error("submitSnapshotToGlobal",name,"HTTP",r.status);
+    const r=await fetch(globalUrl.replace(/\/$/,"")+"/submit",{
+      method:"POST",
+      headers:getWriteHeaders(),
+      body:JSON.stringify({name,snapshot:{...snap,updatedAt:Date.now()}})
+    });
+    if(!r.ok){
+      console.error("submitSnapshotToGlobal",name,"HTTP",r.status);
+      return false;
+    }
+    return true;
   }catch(e){
     console.error("submitSnapshotToGlobal",name,e);
+    return false;
   }
 }
 async function addNameToGlobal(globalUrl,name){
@@ -1095,11 +1087,14 @@ async function pollOnce(names,settings){
   }));
   saveSnapshots(snapshots);
   // グローバルモード: スナップショットをバックエンドに送信（他ユーザーと共有）
-  // getUiSettings() に globalUrl フィールドはないため effectiveGlobalUrl(settings) を使う
   if(viewMode==="global"){
-    const _gUrl=effectiveGlobalUrl(settings);
+    const _gs=getUiSettings();
+    const _gUrl=effectiveGlobalUrl(_gs);
     if(_gUrl){
-      Object.entries(snapshots).forEach(([k,s])=>submitSnapshotToGlobal(_gUrl,k,s));
+      const activeKeys=new Set(getFilteredCommunity(globalFilter).map(e=>e.name.toLowerCase()));
+      Object.entries(snapshots).forEach(([k,s])=>{
+        if(activeKeys.size===0||activeKeys.has(k))submitSnapshotToGlobal(_gUrl,k,s);
+      });
     }
   }
   rows.sort((a,b)=>{
@@ -1397,26 +1392,29 @@ function doStart(){
 async function preloadRemoteSnapshots(settings){
   const remote=await fetchGlobalSnapshots(effectiveGlobalUrl(settings));
   if(!remote||typeof remote!=="object")return;
-  // リモートの lastChangeAt をローカルスナップショットにマージ（初回観測時のズレ防止）
   const localSnaps=getSnapshots();
   let snapshotsMerged=false;
+  const remoteTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,s?.updatedAt||0,0);
+  const localTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,0);
   for(const [key,remSnap] of Object.entries(remote)){
-    if(remSnap&&remSnap.lastChangeAt){
-      if(!localSnaps[key])localSnaps[key]={points:null,lastChangeAt:null};
-      if(!localSnaps[key].lastChangeAt){
-        localSnaps[key]={...localSnaps[key],lastChangeAt:remSnap.lastChangeAt,lastRealChangeAt:remSnap.lastRealChangeAt??remSnap.lastChangeAt};
-        snapshotsMerged=true;
-      }
+    if(!remSnap||typeof remSnap!=="object")continue;
+    const loc=localSnaps[key]||{};
+    if(remoteTs(remSnap) >= localTs(loc)){
+      localSnaps[key]={...loc,...remSnap,...(loc.manualEvent?{manualEvent:loc.manualEvent}:{})};
+      snapshotsMerged=true;
     }
   }
   if(snapshotsMerged)saveSnapshots(localSnaps);
   const names=getActiveNames();
   const now=Date.now();
   const rows=names.map(name=>{
-    const snap=remote[name.toLowerCase()];
+    const snap=(localSnaps[name.toLowerCase()]||remote[name.toLowerCase()]);
     if(!snap||snap.points==null)return null;
-    const inf=inferState(now,snap.lastChangeAt,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,false);
-    return {name,points:snap.points,delta:null,lastChangeAt:snap.lastChangeAt,effectiveLCA:snap.lastChangeAt,manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt,leaderboardRank:snap.leaderboardRank,league:snap.league,region:snap.region,notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
+    const manualEvent=snap.manualEvent??null;
+    const manualActive=isManualActive(manualEvent);
+    const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:(snap.lastChangeAt??null);
+    const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
+    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
   }).filter(Boolean);
   if(rows.length>0&&lastRows.length===0){lastRows=rows;renderTable(rows);renderSpark(rows);}
 }
@@ -1432,7 +1430,10 @@ async function switchToGlobal(){
   // バックエンドがあればリモートとマージ
   if(effectiveGlobalUrl(settings)){
     document.getElementById("globalStatus").textContent="🌐 同期中...";
-    await fetchAndMergeCommunity(effectiveGlobalUrl(settings));
+    await Promise.all([
+      fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
+      fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
+    ]);
   }
   renderGlobalPlayerList();
   const total=getCommunityList().length;
