@@ -386,7 +386,12 @@ function getWriteHeaders(){
   return h;
 }
 async function submitSnapshotToGlobal(globalUrl,name,snap){
-  try{await fetch(globalUrl.replace(/\/$/,"")+"/submit",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name,snapshot:snap})});}catch{}
+  try{
+    const r=await fetch(globalUrl.replace(/\/$/,"")+"/submit",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name,snapshot:snap})});
+    if(!r.ok)console.error("submitSnapshotToGlobal",name,"HTTP",r.status);
+  }catch(e){
+    console.error("submitSnapshotToGlobal",name,e);
+  }
 }
 async function addNameToGlobal(globalUrl,name){
   try{await fetch(globalUrl.replace(/\/$/,"")+"/names",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name})});}catch{}
@@ -1055,7 +1060,13 @@ async function pollOnce(names,settings){
   }));
   saveSnapshots(snapshots);
   // グローバルモード: スナップショットをバックエンドに送信（他ユーザーと共有）
-  if(viewMode==="global"){const _gs=getUiSettings();if(_gs.globalUrl){Object.entries(snapshots).forEach(([k,s])=>submitSnapshotToGlobal(_gs.globalUrl,k,s));}}
+  // getUiSettings() に globalUrl フィールドはないため effectiveGlobalUrl(settings) を使う
+  if(viewMode==="global"){
+    const _gUrl=effectiveGlobalUrl(settings);
+    if(_gUrl){
+      Object.entries(snapshots).forEach(([k,s])=>submitSnapshotToGlobal(_gUrl,k,s));
+    }
+  }
   rows.sort((a,b)=>{
     const ta=a.lastChangeAt?(now-a.lastChangeAt):1e18;
     const tb=b.lastChangeAt?(now-b.lastChangeAt):1e18;
