@@ -1027,6 +1027,9 @@ function renderPickupGraph(){
   const nameEl=document.getElementById("pickupNames");if(nameEl)nameEl.textContent=picked.map(r=>r.name).join("、");
   const pctEl=document.getElementById("pickupPeak");if(pctEl)pctEl.textContent=`ピーク ${combined[peak]}% (+${peak}分後)`;
 }
+let logViewMode="list";
+const LOG_STATE_COLOR={OFFLINE:"#8ea0b7",LOBBY:"#5b9cf6",POST_MATCH_WAIT:"#7bb8f0",IN_MATCH:"#39d98a",IN_TOURNAMENT_DEEP:"#c77dff",RETURNING:"#c77dff",UNKNOWN:"#3a4a60",NOT_FOUND:"#ff9944",BANNED:"#ff5555",NAME_CHANGED:"#6de9ff"};
+
 function renderLogList(){
   const el=document.getElementById("logList");if(!el)return;
   const allLogs=getStateLogs();
@@ -1034,19 +1037,102 @@ function renderLogList(){
   const count=document.getElementById("logCount");
   if(count)count.textContent=`(${allLogs.length}件)`;
   if(logs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
-  const STATE_COLOR={OFFLINE:"#8ea0b7",LOBBY:"#5b9cf6",POST_MATCH_WAIT:"#5b9cf6",IN_MATCH:"#39d98a",IN_TOURNAMENT_DEEP:"#c77dff",RETURNING:"#c77dff",UNKNOWN:"#5a7aaa",NOT_FOUND:"#ff9944",BANNED:"#ff5555",NAME_CHANGED:"#6de9ff"};
   let html="";let lastDate="";
   for(const e of logs){
     const d=new Date(e.ts);
     const dateStr=d.toLocaleDateString(undefined,{month:"short",day:"numeric",weekday:"short"});
     const timeStr=d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",second:"2-digit"});
     if(dateStr!==lastDate){html+=`<div class="logDateSep">${dateStr}</div>`;lastDate=dateStr;}
-    const fromC=STATE_COLOR[e.from]||"#8ea0b7";
-    const toC=STATE_COLOR[e.to]||"#e7edf5";
+    const fromC=LOG_STATE_COLOR[e.from]||"#8ea0b7";
+    const toC=LOG_STATE_COLOR[e.to]||"#e7edf5";
     const delta=e.delta!=null?(e.delta>0?`<span class="logDelta pos">+${e.delta}</span>`:`<span class="logDelta neg">${e.delta}</span>`):"";
     html+=`<div class="logEntry"><span class="logTime">${timeStr}</span><span class="logName">${e.name}</span><span class="logState" style="color:${fromC}">${stateLabel(e.from)}</span><span class="logArrow">→</span><span class="logState" style="color:${toC}">${stateLabel(e.to)}</span>${delta}</div>`;
   }
   el.innerHTML=html;
+}
+
+function renderLogTimeline(){
+  const el=document.getElementById("logList");if(!el)return;
+  const allLogs=getStateLogs();
+  const count=document.getElementById("logCount");
+  if(count)count.textContent=`(${allLogs.length}件)`;
+  if(allLogs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
+
+  // プレイヤー別にグループ化
+  const playerMap={};
+  for(const log of allLogs){
+    if(!playerMap[log.name])playerMap[log.name]=[];
+    playerMap[log.name].push(log);
+  }
+  // 最新のログがあるプレイヤーから並べる（最大20名）
+  const playerNames=Object.keys(playerMap)
+    .sort((a,b)=>Math.max(...playerMap[b].map(l=>l.ts))-Math.max(...playerMap[a].map(l=>l.ts)))
+    .slice(0,20);
+
+  const now=Date.now();
+  const allTs=allLogs.map(l=>l.ts);
+  const timeStart=Math.min(...allTs);
+  const timeEnd=now;
+  const totalDur=timeEnd-timeStart||1;
+
+  const rowH=22;const rowGap=5;const labelW=130;const axisH=22;const padTop=4;
+  const W=Math.max(el.clientWidth||600,400);
+  const trackW=W-labelW-8;
+  const svgH=playerNames.length*(rowH+rowGap)+axisH+padTop;
+
+  let svgRows="";
+
+  playerNames.forEach((name,i)=>{
+    const y=padTop+i*(rowH+rowGap);
+    const logs=[...playerMap[name]].sort((a,b)=>a.ts-b.ts);
+
+    // セグメント計算
+    const segs=[];
+    // 最初のログ前の状態
+    segs.push({start:timeStart,end:logs[0].ts,state:logs[0].from});
+    for(let j=0;j<logs.length;j++){
+      const end=j+1<logs.length?logs[j+1].ts:timeEnd;
+      segs.push({start:logs[j].ts,end,state:logs[j].to});
+    }
+
+    // ラベル（省略）
+    const label=name.length>16?name.slice(0,14)+"…":name;
+    svgRows+=`<text x="${labelW-6}" y="${y+rowH/2+4}" text-anchor="end" fill="#b8c4d6" font-size="11" font-family="system-ui,sans-serif">${label}</text>`;
+
+    // セグメント描画
+    for(const seg of segs){
+      const x=labelW+((seg.start-timeStart)/totalDur)*trackW;
+      const w=Math.max(((seg.end-seg.start)/totalDur)*trackW,1);
+      const color=LOG_STATE_COLOR[seg.state]||"#8ea0b7";
+      const startStr=new Date(seg.start).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+      const endStr=new Date(seg.end).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+      svgRows+=`<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH}" fill="${color}" opacity="0.82" rx="2"><title>${stateLabel(seg.state)}\n${startStr} → ${endStr}</title></rect>`;
+    }
+    // 区切り線
+    svgRows+=`<line x1="${labelW}" y1="${y+rowH+2}" x2="${W-4}" y2="${y+rowH+2}" stroke="#1e2a3a" stroke-width="1"/>`;
+  });
+
+  // 時刻軸
+  const axisY=padTop+playerNames.length*(rowH+rowGap)+4;
+  const numTicks=6;
+  let axis=`<line x1="${labelW}" y1="${axisY}" x2="${W-4}" y2="${axisY}" stroke="#2a3a50" stroke-width="1"/>`;
+  for(let t=0;t<=numTicks;t++){
+    const x=labelW+(t/numTicks)*trackW;
+    const ts=timeStart+(t/numTicks)*totalDur;
+    const lbl=new Date(ts).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+    axis+=`<line x1="${x.toFixed(1)}" y1="${axisY}" x2="${x.toFixed(1)}" y2="${axisY+4}" stroke="#3a4a60" stroke-width="1"/>`;
+    axis+=`<text x="${x.toFixed(1)}" y="${axisY+16}" text-anchor="middle" fill="#5a7aaa" font-size="10" font-family="system-ui,sans-serif">${lbl}</text>`;
+  }
+
+  // 凡例
+  const legendStates=[["OFFLINE","#8ea0b7","Offline"],["LOBBY","#5b9cf6","Lobby"],["IN_MATCH","#39d98a","In Match"],["IN_TOURNAMENT_DEEP","#c77dff","Final/Tournament"],["NOT_FOUND","#ff9944","Missing"],["BANNED","#ff5555","Banned"]];
+  let legend=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
+  for(const [,color,label] of legendStates){
+    legend+=`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#b8c4d6;"><span style="width:14px;height:14px;border-radius:3px;background:${color};opacity:0.85;display:inline-block;"></span>${label}</span>`;
+  }
+  legend+=`</div>`;
+
+  el.innerHTML=`<div style="overflow-x:auto;margin-top:8px;"><svg width="${W}" height="${svgH}" viewBox="0 0 ${W} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="display:block;">${svgRows}${axis}</svg></div>${legend}`;
 }
 function saveNamesToUrl(names){
   const qp=new URLSearchParams(window.location.search);
@@ -1468,10 +1554,19 @@ async function init(){
     if(viewMode==="global")renderGlobalPlayerList();
   });
   // ログ
+  document.getElementById("btnLogTimeline")?.addEventListener("click",()=>{
+    logViewMode=logViewMode==="list"?"timeline":"list";
+    const btn=document.getElementById("btnLogTimeline");
+    if(btn)btn.textContent=logViewMode==="list"?"📊 タイムライン":"📋 リスト";
+    logViewMode==="timeline"?renderLogTimeline():renderLogList();
+  });
   document.getElementById("btnExportLogs")?.addEventListener("click",exportStateLogs);
   document.getElementById("btnClearLogs")?.addEventListener("click",()=>{
     if(!confirm("ログをクリアしますか？"))return;
     clearStateLogs();renderLogList();toast("ログをクリアしました");
+    logViewMode="list";
+    const btn=document.getElementById("btnLogTimeline");
+    if(btn)btn.textContent="📊 タイムライン";
   });
   // ── テーブルヘッダー ? アイコン: fixed グローバルツールチップ ──────────
   // tableWrap の overflow:auto / position:sticky による clipping を回避
