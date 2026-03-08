@@ -124,13 +124,17 @@ export default {
     if (path === "/community") {
       if (request.method === "GET") {
         const list = await kvGet(env, "community", []);
-        // 後方互換: /names KV に登録済みで /community にないエントリを自動補完
+        // 後方互換 + 自動マイグレーション: /names にあって /community にないエントリを補完し
+        // 差分があれば非同期で /community KV へ書き戻す（初回アクセス時のみ実質書き込みが走る）
         const names = await kvGet(env, "names", []);
+        let migrated = false;
         for (const name of names) {
           if (!list.find(e => e.name.toLowerCase() === name.toLowerCase())) {
             list.push({ name, region: "", category: "notable", note: "", addedAt: 0 });
+            migrated = true;
           }
         }
+        if (migrated) ctx.waitUntil(kvPut(env, "community", list));
         return jsonRes(list);
       }
       if (request.method === "POST") {
