@@ -4,6 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>THE FINALS – Ranked Activity Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a2a40" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="style.css" />
   <script src="i18n.js"></script>
 </head>
@@ -22,6 +28,9 @@
         <span id="lastPoll">—</span>
       </div>
       <div class="meta2"><span id="netHint" class="hintTop"></span></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+        <button id="btnNotify" title="通知OFF（クリックでON）" style="background:none;border:1px solid #1e2e40;border-radius:999px;padding:3px 10px;font-size:13px;cursor:pointer;color:#5a7aaa;opacity:0.45;transition:opacity .15s;" aria-label="通知">🔔</button>
+      </div>
       <div class="langSwitcher">
         <button class="langBtn" data-lang="ja">日本語</button>
         <button class="langBtn" data-lang="ko">한국어</button>
@@ -394,5 +403,17 @@ playerB#5678"></textarea>
   </div>
 
   <script src="app.js"></script>
+  <script>
+    // 通知ボタン
+    document.getElementById("btnNotify").addEventListener("click", async () => {
+      const granted = await requestNotifyPermission();
+      if (granted) setNotifyEnabled(!notifyEnabled);
+      else alert("ブラウザの設定で通知を許可してください。");
+    });
+    // Service Worker 登録（PWA）
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/finals-tracker/sw.js").catch(() => {});
+    }
+  </script>
 </body>
 </html>

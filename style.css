@@ -277,3 +277,10 @@ th .thHelpTip{display:none!important}
 .footerContacts{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 24px;line-height:1.9}
 .footerContacts strong{color:#7eb8ff}
 .footerSub{margin-top:12px;color:#2e4060;font-size:11px}
+
+/* ── Log Timeline ───────────────────────────────────────────── */
+.logDateSep{font-size:10px;font-weight:700;color:#3a4a5a;text-transform:uppercase;letter-spacing:.8px;padding:8px 0 3px;border-bottom:1px solid #1a2535;margin-bottom:4px;}
+.logState{font-size:11px;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,0.05);}
+.logDelta{font-size:11px;font-weight:700;margin-left:6px;padding:1px 4px;border-radius:3px;}
+.logDelta.pos{color:#39d98a;background:rgba(57,217,138,0.1);}
+.logDelta.neg{color:#ff7b7b;background:rgba(255,123,123,0.1);}

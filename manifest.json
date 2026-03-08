@@ -1,0 +1,13 @@
+{
+  "name": "THE FINALS – Ranked Activity Tracker",
+  "short_name": "FINALS Tracker",
+  "description": "Track ranked player activity in THE FINALS",
+  "start_url": "/finals-tracker/",
+  "scope": "/finals-tracker/",
+  "display": "standalone",
+  "background_color": "#080e1a",
+  "theme_color": "#1a2a40",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

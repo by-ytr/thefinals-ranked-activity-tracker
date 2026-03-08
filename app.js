@@ -95,6 +95,45 @@ function buildExpandRow(r,key){
   }
   td.appendChild(panel);
   td.appendChild(buildPlayerSparkEl(r));
+  // ── ポイント推移グラフ ──
+  const evts=getEvents().filter(e=>e.name.toLowerCase()===r.name.toLowerCase()&&e.delta!=null).slice(-48);
+  if(evts.length>=2){
+    const chartWrap=document.createElement("div");chartWrap.style.cssText="margin-top:10px;";
+    const chartTitle=document.createElement("div");chartTitle.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;";chartTitle.textContent="📈 ポイント推移（直近"+evts.length+"回）";
+    const canvas=document.createElement("canvas");canvas.width=420;canvas.height=80;canvas.style.cssText="width:100%;max-width:420px;height:80px;display:block;border-radius:4px;background:#0a1a2e;";
+    chartWrap.appendChild(chartTitle);chartWrap.appendChild(canvas);td.appendChild(chartWrap);
+    requestAnimationFrame(()=>{
+      const ctx=canvas.getContext("2d");if(!ctx)return;
+      const W=canvas.width,H=canvas.height,pad=8;
+      const pts=evts.map(e=>e.points).filter(p=>p!=null);
+      if(pts.length<2)return;
+      const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
+      const sx=(i)=>pad+(i/(pts.length-1))*(W-2*pad);
+      const sy=(v)=>H-pad-((v-mn)/range)*(H-2*pad);
+      ctx.clearRect(0,0,W,H);
+      // gradient fill
+      const grad=ctx.createLinearGradient(0,0,0,H);
+      grad.addColorStop(0,"rgba(94,168,255,0.3)");grad.addColorStop(1,"rgba(94,168,255,0)");
+      ctx.beginPath();ctx.moveTo(sx(0),sy(pts[0]));
+      for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
+      ctx.lineTo(sx(pts.length-1),H);ctx.lineTo(sx(0),H);ctx.closePath();
+      ctx.fillStyle=grad;ctx.fill();
+      // line
+      ctx.beginPath();ctx.moveTo(sx(0),sy(pts[0]));
+      for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
+      ctx.strokeStyle="#5ea8ff";ctx.lineWidth=1.5;ctx.stroke();
+      // latest point dot
+      const lx=sx(pts.length-1),ly=sy(pts[pts.length-1]);
+      ctx.beginPath();ctx.arc(lx,ly,3,0,Math.PI*2);ctx.fillStyle="#7eb8ff";ctx.fill();
+      // min/max labels
+      ctx.font="9px monospace";ctx.fillStyle="#5a7aaa";
+      ctx.fillText(mn.toLocaleString(),2,H-2);
+      ctx.fillText(mx.toLocaleString(),2,12);
+      // current points label
+      ctx.font="bold 10px monospace";ctx.fillStyle="#7eb8ff";
+      ctx.fillText(pts[pts.length-1].toLocaleString(),Math.max(0,lx-20),Math.max(12,ly-4));
+    });
+  }
   // ── サーバー選択 ──
   const regionWrap=document.createElement("div");regionWrap.style.cssText="margin-top:10px;display:flex;align-items:center;gap:8px;";
   const rLabel=document.createElement("span");rLabel.textContent="Server";rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
@@ -107,8 +146,29 @@ function buildExpandRow(r,key){
     if(!snaps[k2])snaps[k2]={};snaps[k2].region=rSel.value;saveSnapshots(snaps);
     lastRows=lastRows.map(row=>row.name.toLowerCase()===k2?{...row,region:rSel.value}:row);
     renderTable(lastRows);toast("Server: <b>"+r.name+"</b> → "+(rSel.value||"—"));
+    // グローバルリスト編集の backend 同期
+    const _rs=getUiSettings();
+    if(_rs.globalUrl){
+      const _re=getCommunityList().find(e=>e.name.toLowerCase()===k2);
+      if(_re)submitCommunityEntryToGlobal(_rs.globalUrl,{..._re,region:rSel.value});
+    }
   });
   regionWrap.appendChild(rLabel);regionWrap.appendChild(rSel);td.appendChild(regionWrap);
+  // ── メモ ──
+  const memoWrap=document.createElement("div");memoWrap.style.cssText="margin-top:8px;display:flex;align-items:flex-start;gap:8px;";
+  const memoLbl=document.createElement("span");memoLbl.textContent="📝 Memo";memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
+  const memoTa=document.createElement("textarea");memoTa.style.cssText="flex:1;height:44px;font-size:12px;padding:4px 6px;background:#0a1a2e;border:1px solid #1e2e40;color:#e7edf5;border-radius:4px;resize:vertical;font-family:inherit;";
+  memoTa.value=(getSnapshots()[r.name.toLowerCase()]||{}).memo||"";
+  memoTa.placeholder="個人メモ（自分のみ表示）";
+  let _memoTimer=null;
+  memoTa.addEventListener("input",()=>{
+    clearTimeout(_memoTimer);
+    _memoTimer=setTimeout(()=>{
+      const snaps=getSnapshots();const k2=r.name.toLowerCase();
+      if(!snaps[k2])snaps[k2]={};snaps[k2].memo=memoTa.value;saveSnapshots(snaps);
+    },500);
+  });
+  memoWrap.appendChild(memoLbl);memoWrap.appendChild(memoTa);td.appendChild(memoWrap);
   tr.appendChild(td);return tr;
 }
 function toggleExpand(r,rowEl,key){
@@ -151,6 +211,26 @@ function toast(msg){
   el.innerHTML=msg;
   el.classList.add("show");
   setTimeout(()=>el.classList.remove("show"),4500);
+}
+// ── ブラウザ通知 ─────────────────────────────────────────────────
+let notifyEnabled=localStorage.getItem("finals_notify")==="1";
+async function requestNotifyPermission(){
+  if(!("Notification"in window))return false;
+  if(Notification.permission==="granted")return true;
+  if(Notification.permission==="denied")return false;
+  const p=await Notification.requestPermission();
+  return p==="granted";
+}
+function sendNotification(title,body){
+  if(!notifyEnabled||Notification.permission!=="granted")return;
+  try{new Notification(title,{body,icon:"icon.svg",tag:title,silent:false});}catch{}
+}
+function setNotifyEnabled(on){
+  notifyEnabled=on;
+  localStorage.setItem("finals_notify",on?"1":"0");
+  const btn=document.getElementById("btnNotify");
+  if(btn)btn.title=on?"通知ON（クリックでOFF）":"通知OFF（クリックでON）";
+  if(btn)btn.style.opacity=on?"1":"0.45";
 }
 function setNetHint(text){document.getElementById("netHint").textContent=text||"";}
 function setRunning(on){
@@ -235,15 +315,26 @@ async function fetchGlobalNames(globalUrl){
 async function fetchGlobalSnapshots(globalUrl){
   try{const r=await fetch(globalUrl.replace(/\/$/,"")+"/snapshots",{cache:"no-store"});if(!r.ok)return{};return await r.json();}catch{return{};}
 }
+// 書き込みリクエスト用ヘッダー（管理者パスワードハッシュを認証トークンとして付与）
+function getWriteHeaders(){
+  const h={"Content-Type":"application/json"};
+  const wk=getAuthData().adminPasswordHash;
+  if(wk)h["X-Write-Key"]=wk;
+  return h;
+}
 async function submitSnapshotToGlobal(globalUrl,name,snap){
-  try{await fetch(globalUrl.replace(/\/$/,"")+"/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,snapshot:snap})});}catch{}
+  try{await fetch(globalUrl.replace(/\/$/,"")+"/submit",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name,snapshot:snap})});}catch{}
 }
 async function addNameToGlobal(globalUrl,name){
-  try{await fetch(globalUrl.replace(/\/$/,"")+"/names",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});}catch{}
+  try{await fetch(globalUrl.replace(/\/$/,"")+"/names",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name})});}catch{}
 }
 // コミュニティエントリをバックエンドの /community に送信（他ユーザーへ即時反映）
 async function submitCommunityEntryToGlobal(globalUrl,entry){
-  try{await fetch(globalUrl.replace(/\/$/,"")+"/community",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...entry,addedAt:entry.addedAt||Date.now()})});}catch{}
+  try{await fetch(globalUrl.replace(/\/$/,"")+"/community",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({...entry,addedAt:entry.addedAt||Date.now()})});}catch{}
+}
+// コミュニティエントリをバックエンドから削除
+async function deleteCommunityEntryFromGlobal(globalUrl,name){
+  try{await fetch(globalUrl.replace(/\/$/,"")+"/community?name="+encodeURIComponent(name),{method:"DELETE",headers:getWriteHeaders()});}catch{}
 }
 // 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
 const ENCOUNTER_TYPES=[
@@ -840,7 +931,16 @@ async function pollOnce(names,settings){
     const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
     // 状態変化をログ記録
     const prevRowState=lastRows.find(r=>r.name.toLowerCase()===key)?.state;
-    if(prevRowState && prevRowState!==inf.state) pushStateLog({ts:now,name,from:prevRowState,to:inf.state,points:currentPoints,delta});
+    if(prevRowState && prevRowState!==inf.state){
+      pushStateLog({ts:now,name,from:prevRowState,to:inf.state,points:currentPoints,delta});
+      // ★付きプレイヤーの状態変化通知
+      if(pickedUp.has(key)){
+        const entering=["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(inf.state);
+        const leaving=["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(prevRowState);
+        if(entering)sendNotification(`🎮 ${name} が試合中`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
+        else if(leaving)sendNotification(`🏁 ${name} が試合終了`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
+      }
+    }
     rows.push({name,points:currentPoints,delta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
@@ -929,18 +1029,24 @@ function renderPickupGraph(){
 }
 function renderLogList(){
   const el=document.getElementById("logList");if(!el)return;
-  const logs=getStateLogs().slice(-200).reverse();
+  const allLogs=getStateLogs();
+  const logs=allLogs.slice(-300).reverse();
   const count=document.getElementById("logCount");
-  if(count)count.textContent=`(${getStateLogs().length}件)`;
+  if(count)count.textContent=`(${allLogs.length}件)`;
   if(logs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
-  const stateColor={OFFLINE:"#8ea0b7",LOBBY:"#5b9cf6","In Match (Est. R1)":"#39d98a","In Match (Est. R2)":"#39d98a","Final Round":"#c77dff"};
-  el.innerHTML=logs.map(e=>{
-    const t=new Date(e.ts).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-    const delta=e.delta!=null?(e.delta>0?"+"+e.delta:String(e.delta)):"";
-    const toLabel=STATE_LABEL[e.to]||e.to||"?";
-    const col=stateColor[toLabel]||"#e7edf5";
-    return`<div class="logEntry"><span class="logTime">${t}</span><span class="logName">${e.name}</span><span class="logFrom">${STATE_LABEL[e.from]||e.from||"?"}</span><span class="logArrow">→</span><span class="logTo" style="color:${col}">${toLabel}</span>${delta?`<span class="logDelta" style="color:${e.delta>0?"#39d98a":"#ff7b7b"}">${delta}</span>`:""}</div>`;
-  }).join("");
+  const STATE_COLOR={OFFLINE:"#8ea0b7",LOBBY:"#5b9cf6",POST_MATCH_WAIT:"#5b9cf6",IN_MATCH:"#39d98a",IN_TOURNAMENT_DEEP:"#c77dff",RETURNING:"#c77dff",UNKNOWN:"#5a7aaa",NOT_FOUND:"#ff9944",BANNED:"#ff5555",NAME_CHANGED:"#6de9ff"};
+  let html="";let lastDate="";
+  for(const e of logs){
+    const d=new Date(e.ts);
+    const dateStr=d.toLocaleDateString(undefined,{month:"short",day:"numeric",weekday:"short"});
+    const timeStr=d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    if(dateStr!==lastDate){html+=`<div class="logDateSep">${dateStr}</div>`;lastDate=dateStr;}
+    const fromC=STATE_COLOR[e.from]||"#8ea0b7";
+    const toC=STATE_COLOR[e.to]||"#e7edf5";
+    const delta=e.delta!=null?(e.delta>0?`<span class="logDelta pos">+${e.delta}</span>`:`<span class="logDelta neg">${e.delta}</span>`):"";
+    html+=`<div class="logEntry"><span class="logTime">${timeStr}</span><span class="logName">${e.name}</span><span class="logState" style="color:${fromC}">${stateLabel(e.from)}</span><span class="logArrow">→</span><span class="logState" style="color:${toC}">${stateLabel(e.to)}</span>${delta}</div>`;
+  }
+  el.innerHTML=html;
 }
 function saveNamesToUrl(names){
   const qp=new URLSearchParams(window.location.search);
@@ -1000,15 +1106,21 @@ function renderSearchDropdown(entries){
   });
 }
 function doStart(){
-  if(timer){clearInterval(timer);timer=null;}
+  if(timer){clearTimeout(timer);timer=null;}
   const settings=getUiSettings();saveSettings(settings);
   const names=getActiveNames();
   if(names.length===0)return;
   if(viewMode==="personal"){try{saveNamesToUrl(names);}catch{}saveNamesToLocal(names);}
   currentSettings=settings;
   setRunning(true);
-  pollOnce(names,settings);
-  timer=setInterval(()=>{pollOnce(getActiveNames(),settings);},settings.pollIntervalSec*1000);
+  (function schedulePoll(){
+    pollOnce(getActiveNames(),settings).finally(()=>{
+      if(!running)return;
+      const hasActive=lastRows.some(r=>["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(r.state));
+      const secs=hasActive?Math.max(20,Math.floor(settings.pollIntervalSec/2)):settings.pollIntervalSec;
+      timer=setTimeout(schedulePoll,secs*1000);
+    });
+  })();
 }
 // グローバルモード: バックエンドのスナップショットを取得してテーブルに先行表示
 async function preloadRemoteSnapshots(settings){
@@ -1115,9 +1227,11 @@ function renderGlobalPlayerList(){
     });
   });
   el.querySelectorAll(".communityDelBtn").forEach(btn=>{
-    btn.addEventListener("click",()=>{
+    btn.addEventListener("click",async()=>{
       if(!confirm(btn.dataset.name+" をリストから削除しますか？"))return;
       removeCommunityEntry(btn.dataset.name);
+      const _ds=getUiSettings();
+      if(_ds.globalUrl)await deleteCommunityEntryFromGlobal(_ds.globalUrl,btn.dataset.name);
       renderGlobalPlayerList();
       const total=getCommunityList().length;
       document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
@@ -1133,7 +1247,7 @@ function removePlayer(name){
   expandedRows.delete(name.toLowerCase());
   renderTable(lastRows);renderSpark(lastRows);
   toast("削除: <b>"+name+"</b>");
-  if(timer){clearInterval(timer);timer=null;}
+  if(timer){clearTimeout(timer);timer=null;}
   if(remaining.length>0){doStart();}else{setRunning(false);}
 }
 function addPlayerAndStart(name){
@@ -1219,7 +1333,7 @@ async function init(){
     if(names.length) saveNamesToLocal(names);
   });
   document.getElementById("btnStop").addEventListener("click",()=>{
-    if(timer){clearInterval(timer);timer=null;}
+    if(timer){clearTimeout(timer);timer=null;}
     setRunning(false);toast("stopped");
   });
   document.getElementById("btnAdd").addEventListener("click",()=>{
@@ -1508,8 +1622,16 @@ async function init(){
   // ── 初期ログイン状態を反映 + globalUrl があればバックエンドから取得 ──
   restoreSession(); // ページリロード後もログイン状態を復元
   updateLoginStatus();
+  // 通知ボタンの初期状態
+  setNotifyEnabled(notifyEnabled);
   const _initSettings=getUiSettings();
-  if(_initSettings.globalUrl)fetchAuthConfig(_initSettings.globalUrl);
+  if(_initSettings.globalUrl){
+    fetchAuthConfig(_initSettings.globalUrl);
+    // 起動時にコミュニティリストをバックエンドと同期（全ユーザーで共有リストを反映）
+    fetchAndMergeCommunity(_initSettings.globalUrl).then(()=>{
+      if(viewMode==="global")renderGlobalPlayerList();
+    });
+  }
 
   setRunning(false);
   toast(t("toast.ready"));
