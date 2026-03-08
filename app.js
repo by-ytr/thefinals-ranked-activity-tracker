@@ -330,18 +330,53 @@ async function fetchAndMergeSnapshots(globalUrl){
     const local=getSnapshots();
     let changed=false;
     for(const [key,remSnap] of Object.entries(remote)){
-      if(!remSnap||!remSnap.lastChangeAt)continue;
+      if(!remSnap)continue;
       const locSnap=local[key];
-      const remLca=remSnap.lastChangeAt;
-      const locLca=locSnap?.lastChangeAt||0;
-      // remote の lastChangeAt がより新しければ timing データのみ上書き
-      // points 等の実値は直接ポーリングが正なので変更しない
+      let merged={...(locSnap||{})};
+      let dirty=false;
+
+      // ── lastChangeAt（状態推定タイミング）────────────────────────────
+      // points 等の実値は自分のポーリングが正なので変更しない
+      const remLca=remSnap.lastChangeAt||0;
+      const locLca=merged.lastChangeAt||0;
       if(remLca>locLca){
-        local[key]={
-          ...(locSnap||{}),
-          lastChangeAt:remLca,
-          lastRealChangeAt:remSnap.lastRealChangeAt||remLca,
-        };
+        merged.lastChangeAt=remLca;
+        merged.lastRealChangeAt=remSnap.lastRealChangeAt||remLca;
+        dirty=true;
+      }
+
+      // ── manualEvent（📌タグ・赤行ハイライト）────────────────────────
+      // リモートに有効期限内のイベントがあり、ローカルより新しければ採用する
+      const remMe=remSnap.manualEvent;
+      const locMe=merged.manualEvent;
+      if(remMe&&isManualActive(remMe)){
+        if(!locMe||!isManualActive(locMe)||(remMe.recordedAt>(locMe.recordedAt||0))){
+          merged.manualEvent=remMe;
+          dirty=true;
+        }
+      }
+
+      // ── BAN / NC / Missing バッジ ────────────────────────────────────
+      // notFoundCount: より大きい方を採用（多く確認した側が信頼できる）
+      const remNfc=remSnap.notFoundCount??0;
+      const locNfc=merged.notFoundCount??0;
+      if(remNfc>locNfc){
+        merged.notFoundCount=remNfc;
+        // lastFoundAt も合わせてリモート側に揃える
+        if(remSnap.lastFoundAt&&(remSnap.lastFoundAt>(merged.lastFoundAt||0))){
+          merged.lastFoundAt=remSnap.lastFoundAt;
+        }
+        dirty=true;
+      }
+      // suspectedReason / suspectedNewName: ローカル未確定のときのみリモートを採用
+      if(!merged.suspectedReason&&remSnap.suspectedReason){
+        merged.suspectedReason=remSnap.suspectedReason;
+        merged.suspectedNewName=remSnap.suspectedNewName||null;
+        dirty=true;
+      }
+
+      if(dirty){
+        local[key]=merged;
         changed=true;
       }
     }
