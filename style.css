@@ -273,6 +273,7 @@ th .thHelpTip{display:none!important}
 .headerAuthBtn{padding:5px 14px;font-size:12px;border-radius:999px;height:30px;white-space:nowrap}
 /* ── サイトフッター ── */
 .siteFooter{text-align:center;padding:24px 16px 32px;color:#4a6080;font-size:12px;border-top:1px solid #131d2b;margin-top:16px}
+.footerDesc{max-width:580px;margin:0 auto 18px;color:#4e6887;font-size:12px;line-height:1.75;border-bottom:1px solid #131d2b;padding-bottom:16px}
 .footerTitle{font-weight:700;color:#6a809f;margin-bottom:10px;font-size:13px}
 .footerContacts{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 24px;line-height:1.9}
 .footerContacts strong{color:#7eb8ff}
