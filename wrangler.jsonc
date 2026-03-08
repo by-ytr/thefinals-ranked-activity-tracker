@@ -1,18 +1,33 @@
 {
+  "$schema": "node_modules/wrangler/config-schema.json",
+
   // Worker 名は Cloudflare Dashboard の Workers 一覧と一致させること
   "name": "finals-tracker",
 
   // Worker のエントリポイント（ES module 形式 export default { fetch } を使用）
   "main": "worker.js",
 
-  // Cloudflare Workers の互換日。この日以降の挙動保証を受ける
-  // 2024-09-23 以降は ES module + KV の組み合わせが安定動作
-  "compatibility_date": "2024-09-23",
+  // Cloudflare bot が設定した日付を維持
+  "compatibility_date": "2025-09-27",
+
+  // Node.js 互換モード（fetch / crypto 等）
+  "compatibility_flags": ["nodejs_compat"],
+
+  // 静的ファイル（index.html / app.js / style.css 等）を配信
+  "assets": {
+    "directory": "."
+  },
+
+  // Cloudflare Workers の可観測性
+  "observability": {
+    "enabled": true
+  },
 
   // KV Namespace バインディング
   // binding 名は worker.js 内で env.DATA として参照されているため変更不可
-  // id は Cloudflare Dashboard > Workers & Pages > KV で確認する
-  // （手順は下記 "Cloudflare 側作業" を参照）
+  // ▼ id の確認手順:
+  //   Cloudflare Dashboard → Workers & Pages → KV
+  //   → 該当 Namespace の右に表示される「Namespace ID」をコピーして貼り付ける
   "kv_namespaces": [
     {
       "binding": "DATA",
