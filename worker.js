@@ -124,6 +124,13 @@ export default {
     if (path === "/community") {
       if (request.method === "GET") {
         const list = await kvGet(env, "community", []);
+        // 後方互換: /names KV に登録済みで /community にないエントリを自動補完
+        const names = await kvGet(env, "names", []);
+        for (const name of names) {
+          if (!list.find(e => e.name.toLowerCase() === name.toLowerCase())) {
+            list.push({ name, region: "", category: "notable", note: "", addedAt: 0 });
+          }
+        }
         return jsonRes(list);
       }
       if (request.method === "POST") {
