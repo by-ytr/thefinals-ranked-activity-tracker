@@ -223,16 +223,8 @@
         </div>
 
         <div class="advSection">
-          <div class="advLabel"><span data-i18n="adv.proxy">Proxy / その他</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.proxy">ブラウザから直接APIを叩くとCORSエラーになる場合があります。<br>Cloudflare Worker 等にプロキシをデプロイしてURLを設定してください。</span></span></div>
+          <div class="advLabel"><span data-i18n="adv.proxy">その他</span></div>
           <div class="row tight" style="flex-wrap:wrap;gap:10px;">
-            <div class="field" style="min-width:200px;">
-              <label>Proxy Base URL</label>
-              <input id="proxyBase" placeholder="https://your-worker.workers.dev" style="width:100%" />
-            </div>
-            <div class="field" style="min-width:200px;">
-              <label>Global Backend URL</label>
-              <input id="globalUrl" placeholder="https://your-global-backend.workers.dev" style="width:100%" />
-            </div>
             <div class="field" style="min-width:120px;flex:0 1 auto;">
               <label>Max events</label>
               <input id="maxEvents" type="number" min="200" max="20000" step="100" value="5000" style="width:100px" />

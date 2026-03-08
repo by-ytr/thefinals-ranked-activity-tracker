@@ -1,5 +1,9 @@
 const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
+// バックエンド URL 自動解決：明示設定がなければ同オリジン（Worker 配信時）を使用
+function autoOrigin(){const o=location.origin;return(o==="null"||o.startsWith("file:")||o.includes("localhost")||o.includes("127.0.0.1"))?"":o;}
+function effectiveProxyBase(s){return(s.proxyBase||"").replace(/\/$/,"")||autoOrigin();}
+function effectiveGlobalUrl(s){return(s.globalUrl||"").replace(/\/$/,"")||autoOrigin();}
 let timer=null,running=false,currentSettings=null;
 let lastCommunitySync=0; // グローバルリスト自動同期の最終実行時刻
 let viewMode="personal",globalNames=[],globalFilter="all";
@@ -149,9 +153,9 @@ function buildExpandRow(r,key){
     renderTable(lastRows);toast("Server: <b>"+r.name+"</b> → "+(rSel.value||"—"));
     // グローバルリスト編集の backend 同期
     const _rs=getUiSettings();
-    if(_rs.globalUrl){
+    {
       const _re=getCommunityList().find(e=>e.name.toLowerCase()===k2);
-      if(_re)submitCommunityEntryToGlobal(_rs.globalUrl,{..._re,region:rSel.value});
+      if(_re)submitCommunityEntryToGlobal(effectiveGlobalUrl(_rs),{..._re,region:rSel.value});
     }
   });
   regionWrap.appendChild(rLabel);regionWrap.appendChild(rSel);td.appendChild(regionWrap);
@@ -633,8 +637,6 @@ function getActiveNames(){
 }
 // ────────────────────────────────────────────────────────────
 function applySettingsToUi(s){
-  document.getElementById("proxyBase").value=s.proxyBase||"";
-  if(document.getElementById("globalUrl"))document.getElementById("globalUrl").value=s.globalUrl||"";
   document.getElementById("leaderboardId").value=s.leaderboardId||"s9";
   document.getElementById("platform").value=s.platform||"crossplay";
   document.getElementById("pollInterval").value=String(s.pollIntervalSec||60);
@@ -654,8 +656,6 @@ function applySettingsToUi(s){
 }
 function getUiSettings(){
   return{
-    proxyBase:document.getElementById("proxyBase").value.trim(),
-    globalUrl:document.getElementById("globalUrl")?document.getElementById("globalUrl").value.trim():"",
     leaderboardId:document.getElementById("leaderboardId").value,
     platform:document.getElementById("platform").value,
     pollIntervalSec:parseInt(document.getElementById("pollInterval").value,10),
@@ -807,7 +807,7 @@ function isCorsLikeError(msg){
 async function fetchPlayer(proxyBase,leaderboardId,platform,name){
   const qp=new URLSearchParams({name,leaderboardId,platform});
   if(proxyBase){
-    const url=proxyBase.replace(/\/$/,"")+"/api/player?"+qp.toString();
+    const url=proxyBase+"/api/player?"+qp.toString();
     const r=await fetch(url,{cache:"no-store"});
     if(!r.ok)throw new Error("proxy fetch failed: "+r.status);
     return await r.json();
@@ -955,7 +955,7 @@ async function pollOnce(names,settings){
     const prev=snapshots[key]||{};
     let points=null,stale=false,errMsg="",freshRank=null,freshLeague=null,freshAltNames=null;
     try{
-      const data=await fetchPlayer(settings.proxyBase,settings.leaderboardId,settings.platform,name);
+      const data=await fetchPlayer(effectiveProxyBase(settings),settings.leaderboardId,settings.platform,name);
       const entry=(data&&Array.isArray(data.data)&&data.data.length)?data.data[0]:null;
       points=entry?getPointsFromEntry(entry):null;
       freshRank=entry?pickRank(entry,null):null;
@@ -1059,7 +1059,7 @@ async function pollOnce(names,settings){
     return a.name.localeCompare(b.name);
   });
   document.getElementById("lastPoll").textContent=new Date(now).toLocaleTimeString();
-  if(anyCors && !settings.proxyBase) setNetHint("CORSっぽい失敗あり → worker.js をデプロイして Proxy Base URL を設定推奨");
+  if(anyCors) setNetHint("CORSっぽい失敗あり → ローカル環境の場合は worker.js をデプロイして使用してください");
   else setNetHint("");
   lastRows=rows; // 遭遇ボタンの即時再描画用にキャッシュ
   renderTable(rows);renderSpark(rows);renderBanList(rows);renderPickupGraph();
@@ -1319,11 +1319,11 @@ function doStart(){
   (function schedulePoll(){
     // グローバルリストを 120 秒ごとにバックエンドと自動同期（他ユーザーの追加を反映）
     const now=Date.now();
-    const communitySync=settings.globalUrl&&(now-lastCommunitySync>120000)
+    const communitySync=effectiveGlobalUrl(settings)&&(now-lastCommunitySync>120000)
       // コミュニティリスト同期（追加・更新・削除） + スナップショット状態同期 を並列実行
       ?Promise.all([
-          fetchAndMergeCommunity(settings.globalUrl),
-          fetchAndMergeSnapshots(settings.globalUrl),
+          fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
+          fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
         ]).then(()=>{
           lastCommunitySync=Date.now();
           renderGlobalPlayerList();
@@ -1339,7 +1339,7 @@ function doStart(){
 }
 // グローバルモード: バックエンドのスナップショットを取得してテーブルに先行表示
 async function preloadRemoteSnapshots(settings){
-  const remote=await fetchGlobalSnapshots(settings.globalUrl);
+  const remote=await fetchGlobalSnapshots(effectiveGlobalUrl(settings));
   if(!remote||typeof remote!=="object")return;
   // リモートの lastChangeAt をローカルスナップショットにマージ（初回観測時のズレ防止）
   const localSnaps=getSnapshots();
@@ -1374,9 +1374,9 @@ async function switchToGlobal(){
   document.getElementById("globalListView").style.display="";
   const settings=getUiSettings();
   // バックエンドがあればリモートとマージ
-  if(settings.globalUrl){
+  if(effectiveGlobalUrl(settings)){
     document.getElementById("globalStatus").textContent="🌐 同期中...";
-    await fetchAndMergeCommunity(settings.globalUrl);
+    await fetchAndMergeCommunity(effectiveGlobalUrl(settings));
   }
   renderGlobalPlayerList();
   const total=getCommunityList().length;
@@ -1384,7 +1384,7 @@ async function switchToGlobal(){
   document.getElementById("globalStatus").textContent=
     total===0?"ℹ️ まだ登録がありません。下のフォームから追加してください"
     :`🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
-  if(settings.globalUrl) preloadRemoteSnapshots(settings);
+  if(effectiveGlobalUrl(settings)) preloadRemoteSnapshots(settings);
   if(filtered>0)doStart();
 }
 function switchToPersonal(){
@@ -1580,14 +1580,14 @@ async function init(){
     if(names.length===0){toast("Test: 名前が空です");return;}
     const first=names[0];
     try{
-      const data=await fetchPlayer(settings.proxyBase,settings.leaderboardId,settings.platform,first);
+      const data=await fetchPlayer(effectiveProxyBase(settings),settings.leaderboardId,settings.platform,first);
       const entry=(data&&Array.isArray(data.data)&&data.data.length)?data.data[0]:null;
       const pts=entry?getPointsFromEntry(entry):null;
       if(pts==null) toast("Test: <b>"+first+"</b> → points が取れません（season/platform/対象外の可能性）");
       else toast("Test: <b>"+first+"</b> → points=<b>"+pts+"</b>");
     }catch(e){
       const msg=String(e&&e.message?e.message:e);
-      if(isCorsLikeError(msg) && !settings.proxyBase) toast("Test失敗（CORSの可能性）→ Worker をデプロイして Proxy Base URL を設定してください");
+      if(isCorsLikeError(msg)) toast("Test失敗（CORSの可能性）→ ローカル環境では Worker が必要です");
       else toast("Test失敗：<b>"+msg+"</b>");
     }
   });
@@ -1640,7 +1640,7 @@ async function init(){
     toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
     // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
     const settings=getUiSettings();
-    if(settings.globalUrl)await submitCommunityEntryToGlobal(settings.globalUrl,entry);
+    if(effectiveGlobalUrl(settings))await submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),entry);
     renderGlobalPlayerList();
     const total=getCommunityList().length;
     document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
@@ -1676,8 +1676,8 @@ async function init(){
         added++;
       }
     }
-    if(settings.globalUrl){
-      await Promise.all(newEntries.map(e=>submitCommunityEntryToGlobal(settings.globalUrl,e)));
+    if(effectiveGlobalUrl(settings)){
+      await Promise.all(newEntries.map(e=>submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),e)));
     }
     toast(`🌐 <b>${added}人</b> をグローバルリストにコピーしました`);
     if(viewMode==="global")renderGlobalPlayerList();
@@ -1788,11 +1788,11 @@ async function init(){
   // ── バックエンドに同期ボタン ─────────────────────────────────
   document.getElementById("btnSyncAuth").addEventListener("click",async()=>{
     const settings=getUiSettings();
-    if(!settings.globalUrl){toast("⚠️ Global Backend URL を先に設定してください");return;}
+    if(!effectiveGlobalUrl(settings)){toast("⚠️ バックエンドに接続できません（ローカル環境では Worker URL の設定が必要です）");return;}
     const auth=getAuthData();
     if(!auth.adminPasswordHash){toast("⚠️ アドミンパスワードを先に設定してください");return;}
     document.getElementById("btnSyncAuth").textContent="同期中...";
-    const ok=await syncAuthToBackend(settings.globalUrl,auth.adminPasswordHash,auth.allowedUsers);
+    const ok=await syncAuthToBackend(effectiveGlobalUrl(settings),auth.adminPasswordHash,auth.allowedUsers);
     document.getElementById("btnSyncAuth").textContent="☁️ バックエンドに同期";
     if(ok){
       toast("✅ 認証設定をバックエンドに同期しました");
@@ -1849,10 +1849,10 @@ async function init(){
   // 通知ボタンの初期状態
   setNotifyEnabled(notifyEnabled);
   const _initSettings=getUiSettings();
-  if(_initSettings.globalUrl){
-    fetchAuthConfig(_initSettings.globalUrl);
+  if(effectiveGlobalUrl(_initSettings)){
+    fetchAuthConfig(effectiveGlobalUrl(_initSettings));
     // 起動時にコミュニティリストをバックエンドと同期（全ユーザーで共有リストを反映）
-    fetchAndMergeCommunity(_initSettings.globalUrl).then(()=>{
+    fetchAndMergeCommunity(effectiveGlobalUrl(_initSettings)).then(()=>{
       if(viewMode==="global")renderGlobalPlayerList();
     });
   }
@@ -1863,7 +1863,7 @@ async function init(){
 init();
 
 async function fetchLeaderboardViaProxy(settings){
-  const base = settings.proxyBase ? settings.proxyBase.replace(/\/$/,"") : "";
+  const base = effectiveProxyBase(settings);
   const url = base
     ? `${base}/api/leaderboard?season=${encodeURIComponent(settings.leaderboardId)}&platform=${encodeURIComponent(settings.platform)}&cache=${encodeURIComponent(settings.estCacheSec||30)}`
     : `https://api.the-finals-leaderboard.com/v1/leaderboard/${encodeURIComponent(settings.leaderboardId)}/${encodeURIComponent(settings.platform)}`;
