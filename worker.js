@@ -28,7 +28,7 @@ function corsHeaders(method = "GET, POST, DELETE, OPTIONS") {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": method,
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Write-Key",
   };
 }
 
@@ -146,8 +146,26 @@ export default {
         const list = await kvGet(env, "community", []);
         const key  = (body.name || "").toLowerCase();
         const idx  = list.findIndex(e => e.name.toLowerCase() === key);
-        const entry = { name: body.name, region: body.region || "", category: body.category || "notable", note: body.note || "", addedAt: body.addedAt || Date.now() };
-        if (idx >= 0) list[idx] = entry; else list.push(entry);
+        const now  = Date.now();
+        const entry = {
+          name:       body.name,
+          region:     body.region     || "",
+          category:   body.category   || "notable",
+          note:       body.note       || "",
+          addedAt:    body.addedAt    || now,
+          updatedAt:  body.updatedAt  || now,     // エントリ更新時刻（merge 判定用）
+          sourceUser: body.sourceUser || "",      // 追加/更新したユーザーID
+          // status / lastSeen は /submit (snapshots) で管理 → community には含めない
+        };
+        if (idx >= 0) {
+          // updatedAt が新しいときだけ上書き（古いデータで巻き戻さない）
+          const existing = list[idx];
+          if (!existing.updatedAt || entry.updatedAt >= existing.updatedAt) {
+            list[idx] = entry;
+          }
+        } else {
+          list.push(entry);
+        }
         await kvPut(env, "community", list);
         return jsonRes({ ok: true });
       }

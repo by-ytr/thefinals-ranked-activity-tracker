@@ -1,6 +1,7 @@
 const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
 let timer=null,running=false,currentSettings=null;
+let lastCommunitySync=0; // グローバルリスト自動同期の最終実行時刻
 let viewMode="personal",globalNames=[],globalFilter="all";
 const expandedRows=new Set();
 let pendingScrollY=null; // リロード後スクロール位置復元用
@@ -294,17 +295,56 @@ async function fetchAndMergeCommunity(globalUrl){
   if(!globalUrl)return;
   try{
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/community",{cache:"no-store"});
-    if(!r.ok)return;
+    if(!r.ok){setGlobalSyncStatus("⚠️ 同期失敗 (HTTP "+r.status+")",true);return;}
     const remote=await r.json();
     const arr=Array.isArray(remote)?remote:(remote.entries||[]);
-    const local=getCommunityList();
-    const merged=[...local];
-    for(const re of arr){
-      const k=(re.name||"").toLowerCase();
-      if(!merged.find(e=>e.name.toLowerCase()===k))merged.push(re);
-    }
+    const localMap=new Map(getCommunityList().map(e=>[e.name.toLowerCase(),e]));
+    // サーバーリストを正として同期（推測なし）
+    // ・server に無いエントリは除外（削除反映）
+    // ・server にあるエントリは採用。ただし local の updatedAt がより新しければ local 優先
+    //   （submitCommunityEntryToGlobal 直後など、サーバーへの反映前を保護するため）
+    const merged=arr.map(re=>{
+      const k=re.name.toLowerCase();
+      const loc=localMap.get(k);
+      if(loc&&loc.updatedAt&&re.updatedAt&&loc.updatedAt>re.updatedAt)return loc;
+      return re;
+    });
     saveCommunityList(merged);
-  }catch{}
+  }catch(e){
+    setGlobalSyncStatus("⚠️ 同期エラー",true);
+    console.error("fetchAndMergeCommunity:",e);
+  }
+}
+// スナップショット（状態タイミング）をバックエンドと定期同期
+// 責務: /community = 共有リスト本体、/snapshots = 状態共有（lastChangeAt timing）
+// ポーリングで直接取得した points/state は上書きしない。lastChangeAt timing のみ更新する
+async function fetchAndMergeSnapshots(globalUrl){
+  if(!globalUrl)return;
+  try{
+    const remote=await fetchGlobalSnapshots(globalUrl);
+    if(!remote||typeof remote!=="object")return;
+    const local=getSnapshots();
+    let changed=false;
+    for(const [key,remSnap] of Object.entries(remote)){
+      if(!remSnap||!remSnap.lastChangeAt)continue;
+      const locSnap=local[key];
+      const remLca=remSnap.lastChangeAt;
+      const locLca=locSnap?.lastChangeAt||0;
+      // remote の lastChangeAt がより新しければ timing データのみ上書き
+      // points 等の実値は直接ポーリングが正なので変更しない
+      if(remLca>locLca){
+        local[key]={
+          ...(locSnap||{}),
+          lastChangeAt:remLca,
+          lastRealChangeAt:remSnap.lastRealChangeAt||remLca,
+        };
+        changed=true;
+      }
+    }
+    if(changed)saveSnapshots(local);
+  }catch(e){
+    console.error("fetchAndMergeSnapshots:",e);
+  }
 }
 // ── グローバルバックエンド API ──────────────────────────────
 async function fetchGlobalNames(globalUrl){
@@ -315,11 +355,30 @@ async function fetchGlobalNames(globalUrl){
 async function fetchGlobalSnapshots(globalUrl){
   try{const r=await fetch(globalUrl.replace(/\/$/,"")+"/snapshots",{cache:"no-store"});if(!r.ok)return{};return await r.json();}catch{return{};}
 }
-// 書き込みリクエスト用ヘッダー（管理者パスワードハッシュを認証トークンとして付与）
+// UI エラー表示ヘルパー（#globalStatus に最大10秒表示）
+function setGlobalSyncStatus(msg,isError=false){
+  const el=document.getElementById("globalStatus");
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=isError?"#ff6b6b":"";
+  if(isError)setTimeout(()=>{if(el.textContent===msg)el.style.color="";},10000);
+}
+// 書き込みリクエスト用ヘッダー
+// 優先順位: admin hash → ログイン中 allowed user の hash → 無し（未ログイン）
 function getWriteHeaders(){
   const h={"Content-Type":"application/json"};
-  const wk=getAuthData().adminPasswordHash;
-  if(wk)h["X-Write-Key"]=wk;
+  const auth=getAuthData();
+  // admin として設定済みなら admin hash を使う
+  if(auth.adminPasswordHash){
+    h["X-Write-Key"]=auth.adminPasswordHash;
+    return h;
+  }
+  // allowed user としてログイン中なら、その user の hash を使う
+  // auth.allowedUsers は fetchAuthConfig() でバックエンドから取得済み ({id, passwordHash}[])
+  if(currentUser&&Array.isArray(auth.allowedUsers)){
+    const u=auth.allowedUsers.find(u=>u.id===currentUser.id);
+    if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+  }
   return h;
 }
 async function submitSnapshotToGlobal(globalUrl,name,snap){
@@ -329,12 +388,45 @@ async function addNameToGlobal(globalUrl,name){
   try{await fetch(globalUrl.replace(/\/$/,"")+"/names",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name})});}catch{}
 }
 // コミュニティエントリをバックエンドの /community に送信（他ユーザーへ即時反映）
+// /community は共有リスト本体のみ（status/lastSeen 等の状態は /submit で管理）
+// updatedAt / sourceUser を付与して worker 側の条件 merge を有効にする
 async function submitCommunityEntryToGlobal(globalUrl,entry){
-  try{await fetch(globalUrl.replace(/\/$/,"")+"/community",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({...entry,addedAt:entry.addedAt||Date.now()})});}catch{}
+  try{
+    const now=Date.now();
+    const payload={
+      name:       entry.name,
+      region:     entry.region     || "",
+      category:   entry.category   || "notable",
+      note:       entry.note       || "",
+      addedAt:    entry.addedAt    || now,
+      updatedAt:  entry.updatedAt  || now,  // merge 判定用タイムスタンプ
+      sourceUser: currentUser?.id  || "",   // 書き込んだユーザーID
+      // status / lastSeen は /submit (snapshots) で管理するためここには含めない
+    };
+    const r=await fetch(globalUrl.replace(/\/$/,"")+"/community",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify(payload)});
+    if(!r.ok){
+      const err=await r.json().catch(()=>({}));
+      setGlobalSyncStatus("⚠️ 追加失敗: "+(err.error||r.status),true);
+      console.error("submitCommunityEntryToGlobal HTTP",r.status,err);
+    }
+  }catch(e){
+    setGlobalSyncStatus("⚠️ 追加エラー",true);
+    console.error("submitCommunityEntryToGlobal:",e);
+  }
 }
 // コミュニティエントリをバックエンドから削除
 async function deleteCommunityEntryFromGlobal(globalUrl,name){
-  try{await fetch(globalUrl.replace(/\/$/,"")+"/community?name="+encodeURIComponent(name),{method:"DELETE",headers:getWriteHeaders()});}catch{}
+  try{
+    const r=await fetch(globalUrl.replace(/\/$/,"")+"/community?name="+encodeURIComponent(name),{method:"DELETE",headers:getWriteHeaders()});
+    if(!r.ok){
+      const err=await r.json().catch(()=>({}));
+      setGlobalSyncStatus("⚠️ 削除失敗: "+(err.error||r.status),true);
+      console.error("deleteCommunityEntryFromGlobal HTTP",r.status,err);
+    }
+  }catch(e){
+    setGlobalSyncStatus("⚠️ 削除エラー",true);
+    console.error("deleteCommunityEntryFromGlobal:",e);
+  }
 }
 // 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
 const ENCOUNTER_TYPES=[
@@ -528,11 +620,16 @@ function applyEncounterEvent(name,typeKey){
   }
 }
 function getActiveNames(){
-  if(viewMode==="global"){
-    const filtered=getFilteredCommunity(globalFilter);
-    return filtered.map(e=>e.name);
+  // 個人リストとグローバルリスト両方を常にポーリング → 状態を共有
+  const personal=parseNames(document.getElementById("namesBox").value);
+  const community=getCommunityList().map(e=>e.name);
+  const seen=new Set();
+  const all=[];
+  for(const n of [...personal,...community]){
+    const k=n.toLowerCase();
+    if(!seen.has(k)){seen.add(k);all.push(n);}
   }
-  return parseNames(document.getElementById("namesBox").value);
+  return all;
 }
 // ────────────────────────────────────────────────────────────
 function applySettingsToUi(s){
@@ -724,6 +821,14 @@ async function fetchPlayer(proxyBase,leaderboardId,platform,name){
 function renderTable(rows){
   const tbody=document.getElementById("tbody");tbody.innerHTML="";
   let filtered=rows;
+  // viewMode に応じて表示プレイヤーを絞り込む（ポーリングは両リスト共通）
+  if(viewMode==="personal"){
+    const pset=new Set(parseNames(document.getElementById("namesBox").value).map(n=>n.toLowerCase()));
+    filtered=filtered.filter(r=>pset.has(r.name.toLowerCase()));
+  }else if(viewMode==="global"){
+    const gset=new Set(getFilteredCommunity(globalFilter).map(e=>e.name.toLowerCase()));
+    filtered=filtered.filter(r=>gset.has(r.name.toLowerCase()));
+  }
   if(liveTabMode==="pickup") filtered=filtered.filter(r=>pickedUp.has(r.name.toLowerCase()));
   if(liveRegionFilter!=="all") filtered=filtered.filter(r=>(r.region||"")===liveRegionFilter);
   if(liveSearchQuery) filtered=filtered.filter(r=>r.name.toLowerCase().includes(liveSearchQuery));
@@ -757,8 +862,8 @@ function renderTable(rows){
       <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="ピックアップ（大型グラフに追加）">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
-      <td class="num">${(r.delta==null)?"—":(r.delta>=0?("+"+r.delta):r.delta)}</td>
-      <td class="tsCell">${fmtAgo(r.lastRealChangeAt)}</td>
+      <td class="num">${r.lastDelta==null?"—":r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
+      <td class="tsCell">${r.lastDelta==null?"—":fmtAgo(r.lastRealChangeAt)}</td>
       <td><span class="state ${displayState}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
@@ -862,6 +967,7 @@ async function pollOnce(names,settings){
       if(isCorsLikeError(errMsg)) anyCors=true;
     }
     let delta=null;
+    let lastDelta=prev.lastDelta??null; // 最後の非ゼロ変動値（表示固定用）
     let lastChangeAt=prev.lastChangeAt??null;
     let lastRealChangeAt=prev.lastRealChangeAt??null; // 実際のポイント変動のみ記録（表示用）
     let manualEvent=prev.manualEvent??null; // 手動遭遇記録
@@ -890,7 +996,7 @@ async function pollOnce(names,settings){
       notFoundCount=0;lastFoundAt=now;banNotified=false;suspectedReason=null;suspectedNewName=null;
       if(typeof prev.points==="number"){
         delta=currentPoints-prev.points;
-        if(delta!==0){lastChangeAt=now;lastRealChangeAt=now;pushEvent({ts:now,name,points:currentPoints,delta,inferred_state:null},settings.maxEvents);}
+        if(delta!==0){lastChangeAt=now;lastRealChangeAt=now;lastDelta=delta;pushEvent({ts:now,name,points:currentPoints,delta,inferred_state:null},settings.maxEvents);}
         // RS急落アラート
         if(delta<=-settings.rsDropThreshold){
           const prevRk=prev.leaderboardRank;
@@ -927,7 +1033,7 @@ async function pollOnce(names,settings){
     if(!manualActive)manualEvent=null;
     const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:lastChangeAt;
     const region=prev.region??"";
-    snapshots[key]={points:currentPoints,lastChangeAt,lastRealChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region,...(manualEvent?{manualEvent}:{})};
+    snapshots[key]={points:currentPoints,lastDelta,lastChangeAt,lastRealChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region,...(manualEvent?{manualEvent}:{})};
     const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
     // 状態変化をログ記録
     const prevRowState=lastRows.find(r=>r.name.toLowerCase()===key)?.state;
@@ -941,7 +1047,7 @@ async function pollOnce(names,settings){
         else if(leaving)sendNotification(`🏁 ${name} が試合終了`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
       }
     }
-    rows.push({name,points:currentPoints,delta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
+    rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
   // グローバルモード: スナップショットをバックエンドに送信（他ユーザーと共有）
@@ -1041,7 +1147,7 @@ function renderLogList(){
   for(const e of logs){
     const d=new Date(e.ts);
     const dateStr=d.toLocaleDateString(undefined,{month:"short",day:"numeric",weekday:"short"});
-    const timeStr=d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    const timeStr=d.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
     if(dateStr!==lastDate){html+=`<div class="logDateSep">${dateStr}</div>`;lastDate=dateStr;}
     const fromC=LOG_STATE_COLOR[e.from]||"#8ea0b7";
     const toC=LOG_STATE_COLOR[e.to]||"#e7edf5";
@@ -1070,12 +1176,13 @@ function renderLogTimeline(){
     .slice(0,20);
 
   const now=Date.now();
-  const allTs=allLogs.map(l=>l.ts);
-  const timeStart=Math.min(...allTs);
-  const timeEnd=now;
-  const totalDur=timeEnd-timeStart||1;
+  // 本日 00:00:00（ローカル）〜 翌 00:00:00 の固定 24 時間軸
+  const todayMidnight=new Date(now);todayMidnight.setHours(0,0,0,0);
+  const timeStart=todayMidnight.getTime();
+  const timeEnd=timeStart+24*60*60*1000;
+  const totalDur=timeEnd-timeStart; // 86400000
 
-  const rowH=22;const rowGap=5;const labelW=130;const axisH=22;const padTop=4;
+  const rowH=22;const rowGap=5;const labelW=130;const axisH=24;const padTop=16;
   const W=Math.max(el.clientWidth||600,400);
   const trackW=W-labelW-8;
   const svgH=playerNames.length*(rowH+rowGap)+axisH+padTop;
@@ -1086,13 +1193,17 @@ function renderLogTimeline(){
     const y=padTop+i*(rowH+rowGap);
     const logs=[...playerMap[name]].sort((a,b)=>a.ts-b.ts);
 
-    // セグメント計算
+    // セグメント計算（今日 0:00〜現在にクリップ）
     const segs=[];
-    // 最初のログ前の状態
-    segs.push({start:timeStart,end:logs[0].ts,state:logs[0].from});
+    if(logs[0].ts>timeStart){
+      segs.push({start:timeStart,end:Math.min(logs[0].ts,now),state:logs[0].from});
+    }
     for(let j=0;j<logs.length;j++){
-      const end=j+1<logs.length?logs[j+1].ts:timeEnd;
-      segs.push({start:logs[j].ts,end,state:logs[j].to});
+      const segStart=Math.max(logs[j].ts,timeStart);
+      const segEnd=j+1<logs.length?Math.min(logs[j+1].ts,now):Math.min(now,timeEnd);
+      if(segStart<timeEnd&&segEnd>timeStart){
+        segs.push({start:segStart,end:segEnd,state:logs[j].to});
+      }
     }
 
     // ラベル（省略）
@@ -1104,25 +1215,31 @@ function renderLogTimeline(){
       const x=labelW+((seg.start-timeStart)/totalDur)*trackW;
       const w=Math.max(((seg.end-seg.start)/totalDur)*trackW,1);
       const color=LOG_STATE_COLOR[seg.state]||"#8ea0b7";
-      const startStr=new Date(seg.start).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
-      const endStr=new Date(seg.end).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+      const startStr=new Date(seg.start).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
+      const endStr=new Date(seg.end).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
       svgRows+=`<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH}" fill="${color}" opacity="0.82" rx="2"><title>${stateLabel(seg.state)}\n${startStr} → ${endStr}</title></rect>`;
     }
     // 区切り線
     svgRows+=`<line x1="${labelW}" y1="${y+rowH+2}" x2="${W-4}" y2="${y+rowH+2}" stroke="#1e2a3a" stroke-width="1"/>`;
   });
 
-  // 時刻軸
+  // 時刻軸（2時間ごと: 00:00, 02:00, ..., 24:00）
   const axisY=padTop+playerNames.length*(rowH+rowGap)+4;
-  const numTicks=6;
   let axis=`<line x1="${labelW}" y1="${axisY}" x2="${W-4}" y2="${axisY}" stroke="#2a3a50" stroke-width="1"/>`;
-  for(let t=0;t<=numTicks;t++){
-    const x=labelW+(t/numTicks)*trackW;
-    const ts=timeStart+(t/numTicks)*totalDur;
-    const lbl=new Date(ts).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
-    axis+=`<line x1="${x.toFixed(1)}" y1="${axisY}" x2="${x.toFixed(1)}" y2="${axisY+4}" stroke="#3a4a60" stroke-width="1"/>`;
-    axis+=`<text x="${x.toFixed(1)}" y="${axisY+16}" text-anchor="middle" fill="#5a7aaa" font-size="10" font-family="system-ui,sans-serif">${lbl}</text>`;
+  for(let h=0;h<=24;h+=2){
+    const x=labelW+(h/24)*trackW;
+    const lbl=String(h%24).padStart(2,"0")+":00";
+    const isMajor=(h%6===0);
+    axis+=`<line x1="${x.toFixed(1)}" y1="${axisY}" x2="${x.toFixed(1)}" y2="${axisY+(isMajor?6:3)}" stroke="${isMajor?"#4a6a90":"#3a4a60"}" stroke-width="1"/>`;
+    if(isMajor){
+      axis+=`<text x="${x.toFixed(1)}" y="${axisY+17}" text-anchor="middle" fill="#6a8aaa" font-size="10" font-family="system-ui,sans-serif">${lbl}</text>`;
+    }
   }
+
+  // 現在時刻の垂直 NOW ライン
+  const nowX=labelW+((now-timeStart)/totalDur)*trackW;
+  axis+=`<line x1="${nowX.toFixed(1)}" y1="${padTop}" x2="${nowX.toFixed(1)}" y2="${axisY}" stroke="#ff9944" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.8"/>`;
+  axis+=`<text x="${nowX.toFixed(1)}" y="${padTop-3}" text-anchor="middle" fill="#ff9944" font-size="9" font-weight="bold" font-family="system-ui,sans-serif">NOW</text>`;
 
   // 凡例
   const legendStates=[["OFFLINE","#8ea0b7","Offline"],["LOBBY","#5b9cf6","Lobby"],["IN_MATCH","#39d98a","In Match"],["IN_TOURNAMENT_DEEP","#c77dff","Final/Tournament"],["NOT_FOUND","#ff9944","Missing"],["BANNED","#ff5555","Banned"]];
@@ -1200,12 +1317,24 @@ function doStart(){
   currentSettings=settings;
   setRunning(true);
   (function schedulePoll(){
-    pollOnce(getActiveNames(),settings).finally(()=>{
+    // グローバルリストを 120 秒ごとにバックエンドと自動同期（他ユーザーの追加を反映）
+    const now=Date.now();
+    const communitySync=settings.globalUrl&&(now-lastCommunitySync>120000)
+      // コミュニティリスト同期（追加・更新・削除） + スナップショット状態同期 を並列実行
+      ?Promise.all([
+          fetchAndMergeCommunity(settings.globalUrl),
+          fetchAndMergeSnapshots(settings.globalUrl),
+        ]).then(()=>{
+          lastCommunitySync=Date.now();
+          renderGlobalPlayerList();
+        })
+      :Promise.resolve();
+    communitySync.finally(()=>pollOnce(getActiveNames(),settings).finally(()=>{
       if(!running)return;
       const hasActive=lastRows.some(r=>["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(r.state));
       const secs=hasActive?Math.max(20,Math.floor(settings.pollIntervalSec/2)):settings.pollIntervalSec;
       timer=setTimeout(schedulePoll,secs*1000);
-    });
+    }));
   })();
 }
 // グローバルモード: バックエンドのスナップショットを取得してテーブルに先行表示
