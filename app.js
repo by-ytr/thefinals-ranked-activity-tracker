@@ -353,10 +353,8 @@ async function fetchAndMergeSnapshots(globalUrl){
       const merged={
         ...locSnap,
         ...remSnap,
-        // 手動遭遇は自端末の操作を優先
         ...(locSnap.manualEvent?{manualEvent:locSnap.manualEvent}:{}),
       };
-      // lastChangeAt が無いデータで current state が落ちるのを防ぐ
       if(!merged.lastChangeAt&&remSnap.lastChangeAt)merged.lastChangeAt=remSnap.lastChangeAt;
       if(!merged.lastRealChangeAt&&remSnap.lastRealChangeAt)merged.lastRealChangeAt=remSnap.lastRealChangeAt;
       if(!merged.lastOkAt&&rts)merged.lastOkAt=rts||now;
@@ -390,16 +388,16 @@ function setGlobalSyncStatus(msg,isError=false){
 function getWriteHeaders(){
   const h={"Content-Type":"application/json"};
   const auth=getAuthData();
-  // admin として設定済みなら admin hash を使う
   if(auth.adminPasswordHash){
     h["X-Write-Key"]=auth.adminPasswordHash;
     return h;
   }
-  // allowed user としてログイン中なら、その user の hash を使う
-  // auth.allowedUsers は fetchAuthConfig() でバックエンドから取得済み ({id, passwordHash}[])
-  if(currentUser&&Array.isArray(auth.allowedUsers)){
-    const u=auth.allowedUsers.find(u=>u.id===currentUser.id);
-    if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+  if(currentUser){
+    const allowed=getEffectiveAllowedUsers();
+    if(Array.isArray(allowed)){
+      const u=allowed.find(u=>String(u.id||"").toLowerCase()===String(currentUser.id||"").toLowerCase());
+      if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+    }
   }
   return h;
 }
@@ -566,13 +564,17 @@ async function fetchAuthConfig(globalUrl){
     const d=await r.json();
     if(Array.isArray(d.allowedUsers)){
       _backendAllowedUsers=d.allowedUsers;
-      // 復元したセッションのユーザーが削除されていたら自動ログアウト
-      if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>u.id.toLowerCase()===currentUser.id.toLowerCase())){
+      const auth=getAuthData();
+      saveAuthData({...auth,allowedUsers:d.allowedUsers});
+      if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>String(u.id||"").toLowerCase()===String(currentUser.id||"").toLowerCase())){
         setCurrentUser(null);
       }
-      updateLoginStatus(); // バックエンドリストで状態を更新
+      renderAllowedUserList();
+      updateLoginStatus();
     }
-  }catch{}
+  }catch(e){
+    console.error("fetchAuthConfig:",e);
+  }
 }
 // バックエンドに認証設定を同期（アドミンパネルのボタンから呼ぶ）
 async function syncAuthToBackend(globalUrl,adminPasswordHash,allowedUsers){
@@ -1086,16 +1088,17 @@ async function pollOnce(names,settings){
     rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
-  // グローバルモード: スナップショットをバックエンドに送信（他ユーザーと共有）
-  if(viewMode==="global"){
-    const _gs=getUiSettings();
-    const _gUrl=effectiveGlobalUrl(_gs);
-    if(_gUrl){
-      const activeKeys=new Set(getFilteredCommunity(globalFilter).map(e=>e.name.toLowerCase()));
+  // コミュニティ登録済みプレイヤーのスナップショットをバックエンドに送信（タブに関係なく共有）
+  const _gs=getUiSettings();
+  const _gUrl=effectiveGlobalUrl(_gs);
+  if(_gUrl){
+    const activeKeys=new Set(getCommunityList().map(e=>e.name.toLowerCase()));
+    if(activeKeys.size>0){
       Object.entries(snapshots).forEach(([k,s])=>{
-        if(activeKeys.size===0||activeKeys.has(k))submitSnapshotToGlobal(_gUrl,k,s);
+        if(activeKeys.has(k))submitSnapshotToGlobal(_gUrl,k,s);
       });
     }
+  }
   }
   rows.sort((a,b)=>{
     const ta=a.lastChangeAt?(now-a.lastChangeAt):1e18;
