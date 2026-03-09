@@ -49,6 +49,14 @@ async function kvGet(env, key, fallback) {
 async function kvPut(env, key, val) {
   await env.DATA.put(key, JSON.stringify(val));
 }
+function stableStringify(obj) {
+  if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
+  if (Array.isArray(obj)) return "[" + obj.map(stableStringify).join(",") + "]";
+  return "{" + Object.keys(obj).sort().map(k => JSON.stringify(k)+":"+stableStringify(obj[k])).join(",") + "}";
+}
+function sameJson(a, b) {
+  return stableStringify(a) === stableStringify(b);
+}
 // 書き込みキー検証: adminPasswordHash または allowedUser の passwordHash と一致すれば OK
 // auth 未設定の場合は誰でも書き込み可（後方互換）
 async function verifyWriteKey(request, env) {

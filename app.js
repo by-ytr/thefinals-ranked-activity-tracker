@@ -353,10 +353,8 @@ async function fetchAndMergeSnapshots(globalUrl){
       const merged={
         ...locSnap,
         ...remSnap,
-        // 手動遭遇は自端末の操作を優先
         ...(locSnap.manualEvent?{manualEvent:locSnap.manualEvent}:{}),
       };
-      // lastChangeAt が無いデータで current state が落ちるのを防ぐ
       if(!merged.lastChangeAt&&remSnap.lastChangeAt)merged.lastChangeAt=remSnap.lastChangeAt;
       if(!merged.lastRealChangeAt&&remSnap.lastRealChangeAt)merged.lastRealChangeAt=remSnap.lastRealChangeAt;
       if(!merged.lastOkAt&&rts)merged.lastOkAt=rts||now;
@@ -390,16 +388,20 @@ function setGlobalSyncStatus(msg,isError=false){
 function getWriteHeaders(){
   const h={"Content-Type":"application/json"};
   const auth=getAuthData();
-  // admin として設定済みなら admin hash を使う
   if(auth.adminPasswordHash){
     h["X-Write-Key"]=auth.adminPasswordHash;
     return h;
   }
-  // allowed user としてログイン中なら、その user の hash を使う
-  // auth.allowedUsers は fetchAuthConfig() でバックエンドから取得済み ({id, passwordHash}[])
-  if(currentUser&&Array.isArray(auth.allowedUsers)){
-    const u=auth.allowedUsers.find(u=>u.id===currentUser.id);
-    if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+  if(currentUser){
+    const allowed=getEffectiveAllowedUsers();
+    if(Array.isArray(allowed)){
+      const u=allowed.find(u=>u.id&&u.id.toLowerCase()===currentUser.id.toLowerCase());
+      if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+    }
+    if(!h["X-Write-Key"]&&Array.isArray(auth.allowedUsers)){
+      const u=auth.allowedUsers.find(u=>u.id&&u.id.toLowerCase()===currentUser.id.toLowerCase());
+      if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+    }
   }
   return h;
 }
@@ -422,6 +424,38 @@ async function submitSnapshotToGlobal(globalUrl,name,snap){
 }
 async function addNameToGlobal(globalUrl,name){
   try{await fetch(globalUrl.replace(/\/$/,"")+"/names",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name})});}catch{}
+}
+// 状態共有の送信回数を減らすため、前回送信内容と同一なら /submit をスキップ
+const snapshotSubmitCache=new Map();
+function buildSnapshotSubmitPayload(snap){
+  return {
+    points:snap?.points??null,
+    lastDelta:snap?.lastDelta??null,
+    lastChangeAt:snap?.lastChangeAt??null,
+    lastRealChangeAt:snap?.lastRealChangeAt??null,
+    lastOkAt:snap?.lastOkAt??null,
+    leaderboardRank:snap?.leaderboardRank??null,
+    league:snap?.league??null,
+    region:snap?.region??"",
+    notFoundCount:snap?.notFoundCount??0,
+    lastFoundAt:snap?.lastFoundAt??null,
+    suspectedReason:snap?.suspectedReason??null,
+    suspectedNewName:snap?.suspectedNewName??null,
+    manualEvent:snap?.manualEvent??null,
+  };
+}
+function shouldSubmitSnapshot(name,snap){
+  const payload=buildSnapshotSubmitPayload(snap);
+  const serialized=JSON.stringify(payload);
+  const prev=snapshotSubmitCache.get(name);
+  if(prev===serialized)return null;
+  snapshotSubmitCache.set(name,serialized);
+  return payload;
+}
+async function maybeSubmitSnapshotToGlobal(globalUrl,name,snap){
+  const payload=shouldSubmitSnapshot(name,snap);
+  if(!payload)return false;
+  return submitSnapshotToGlobal(globalUrl,name,payload);
 }
 // コミュニティエントリをバックエンドの /community に送信（他ユーザーへ即時反映）
 // /community は共有リスト本体のみ（status/lastSeen 等の状態は /submit で管理）
@@ -566,11 +600,14 @@ async function fetchAuthConfig(globalUrl){
     const d=await r.json();
     if(Array.isArray(d.allowedUsers)){
       _backendAllowedUsers=d.allowedUsers;
-      // 復元したセッションのユーザーが削除されていたら自動ログアウト
+      const auth=getAuthData();
+      auth.allowedUsers=d.allowedUsers;
+      saveAuthData(auth);
       if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>u.id.toLowerCase()===currentUser.id.toLowerCase())){
         setCurrentUser(null);
       }
-      updateLoginStatus(); // バックエンドリストで状態を更新
+      renderAllowedUserList();
+      updateLoginStatus();
     }
   }catch{}
 }
@@ -1085,33 +1122,18 @@ async function pollOnce(names,settings){
     }
     rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
-  saveSnapshots(snapshots);
-  // グローバルモード: スナップショットをバックエンドに送信（他ユーザーと共有）
-  if(viewMode==="global"){
+  saveSnapshots(snapshots);  // community 登録済みプレイヤーの状態は、表示タブに関係なくバックエンドへ共有
+  {
     const _gs=getUiSettings();
     const _gUrl=effectiveGlobalUrl(_gs);
     if(_gUrl){
-      const activeKeys=new Set(getFilteredCommunity(globalFilter).map(e=>e.name.toLowerCase()));
-      Object.entries(snapshots).forEach(([k,s])=>{
-        if(activeKeys.size===0||activeKeys.has(k))submitSnapshotToGlobal(_gUrl,k,s);
-      });
+      const activeKeys=new Set(getCommunityList().map(e=>e.name.toLowerCase()));
+      if(activeKeys.size>0){
+        Object.entries(snapshots).forEach(([k,s])=>{
+          if(activeKeys.has(k))maybeSubmitSnapshotToGlobal(_gUrl,k,s);
+        });
+      }
     }
-  }
-  rows.sort((a,b)=>{
-    const ta=a.lastChangeAt?(now-a.lastChangeAt):1e18;
-    const tb=b.lastChangeAt?(now-b.lastChangeAt):1e18;
-    if(ta!==tb)return ta-tb;
-    return a.name.localeCompare(b.name);
-  });
-  document.getElementById("lastPoll").textContent=new Date(now).toLocaleTimeString();
-  if(anyCors) setNetHint("CORSっぽい失敗あり → ローカル環境の場合は worker.js をデプロイして使用してください");
-  else setNetHint("");
-  lastRows=rows; // 遭遇ボタンの即時再描画用にキャッシュ
-  renderTable(rows);renderSpark(rows);renderBanList(rows);renderPickupGraph();
-  // リロード後スクロール位置をテーブル描画完了後に復元（1フレーム後）
-  if(pendingScrollY!==null){
-    const y=pendingScrollY;pendingScrollY=null;
-    requestAnimationFrame(()=>window.scrollTo({top:y,behavior:"instant"}));
   }
 }
 function csvEscape(s){const t=String(s??"");if(/[",\n]/.test(t))return '"'+t.replaceAll('"','""')+'"';return t;}
@@ -1358,13 +1380,7 @@ function doStart(){
   const settings=getUiSettings();saveSettings(settings);
   const names=getActiveNames();
   if(names.length===0)return;
-  if(viewMode==="personal"){
-    // namesBox の内容だけを保存（community との union を保存すると community players が
-    // namesBox に混入してしまうため、ここでは personal 分のみを対象にする）
-    const personalOnly=parseNames(document.getElementById("namesBox").value);
-    try{saveNamesToUrl(personalOnly);}catch{}
-    saveNamesToLocal(personalOnly);
-  }
+  if(viewMode==="personal"){try{saveNamesToUrl(names);}catch{}saveNamesToLocal(names);}
   currentSettings=settings;
   setRunning(true);
   (function schedulePoll(){
@@ -1392,29 +1408,26 @@ function doStart(){
 async function preloadRemoteSnapshots(settings){
   const remote=await fetchGlobalSnapshots(effectiveGlobalUrl(settings));
   if(!remote||typeof remote!=="object")return;
+  // リモートの lastChangeAt をローカルスナップショットにマージ（初回観測時のズレ防止）
   const localSnaps=getSnapshots();
   let snapshotsMerged=false;
-  const remoteTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,s?.updatedAt||0,0);
-  const localTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,0);
   for(const [key,remSnap] of Object.entries(remote)){
-    if(!remSnap||typeof remSnap!=="object")continue;
-    const loc=localSnaps[key]||{};
-    if(remoteTs(remSnap) >= localTs(loc)){
-      localSnaps[key]={...loc,...remSnap,...(loc.manualEvent?{manualEvent:loc.manualEvent}:{})};
-      snapshotsMerged=true;
+    if(remSnap&&remSnap.lastChangeAt){
+      if(!localSnaps[key])localSnaps[key]={points:null,lastChangeAt:null};
+      if(!localSnaps[key].lastChangeAt){
+        localSnaps[key]={...localSnaps[key],lastChangeAt:remSnap.lastChangeAt,lastRealChangeAt:remSnap.lastRealChangeAt??remSnap.lastChangeAt};
+        snapshotsMerged=true;
+      }
     }
   }
   if(snapshotsMerged)saveSnapshots(localSnaps);
   const names=getActiveNames();
   const now=Date.now();
   const rows=names.map(name=>{
-    const snap=(localSnaps[name.toLowerCase()]||remote[name.toLowerCase()]);
+    const snap=remote[name.toLowerCase()];
     if(!snap||snap.points==null)return null;
-    const manualEvent=snap.manualEvent??null;
-    const manualActive=isManualActive(manualEvent);
-    const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:(snap.lastChangeAt??null);
-    const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
-    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
+    const inf=inferState(now,snap.lastChangeAt,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,false);
+    return {name,points:snap.points,delta:null,lastChangeAt:snap.lastChangeAt,effectiveLCA:snap.lastChangeAt,manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt,leaderboardRank:snap.leaderboardRank,league:snap.league,region:snap.region,notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
   }).filter(Boolean);
   if(rows.length>0&&lastRows.length===0){lastRows=rows;renderTable(rows);renderSpark(rows);}
 }
@@ -1430,10 +1443,7 @@ async function switchToGlobal(){
   // バックエンドがあればリモートとマージ
   if(effectiveGlobalUrl(settings)){
     document.getElementById("globalStatus").textContent="🌐 同期中...";
-    await Promise.all([
-      fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
-      fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
-    ]);
+    await fetchAndMergeCommunity(effectiveGlobalUrl(settings));
   }
   renderGlobalPlayerList();
   const total=getCommunityList().length;
@@ -1832,10 +1842,6 @@ async function init(){
     if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast("そのIDは既に登録されています");return;}
     auth.allowedUsers.push({id,passwordHash:await sha256(pw)});
     saveAuthData(auth);
-    // バックエンドキャッシュを無効化してローカルリストにフォールバックさせる。
-    // fetchAuthConfig がページロード時に _backendAllowedUsers=[] をセットしているため、
-    // null に戻さないと作成直後のログイン照合でバックエンドの空リストが使われてしまう。
-    _backendAllowedUsers=null;
     document.getElementById("newUserId").value="";
     document.getElementById("newUserPassword").value="";
     renderAllowedUserList();
