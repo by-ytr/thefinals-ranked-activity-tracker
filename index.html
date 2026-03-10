@@ -3,7 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>THE FINALS – Ranked Activity Tracker</title>
+
+  <title>THE FINALS Ranked Activity Tracker | Avoid Known Cheaters</title>
+  <meta name="description" content="Track ranked players in THE FINALS with live lobby status, point history, server tags, and tools to help avoid known cheaters." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://your-domain.example/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="THE FINALS Ranked Activity Tracker | Avoid Known Cheaters" />
+  <meta property="og:description" content="Track ranked players in THE FINALS with live lobby status, point history, server tags, and tools to help avoid known cheaters." />
+  <meta property="og:url" content="https://your-domain.example/" />
+  <meta property="og:site_name" content="THE FINALS Ranked Activity Tracker" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="THE FINALS Ranked Activity Tracker | Avoid Known Cheaters" />
+  <meta name="twitter:description" content="Track ranked players in THE FINALS with live lobby status, point history, server tags, and tools to help avoid known cheaters." />
+
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#1a2a40" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -12,6 +27,16 @@
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="style.css" />
   <script src="i18n.js"></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "THE FINALS Ranked Activity Tracker",
+    "url": "https://your-domain.example/",
+    "description": "Track ranked players in THE FINALS with live lobby status, point history, server tags, and tools to help avoid known cheaters."
+  }
+  </script>
 </head>
 <body>
   <header class="bar">
@@ -106,7 +131,6 @@
         </table>
       </div>
     </section>
-
 
     <!-- ③.5 Pickup グラフ（★ ピックアップ時のみ表示） -->
     <section class="card" id="pickupSection" style="display:none">
@@ -243,7 +267,6 @@
           </div>
         </div>
 
-        <!-- ── アクセス管理（右上ボタンから開くモーダルに移動） ── -->
         <div class="advSection">
           <div class="advLabel" data-i18n="adv.access.title">🔐 アクセス管理</div>
           <button onclick="document.getElementById('adminModal').style.display='flex'" style="margin-top:6px;font-size:12px;" data-i18n="adv.access.open">アカウント管理を開く →</button>
@@ -253,7 +276,6 @@
       <div id="toast" class="toast" aria-live="polite"></div>
     </section>
 
-    <!-- ④.5 状態変化ログ -->
     <section class="card">
       <details>
         <summary style="cursor:pointer;font-weight:700;color:#b8c4d6;padding:4px 0;font-size:13px;">
@@ -269,7 +291,6 @@
       </details>
     </section>
 
-    <!-- ⑤ 追加されたプレイヤー -->
     <section class="card">
       <div class="modeTabs">
         <button id="tabPersonal" class="modeTab active" data-i18n="tab.personal">👤 自分のリスト</button>
@@ -291,13 +312,11 @@ playerB#5678"></textarea>
         <div id="banAlertList" class="banAlertList"></div>
       </div>
       <div id="globalListView" style="display:none">
-        <!-- ログイン状態バー -->
         <div id="loginStatusBar" style="display:none;align-items:center;gap:8px;margin-top:6px;margin-bottom:2px;flex-wrap:wrap;">
           <span id="loginStatusText" style="font-size:12px;color:#b8c4d6;"></span>
           <button id="btnLogout" style="display:none;padding:3px 10px;font-size:11px;border-radius:999px;" data-i18n="btn.logout">ログアウト</button>
         </div>
         <div id="globalStatus" class="hint" style="margin-top:4px">—</div>
-        <!-- 地域フィルタータブ -->
         <div class="regionTabs" style="margin-top:10px">
           <button class="regionTab active" data-region="all" data-i18n="region.all">🌐 全て</button>
           <button class="regionTab" data-region="AS">🌏 AS</button>
@@ -305,7 +324,6 @@ playerB#5678"></textarea>
           <button class="regionTab" data-region="NA">🌎 NA</button>
         </div>
         <div id="globalPlayerList" class="globalPlayerList"></div>
-        <!-- 追加フォーム -->
         <details class="communityAddWrap" style="margin-top:12px">
           <summary class="communityAddSummary" data-i18n="global.add.summary">＋ チーター / 注目プレイヤーを報告・追加</summary>
           <div class="communityAddForm">
@@ -338,12 +356,12 @@ playerB#5678"></textarea>
       <span>🇯🇵 バグ報告・フィードバックはこちら: <strong>Discord: yatoru</strong></span>
       <span>🇰🇷 버그 제보 및 피드백: <strong>Discord: yatoru</strong></span>
       <span>🇨🇳 错误报告或反馈请联系: <strong>Discord: yatoru</strong></span>
+      <span>🇪🇳 Avoid known cheaters with live ranked activity, server tags, and shared watchlists.</span>
     </div>
     <div class="footerSub">Data source: the-finals-leaderboard API (via proxy if needed).</div>
   </footer>
   <div id="globalTooltip" class="globalTooltip" role="tooltip" aria-hidden="true"></div>
 
-  <!-- ── ログインモーダル ── -->
   <div id="loginModal" class="loginModalOverlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
     <div class="loginModalBox">
       <div class="loginModalTitle" id="loginModalTitle" data-i18n="modal.login.title">🔐 ログイン</div>
@@ -365,7 +383,6 @@ playerB#5678"></textarea>
     </div>
   </div>
 
-  <!-- アカウント管理モーダル -->
   <div id="adminModal" class="loginModalOverlay" style="display:none;" role="dialog" aria-modal="true">
     <div class="loginModalBox" style="max-width:460px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
