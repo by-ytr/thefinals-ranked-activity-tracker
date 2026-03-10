@@ -36,7 +36,7 @@ function buildPlayerSparkEl(row){
     barsEl.appendChild(bar);
   }
   const axisEl=document.createElement("div");axisEl.className="psAxis";
-  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"莉・:"+"+m+"m";axisEl.appendChild(s);});
+  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"Now":"+"+m+"m";axisEl.appendChild(s);});
   wrap.appendChild(barsEl);wrap.appendChild(axisEl);
   return wrap;
 }
