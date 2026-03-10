@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
 
   // Worker 名は Cloudflare Dashboard の Workers 一覧と一致させること
-  "name": "ranked-activity-tracker",
+  "name": "finals-tracker",
 
   // Worker のエントリポイント（ES module 形式 export default { fetch } を使用）
   "main": "worker.js",
