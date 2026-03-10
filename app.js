@@ -1824,12 +1824,16 @@ async function init(){
     document.getElementById("communityNote").value="";
     toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
     // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
-    const settings=getUiSettings();
-    if(effectiveGlobalUrl(settings))await submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),entry);
-    renderGlobalPlayerList();
-    const total=getCommunityList().length;
-    document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
-    if(viewMode==="global")doStart();
+   const settings=getUiSettings();
+const gUrl=effectiveGlobalUrl(settings);
+if(gUrl){
+  await submitCommunityEntryToGlobal(gUrl,entry);
+  await fetchAndMergeCommunity(gUrl);
+}
+renderGlobalPlayerList();
+const total=getCommunityList().length;
+document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+if(viewMode==="global")doStart();
   });
   // 設定の自動保存（リロード・タブ閉じ時にも反映）
   window.addEventListener("beforeunload",()=>{try{saveSettings(getUiSettings());}catch{}});
