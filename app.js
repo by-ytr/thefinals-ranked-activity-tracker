@@ -2017,4 +2017,3 @@ async function pollLeaderboardEstimator(settings){
 }
 
 ;
-
