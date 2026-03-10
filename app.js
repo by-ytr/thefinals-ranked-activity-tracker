@@ -1804,37 +1804,45 @@ async function init(){
       if(running&&currentSettings)pollOnce(getActiveNames(),currentSettings);
     });
   });
-  // コミュニティ追加フォーム
-  document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
-    // 認証チェック：許可ユーザーが設定済みで未ログインならモーダルを表示
-    if(getEffectiveAllowedUsers().length>0&&!isLoggedIn()){
-      showLoginModal(()=>document.getElementById("btnCommunityAdd").click());
-      return;
+// コミュニティ追加フォーム
+document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
+  if(getEffectiveAllowedUsers().length>0&&!isLoggedIn()){
+    showLoginModal(()=>document.getElementById("btnCommunityAdd").click());
+    return;
+  }
+  const name=(document.getElementById("communityName").value||"").trim();
+  if(!name){toast("名前を入力してください");return;}
+
+  const entry={
+    name,
+    region:document.getElementById("communityRegion").value,
+    category:document.getElementById("communityCategory").value,
+    note:(document.getElementById("communityNote").value||"").trim(),
+  };
+
+  addCommunityEntry(entry);
+  renderGlobalPlayerList();
+
+  document.getElementById("communityName").value="";
+  document.getElementById("communityNote").value="";
+  toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
+
+  const settings=getUiSettings();
+  const gUrl=effectiveGlobalUrl(settings);
+  if(gUrl){
+    try{
+      await submitCommunityEntryToGlobal(gUrl,entry);
+      await fetchAndMergeCommunity(gUrl);
+      renderGlobalPlayerList();
+    }catch(e){
+      setGlobalSyncStatus("ローカルには追加済み / 共有反映は未完了",true);
     }
-    const name=(document.getElementById("communityName").value||"").trim();
-    if(!name){toast("名前を入力してください");return;}
-    const entry={
-      name,
-      region:document.getElementById("communityRegion").value,
-      category:document.getElementById("communityCategory").value,
-      note:(document.getElementById("communityNote").value||"").trim(),
-    };
-    addCommunityEntry(entry);
-    document.getElementById("communityName").value="";
-    document.getElementById("communityNote").value="";
-    toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
-    // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
-   const settings=getUiSettings();
-const gUrl=effectiveGlobalUrl(settings);
-if(gUrl){
-  await submitCommunityEntryToGlobal(gUrl,entry);
-  await fetchAndMergeCommunity(gUrl);
-}
-renderGlobalPlayerList();
-const total=getCommunityList().length;
-document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
-if(viewMode==="global")doStart();
-  });
+  }
+
+  const total=getCommunityList().length;
+  document.getElementById("globalStatus").textContent=`合計${total}人`;
+  if(viewMode==="global")doStart();
+});
   // 設定の自動保存（リロード・タブ閉じ時にも反映）
   window.addEventListener("beforeunload",()=>{try{saveSettings(getUiSettings());}catch{}});
   // よく変更するマッチ設定入力を変更したら即保存
