@@ -1,28 +1,29 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
 
-  // Worker 名は Cloudflare Dashboard の Workers 一覧と一致させること
+  // Worker 名
   "name": "ranked-activity-tracker",
 
-  // Worker のエントリポイント（ES module 形式 export default { fetch } を使用）
+  // エントリポイント
   "main": "worker.js",
 
-  // Cloudflare bot が設定した日付を維持
+  // 互換日付
   "compatibility_date": "2025-09-27",
 
-  // Node.js 互換モード（fetch / crypto 等）
+  // Node.js 互換
   "compatibility_flags": ["nodejs_compat"],
 
-  // 静的ファイル（index.html / app.js / style.css 等）を配信
+  // 静的ファイル配信
   "assets": {
     "directory": "."
   },
 
-  // Cloudflare Workers の可観測性
+  // 可観測性
   "observability": {
     "enabled": true
   },
 
+  // Durable Objects
   "durable_objects": {
     "bindings": [
       {
@@ -32,18 +33,17 @@
     ]
   },
 
+  // Durable Objects migration
   "migrations": [
     {
-      "tag": "v1-snapshot-do",
-      "new_sqlite_classes": ["SnapshotStateDO"]
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "SnapshotStateDO"
+      ]
     }
   ],
 
-  // KV Namespace バインディング
-  // binding 名は worker.js 内で env.DATA として参照されているため変更不可
-  // ▼ id の確認手順:
-  //   Cloudflare Dashboard → Workers & Pages → KV
-  //   → 該当 Namespace の右に表示される「Namespace ID」をコピーして貼り付ける
+  // KV Namespace
   "kv_namespaces": [
     {
       "binding": "DATA",
