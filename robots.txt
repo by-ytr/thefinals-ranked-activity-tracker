@@ -1,0 +1,4 @@
+﻿User-agent: *
+Allow: /
+
+Sitemap: https://thefinals-ranked-activity-tracker.yatoru19.workers.dev/sitemap.xml
