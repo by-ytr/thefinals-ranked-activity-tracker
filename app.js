@@ -80,7 +80,7 @@ function buildExpandRow(r,key){
     }else{
       const btn=document.createElement("button");
       btn.className="encounterBtn"+(et.key==="offline"?" encounterBtn--offline":"");
-      btn.title=et.desc;btn.textContent=et.label+(et.overrideDurationMs?" ("+Math.round(et.overrideDurationMs/60000)+"蛻・":"");
+      btn.title=et.desc;btn.textContent=et.label+(et.overrideDurationMs?" ("+Math.round(et.overrideDurationMs/60000)+"m)":"");
       btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);});
       btns.appendChild(btn);
     }
@@ -92,7 +92,7 @@ function buildExpandRow(r,key){
     const rem=manualRem(r.manualEvent);
     const activeEl=document.createElement("div");activeEl.className="encounterActive";
     const et=findEncounterType(r.manualEvent.type);
-    activeEl.innerHTML="東 <b>"+(et?et.label:r.manualEvent.type)+"</b> 險倬鹸荳ｭ繝ｻ谿・<b>"+rem+"蛻・/b> 蜆ｪ蜈井ｺ域ｸｬ";
+    activeEl.innerHTML="📌 <b>"+(et?et.label:r.manualEvent.type)+"</b> recording in progress · remaining <b>"+rem+"m</b>";
     panel.appendChild(activeEl);
   }
   td.appendChild(panel);
@@ -108,7 +108,7 @@ if(evts.length>=2){
   const latestPts=pts[pts.length-1];
   const startPts=pts[0];
   const diffPts=(latestPts!=null&&startPts!=null)?latestPts-startPts:null;
-  chartTitle.innerHTML=`<span>嶋 繝昴う繝ｳ繝域耳遘ｻ・育峩霑・{evts.length}蝗橸ｼ・/span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
+    chartTitle.innerHTML=`<span>📈 Point History (${evts.length})</span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
   const canvas=document.createElement("canvas");
   canvas.width=520;canvas.height=140;
   canvas.style.cssText="width:100%;max-width:520px;height:140px;display:block;border-radius:8px;background:#091626;border:1px solid #16314f;";
