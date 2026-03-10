@@ -830,7 +830,7 @@ function stateExplain(row,displayState){
     case "LOBBY": return "試合終了後の待機中と推定。次の試合開始候補です。";
     case "IN_MATCH": return "R1試合中と推定。次の更新までは試合継続扱いです。";
     case "IN_TOURNAMENT_DEEP": return "R2以降の試合中と推定。Final進行中の可能性を含みます。";
-    case "RETURNING": return "Final Round終了後の戻り時間帯を推定中。次の更新待ちです。";
+    case "RETURNING": return "Final Round終了後、まもなくロビーに戻る状態と推定。";
     case "OFFLINE": return "最近の更新がなく、現在は非アクティブと推定。";
     case "UNKNOWN": return "情報不足のため状態を判定できません。";
     case "NOT_FOUND": return "リーダーボードで連続未検出。BANまたは名前変更の可能性があります。";
