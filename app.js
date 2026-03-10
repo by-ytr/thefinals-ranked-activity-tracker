@@ -885,14 +885,27 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
   const tMin = (now - lastChangeAtMs) / 60000;
   const X = reflectDelayMin;
 
-  if(!skipOffline20){
-    // ① バッチ検出済み：lastBatchAt が lastChangeAt より 5分以上新しい
-    //    → 最新バッチでこのプレイヤーのポイント変動なし = OFFLINE確定
-    const lastBatch = estimator.lastBatchAt;
-    const BATCH_BUF_MS = 5 * 60 * 1000; // ポーリングズレ吸収バッファ
-    if(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS){
-      return { state:"OFFLINE", nextMatchProb:0 };
-    }
+if(!skipOffline20){
+  const lastBatch=estimator.lastBatchAt;
+  const BATCH_BUF_MS=5*60*1000;
+
+  const W=Math.max(0,Math.min(30,matchWaitMin??5));
+  const M=Math.max(20,Math.min(60,matchAvgMin||31));
+  const J=Math.max(0,Math.min(10,matchJitterMin??3));
+  const T=Math.max(M+W+5,Math.min(180,tournamentTotalMin||70));
+
+  const lobbyWindowEnd = reflectDelayMin + W;
+
+  const shouldOfflineByBatch =
+    lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS && tMin <= lobbyWindowEnd;
+
+  const shouldOfflineByTimeout =
+    !lastBatch && tMin >= 20 && tMin <= lobbyWindowEnd;
+
+  if(shouldOfflineByBatch || shouldOfflineByTimeout){
+    return { state:"OFFLINE", nextMatchProb:0 };
+  }
+}
     // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック（20分固定）
     if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
   }
@@ -1824,12 +1837,16 @@ async function init(){
     document.getElementById("communityNote").value="";
     toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
     // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
-    const settings=getUiSettings();
-    if(effectiveGlobalUrl(settings))await submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),entry);
-    renderGlobalPlayerList();
-    const total=getCommunityList().length;
-    document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
-    if(viewMode==="global")doStart();
+const settings=getUiSettings();
+const gUrl=effectiveGlobalUrl(settings);
+if(gUrl){
+  await submitCommunityEntryToGlobal(gUrl,entry);
+  await fetchAndMergeCommunity(gUrl);
+}
+renderGlobalPlayerList();
+const total=getCommunityList().length;
+document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+if(viewMode==="global")doStart();
   });
   // 設定の自動保存（リロード・タブ閉じ時にも反映）
   window.addEventListener("beforeunload",()=>{try{saveSettings(getUiSettings());}catch{}});
