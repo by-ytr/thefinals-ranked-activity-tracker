@@ -1,9 +1,9 @@
-﻿<!doctype html>
-<html lang="en">
+<!doctype html>
+<html lang="ja">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>THE FINALS 窶・Ranked Activity Tracker</title>
+  <title>THE FINALS – Ranked Activity Tracker</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#1a2a40" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -12,73 +12,34 @@
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="style.css" />
   <script src="i18n.js"></script>
-  <title>THE FINALS Ranked Activity Tracker | Lobby, In Match, Offline</title>
-  <meta name="description" content="Track THE FINALS ranked players and estimate whether they are in Lobby, In Match, Final Round, or Offline. Includes global player sharing, status logs, and point history." />
-  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
-  <link rel="canonical" href="https://thefinals-ranked-activity-tracker.yatoru19.workers.dev/" />
-  <link rel="alternate" hreflang="en" href="https://thefinals-ranked-activity-tracker.yatoru19.workers.dev/" />
-  <link rel="alternate" hreflang="x-default" href="https://thefinals-ranked-activity-tracker.yatoru19.workers.dev/" />
-
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="THE FINALS Ranked Activity Tracker" />
-  <meta property="og:description" content="Track ranked player activity in THE FINALS and estimate Lobby, In Match, Final Round, or Offline states." />
-  <meta property="og:url" content="https://thefinals-ranked-activity-tracker.yatoru19.workers.dev/" />
-  <meta property="og:site_name" content="THE FINALS Ranked Activity Tracker" />
-
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="THE FINALS Ranked Activity Tracker" />
-  <meta name="twitter:description" content="Track ranked player activity in THE FINALS and estimate Lobby, In Match, Final Round, or Offline states." />
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "THE FINALS Ranked Activity Tracker",
-    "applicationCategory": "GameApplication",
-    "operatingSystem": "Web",
-    "url": "https://thefinals-ranked-activity-tracker.yatoru19.workers.dev/",
-    "description": "A web tracker for THE FINALS ranked players that estimates Lobby, In Match, Final Round, and Offline states."
-  }
-  </script>
 </head>
 <body>
-<section class="seoIntro" style="max-width:980px;margin:20px auto;padding:16px 20px;border:1px solid #223248;border-radius:12px;background:#0f1722;color:#d9e3f0;">
-  <h1 style="margin:0 0 10px 0;font-size:28px;">THE FINALS Ranked Activity Tracker</h1>
-  <p style="margin:0 0 8px 0;line-height:1.6;">
-    Track ranked players in THE FINALS and estimate whether they are in Lobby,
-    In Match, Final Round, or Offline based on leaderboard activity.
-  </p>
-  <p style="margin:0;line-height:1.6;">
-    The tracker includes personal lists, global player sharing, status logs,
-    and point history for monitored players.
-  </p>
-</section>
   <header class="bar">
     <div class="left">
-      <div class="title">THE FINALS 窶・Ranked Activity Tracker</div>
-      <div class="sub" data-i18n="site.sub">螟夜Κ繝ｪ繝ｼ繝繝ｼ繝懊・繝峨・譖ｴ譁ｰ縺九ｉ豢ｻ蜍慕憾諷九ｒ謗ｨ螳壹＠縺ｾ縺吶・/div>
+      <div class="title">THE FINALS – Ranked Activity Tracker</div>
+      <div class="sub" data-i18n="site.sub">外部リーダーボードの更新から活動状態を推定します。</div>
     </div>
     <div class="right">
       <div class="meta">
         <span id="statusDot" class="dot off"></span>
         <span id="runState">stopped</span>
-        <span class="sep">ﾂｷ</span>
+        <span class="sep">·</span>
         <span>last poll:</span>
-        <span id="lastPoll">窶・/span>
+        <span id="lastPoll">—</span>
       </div>
       <div class="meta2"><span id="netHint" class="hintTop"></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-        <button id="btnNotify" title="騾夂衍OFF・医け繝ｪ繝・け縺ｧON・・ style="background:none;border:1px solid #1e2e40;border-radius:999px;padding:3px 10px;font-size:13px;cursor:pointer;color:#5a7aaa;opacity:0.45;transition:opacity .15s;" aria-label="騾夂衍">粕</button>
+        <button id="btnNotify" title="通知OFF（クリックでON）" style="background:none;border:1px solid #1e2e40;border-radius:999px;padding:3px 10px;font-size:13px;cursor:pointer;color:#5a7aaa;opacity:0.45;transition:opacity .15s;" aria-label="通知">🔔</button>
         <div class="langSwitcher" style="margin-top:0;">
-          <button class="langBtn" data-lang="ja">譌･譛ｬ隱・/button>
-          <button class="langBtn" data-lang="ko">﨑懋ｵｭ・ｴ</button>
+          <button class="langBtn" data-lang="ja">日本語</button>
+          <button class="langBtn" data-lang="ko">한국어</button>
           <button class="langBtn" data-lang="en">English</button>
         </div>
         <div id="headerAuthBtns" style="display:flex;gap:8px;align-items:center;">
           <span id="headerUserInfo" style="display:none;font-size:12px;color:#7eb8ff;font-weight:600;"></span>
-          <button id="btnHeaderLogout" class="headerAuthBtn" style="display:none;" data-i18n="btn.logout">繝ｭ繧ｰ繧｢繧ｦ繝・/button>
-          <button id="btnHeaderLogin" class="headerAuthBtn" data-i18n="btn.login">繝ｭ繧ｰ繧､繝ｳ</button>
-          <button id="btnHeaderAdmin" class="headerAuthBtn primary" data-i18n="btn.admin">繧｢繧ｫ繧ｦ繝ｳ繝井ｽ懈・</button>
+          <button id="btnHeaderLogout" class="headerAuthBtn" style="display:none;" data-i18n="btn.logout">ログアウト</button>
+          <button id="btnHeaderLogin" class="headerAuthBtn" data-i18n="btn.login">ログイン</button>
+          <button id="btnHeaderAdmin" class="headerAuthBtn primary" data-i18n="btn.admin">アカウント作成</button>
         </div>
       </div>
     </div>
@@ -86,7 +47,7 @@
 
   <main class="wrap">
 
-    <!-- 竭 Search hero -->
+    <!-- ① Search hero -->
     <div class="searchHero">
       <div class="bigSearchWrap">
         <div class="bigSearchBar">
@@ -96,33 +57,33 @@
         </div>
         <div id="searchDropdown" class="suggestions"></div>
       </div>
-      <div class="searchHint" data-i18n="search.hint">Embark ID &nbsp;ﾂｷ&nbsp; Steam &nbsp;ﾂｷ&nbsp; PSN &nbsp;ﾂｷ&nbsp; Xbox &nbsp;縺ｫ蟇ｾ蠢懊りｿｽ蜉縺吶ｋ縺ｨ閾ｪ蜍輔〒逶｣隕夜幕蟋九・/div>
+      <div class="searchHint" data-i18n="search.hint">Embark ID &nbsp;·&nbsp; Steam &nbsp;·&nbsp; PSN &nbsp;·&nbsp; Xbox &nbsp;に対応。追加すると自動で監視開始。</div>
     </div>
 
-    <!-- 竭｡ Live table -->
+    <!-- ② Live table -->
     <section class="card">
       <div class="row between" style="margin-bottom:8px">
         <div>
           <div class="h2" data-i18n="live.title">Live table</div>
-          <div class="hint" data-i18n="live.hint">points 縺・N/A・嗟eaderboard 縺ｫ縺・↑縺・/ season驕輔＞ / CORS縲・/div>
+          <div class="hint" data-i18n="live.hint">points が N/A：leaderboard にいない / season違い / CORS。</div>
         </div>
         <div class="row tight">
           <button id="btnClear" class="danger" data-i18n="btn.clear">Clear local data</button>
         </div>
       </div>
       <div class="modeTabs" style="margin-bottom:6px">
-        <button id="liveTabPersonal" class="modeTab active" data-i18n="tab.personal">側 閾ｪ蛻・・繝ｪ繧ｹ繝・/button>
-        <button id="liveTabGlobal" class="modeTab" data-i18n="tab.global">倹 繧ｰ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝・/button>
-        <button id="liveTabPickup" class="modeTab" data-i18n="tab.pickup">箝・豕ｨ逶ｮ</button>
+        <button id="liveTabPersonal" class="modeTab active" data-i18n="tab.personal">👤 自分のリスト</button>
+        <button id="liveTabGlobal" class="modeTab" data-i18n="tab.global">🌐 グローバルリスト</button>
+        <button id="liveTabPickup" class="modeTab" data-i18n="tab.pickup">⭐ 注目</button>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <div class="regionTabs" id="liveRegionTabs" style="margin:0">
-          <button class="liveRegionTab regionTab active" data-lregion="all" data-i18n="region.all">倹 蜈ｨ縺ｦ</button>
-          <button class="liveRegionTab regionTab" data-lregion="AS">件 AS</button>
-          <button class="liveRegionTab regionTab" data-lregion="EU">訣 EU</button>
-          <button class="liveRegionTab regionTab" data-lregion="NA">月 NA</button>
+          <button class="liveRegionTab regionTab active" data-lregion="all" data-i18n="region.all">🌐 全て</button>
+          <button class="liveRegionTab regionTab" data-lregion="AS">🌏 AS</button>
+          <button class="liveRegionTab regionTab" data-lregion="EU">🌍 EU</button>
+          <button class="liveRegionTab regionTab" data-lregion="NA">🌎 NA</button>
         </div>
-        <input id="liveSearch" type="text" placeholder="剥 蜷榊燕縺ｧ邨槭ｊ霎ｼ縺ｿ窶ｦ" data-i18n-ph="live.search" autocomplete="off" spellcheck="false"
+        <input id="liveSearch" type="text" placeholder="🔍 名前で絞り込み…" data-i18n-ph="live.search" autocomplete="off" spellcheck="false"
           style="flex:1;min-width:140px;max-width:240px;height:28px;font-size:12px;padding:0 10px;border-radius:999px;border:1px solid #1e2e40;background:#0d1520;color:#cfe0ff" />
       </div>
       <div class="tableWrap">
@@ -133,7 +94,7 @@
               <th data-i18n="th.rank">rank</th>
               <th class="num" data-i18n="th.points">points</th>
               <th class="num" data-i18n="th.delta">delta</th>
-              <th data-i18n="th.changed">螟牙虚</th>
+              <th data-i18n="th.changed">変動</th>
               <th><span data-i18n="th.state">inferred state</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="th.state.tip"><div class="thHelpRow"><span class="thHelpState" style="color:#5b9cf6">Lobby</span><span>Post-match or queuing. <b style="color:#5b9cf6">Encounter chance rising.</b></span></div></span></span></th>
               <th class="num" data-i18n="th.nextmatch">next_match%</th>
               <th data-i18n="th.lastpoll">last_poll</th>
@@ -147,12 +108,12 @@
     </section>
 
 
-    <!-- 竭｢.5 Pickup 繧ｰ繝ｩ繝包ｼ遺・ 繝斐ャ繧ｯ繧｢繝・・譎ゅ・縺ｿ陦ｨ遉ｺ・・-->
+    <!-- ③.5 Pickup グラフ（★ ピックアップ時のみ表示） -->
     <section class="card" id="pickupSection" style="display:none">
       <div class="row between" style="margin-bottom:8px;">
         <div>
-          <div class="h2" data-i18n="pickup.title">箝・Pickup 繧ｰ繝ｩ繝包ｼ亥粋邂励・30蛻・ｼ・/div>
-          <div class="hint" data-i18n="pickup.hint">笘・縺ｧ繝斐ャ繧ｯ繧｢繝・・縺励◆繝励Ξ繧､繝､繝ｼ縺ｮ蜷育ｮ鈴・驕・｢ｺ邇・ｼ・ - 竏・1-p盞｢)・・/div>
+          <div class="h2" data-i18n="pickup.title">⭐ Pickup グラフ（合算・30分）</div>
+          <div class="hint" data-i18n="pickup.hint">★ でピックアップしたプレイヤーの合算遭遇確率（1 - ∏(1-pᵢ)）</div>
         </div>
         <div id="pickupPeak" class="psPct" style="color:#ffcf5c;font-size:14px;"></div>
       </div>
@@ -161,22 +122,22 @@
       <div id="pickupNames" class="pickupNames"></div>
     </section>
 
-    <!-- 竭｣ 險ｭ螳・(controls + advanced) -->
+    <!-- ④ 設定 (controls + advanced) -->
     <section class="card settingsCard">
       <div class="ctrlRow">
-        <span class="ctrlLabel" data-i18n="adv.matchSetting">繝槭ャ繝∬ｨｭ螳・/span>
+        <span class="ctrlLabel" data-i18n="adv.matchSetting">マッチ設定</span>
         <div class="pill sm">
-          <span>Wait <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.wait">繧ｭ繝･繝ｼ縺ｫ蜈･縺｣縺ｦ縺九ｉ谺｡縺ｮ隧ｦ蜷医′髢句ｧ九☆繧九∪縺ｧ縺ｮ蠕・■譎る俣・亥・・峨・br>繝昴う繝ｳ繝亥､牙虚蠕後％縺ｮ譎る俣縺ｯ <b>Lobby</b> 繧ｹ繝・・繝医→謗ｨ螳壹＠縺ｾ縺吶・br>逶ｮ螳会ｼ夂ｴ・蛻・/span></span></span>
+          <span>Wait <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.wait">キューに入ってから次の試合が開始するまでの待ち時間（分）。<br>ポイント変動後この時間は <b>Lobby</b> ステートと推定します。<br>目安：約5分</span></span></span>
           <input id="matchWait" type="number" min="0" max="30" step="1" value="5" />
           <span>m</span>
         </div>
         <div class="pill sm">
-          <span>Match <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">1繝ｩ繧ｦ繝ｳ繝会ｼ・1・峨・蟷ｳ蝮・園隕∵凾髢難ｼ亥・・峨・br>Lobby 邨ゆｺ・°繧峨％縺ｮ譎る俣蜀・・ <b>In Match (R1)</b> 縺ｨ謗ｨ螳壹＠縺ｾ縺吶・br>窶ｻ1隧ｦ蜷・= R1+R2+Final 縺ｮ蜈ｨ菴薙ゅ％縺ｮMatch蛟､縺ｯR1蝓ｺ貅悶・br>逶ｮ螳会ｼ夂ｴ・1蛻・/span></span></span>
+          <span>Match <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">1ラウンド（R1）の平均所要時間（分）。<br>Lobby 終了からこの時間内は <b>In Match (R1)</b> と推定します。<br>※1試合 = R1+R2+Final の全体。このMatch値はR1基準。<br>目安：約31分</span></span></span>
           <input id="matchAvg" type="number" min="20" max="60" step="1" value="31" />
           <span>m</span>
         </div>
         <div class="pill sm">
-          <span>+jitter <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">隧ｦ蜷域凾髢薙・隱､蟾ｮ繝槭・繧ｸ繝ｳ・亥・・峨・br>Match+jitter 繧定ｶ・∴繧九→ <b>In Match (R2)</b> 謗ｨ螳壹↓遘ｻ陦後＠縺ｾ縺吶・br>隧ｦ蜷医′髟ｷ蠑輔＞縺滄圀縺ｮ繝舌ャ繝輔ぃ縺ｨ縺励※讖溯・縺励∪縺吶・/span></span></span>
+          <span>+jitter <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">試合時間の誤差マージン（分）。<br>Match+jitter を超えると <b>In Match (R2)</b> 推定に移行します。<br>試合が長引いた際のバッファとして機能します。</span></span></span>
           <input id="matchJitter" type="number" min="0" max="10" step="1" value="3" />
           <span>m</span>
         </div>
@@ -186,13 +147,13 @@
       </div>
 
       <details class="advanced" id="advancedDetails">
-        <summary data-i18n="adv.summary">Advanced 險ｭ螳・/summary>
+        <summary data-i18n="adv.summary">Advanced 設定</summary>
 
         <div class="advSection">
-          <div class="advLabel"><span data-i18n="adv.leaderboard">繝ｪ繝ｼ繝繝ｼ繝懊・繝・/span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.leaderboard">Embark 蜈ｬ蠑上Μ繝ｼ繝繝ｼ繝懊・繝陰PI縺ｮ蜿門ｾ苓ｨｭ螳壹〒縺吶・/span></span></div>
+          <div class="advLabel"><span data-i18n="adv.leaderboard">リーダーボード</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.leaderboard">Embark 公式リーダーボードAPIの取得設定です。</span></span></div>
           <div class="row tight">
             <div class="pill sm">
-              <span>Season <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.season">蜿門ｾ励☆繧九Μ繝ｼ繝繝ｼ繝懊・繝峨・繧ｷ繝ｼ繧ｺ繝ｳ縲・br>S9 = 迴ｾ陦後す繝ｼ繧ｺ繝ｳ縲ゅす繝ｼ繧ｺ繝ｳ縺悟､峨ｏ縺｣縺溘ｉ譖ｴ譁ｰ縺励※縺上□縺輔＞縲・/span></span></span>
+              <span>Season <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.season">取得するリーダーボードのシーズン。<br>S9 = 現行シーズン。シーズンが変わったら更新してください。</span></span></span>
               <select id="leaderboardId">
                 <option value="s9" selected>S9</option>
                 <option value="s8">S8</option>
@@ -200,7 +161,7 @@
               </select>
             </div>
             <div class="pill sm">
-              <span>Platform <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.platform">繝励Λ繝・ヨ繝輔か繝ｼ繝蛻･縺ｮ繝ｪ繝ｼ繝繝ｼ繝懊・繝峨ｒ驕ｸ謚槭・br><b>crossplay</b>・壼・繝励Λ繝・ヨ繝輔か繝ｼ繝邨ｱ蜷茨ｼ域耳螂ｨ・・br>steam / psn / xbox・壼推繝励Λ繝・ヨ繝輔か繝ｼ繝蟆ら畑</span></span></span>
+              <span>Platform <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.platform">プラットフォーム別のリーダーボードを選択。<br><b>crossplay</b>：全プラットフォーム統合（推奨）<br>steam / psn / xbox：各プラットフォーム専用</span></span></span>
               <select id="platform">
                 <option value="crossplay" selected>crossplay</option>
                 <option value="steam">steam</option>
@@ -209,7 +170,7 @@
               </select>
             </div>
             <div class="pill sm">
-              <span>Interval <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.interval">API繝昴・繝ｪ繝ｳ繧ｰ髢馴囈・育ｧ抵ｼ峨・br>遏ｭ縺・⊇縺ｩ繝ｪ繧｢繝ｫ繧ｿ繧､繝縺ｧ縺吶′ API 雋闕ｷ縺悟｢励∴縺ｾ縺吶・br>謗ｨ螂ｨ・・0遘・/span></span></span>
+              <span>Interval <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.interval">APIポーリング間隔（秒）。<br>短いほどリアルタイムですが API 負荷が増えます。<br>推奨：60秒</span></span></span>
               <select id="pollInterval">
                 <option value="30">30s</option>
                 <option value="60" selected>60s</option>
@@ -217,12 +178,12 @@
               </select>
             </div>
             <div class="pill sm">
-              <span>Reflect X <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.reflectx">繧ｲ繝ｼ繝蜀・〒繝昴う繝ｳ繝亥､牙虚縺励※縺九ｉAPI縺ｫ蜿肴丐縺輔ｌ繧九∪縺ｧ縺ｮ驕・ｻｶ譎る俣・亥・・峨・br>繝昴う繝ｳ繝亥､牙虚蠕後％縺ｮ譎る俣縺ｯ <b>POST_MATCH_WAIT</b> 迥ｶ諷九→謗ｨ螳壹・br>Update Estimator 縺瑚・蜍墓､懷・縺励※譖ｴ譁ｰ縺励∪縺吶ら岼螳会ｼ・蛻・/span></span></span>
+              <span>Reflect X <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.reflectx">ゲーム内でポイント変動してからAPIに反映されるまでの遅延時間（分）。<br>ポイント変動後この時間は <b>POST_MATCH_WAIT</b> 状態と推定。<br>Update Estimator が自動検出して更新します。目安：8分</span></span></span>
               <input id="reflectDelay" type="number" min="1" max="30" step="1" value="8" />
               <span>m</span>
             </div>
             <div class="pill sm">
-              <span>Tournament <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.tournament">1螟ｧ莨壼・菴薙・諠ｳ螳壽凾髢難ｼ亥・・峨・br>蜈ｨ繝ｩ繧ｦ繝ｳ繝峨・蜷郁ｨ域凾髢薙ゅ％縺ｮ譎る俣繧定ｶ・∴繧九→ <b>Final Round 竊・Offline</b> 縺ｫ遘ｻ陦後＠縺ｾ縺吶・br>逶ｮ螳会ｼ・5蛻・ｼ・ait+Matchﾃ・縲・R・・/span></span></span>
+              <span>Tournament <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.tournament">1大会全体の想定時間（分）。<br>全ラウンドの合計時間。この時間を超えると <b>Final Round → Offline</b> に移行します。<br>目安：45分（Wait+Match×1〜2R）</span></span></span>
               <input id="tournamentTotal" type="number" min="10" max="120" step="1" value="45" />
               <span>m</span>
             </div>
@@ -230,26 +191,26 @@
         </div>
 
         <div class="advSection">
-          <div class="advLabel"><span data-i18n="adv.rsdrop">RS螟牙虚繧｢繝ｩ繝ｼ繝・/span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.rsdrop">繝昴・繝ｪ繝ｳ繧ｰ縺斐→縺ｫRS縺ｮ諤･關ｽ繧呈､懷・縺励※騾夂衍縺励∪縺吶・AN繧・､ｧ驥蹴S蝟ｪ螟ｱ縺ｮ譌ｩ譛溽匱隕九↓菴ｿ縺医∪縺吶・/span></span></div>
+          <div class="advLabel"><span data-i18n="adv.rsdrop">RS変動アラート</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.rsdrop">ポーリングごとにRSの急落を検出して通知します。BANや大量RS喪失の早期発見に使えます。</span></span></div>
           <div class="row tight">
             <div class="pill sm">
-              <span><span data-i18n="lbl.rsdrop.threshold">悼 諤･關ｽ縺励″縺・､</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.rsdrop.threshold">1蝗槭・繝昴・繝ｪ繝ｳ繧ｰ縺ｧ縺薙・蛟､莉･荳崖S縺梧ｸ帛ｰ代＠縺溷ｴ蜷医↓繝医・繧ｹ繝磯夂衍縲・br>萓具ｼ・000 竊・1000RS莉･荳翫・貂帛ｰ代〒騾夂衍<br>BAN繧貞女縺代ｋ縺ｨ謨ｰ蜊コS蝟ｪ螟ｱ縺吶ｋ縺薙→縺悟､壹＞縲・/span></span></span>
+              <span><span data-i18n="lbl.rsdrop.threshold">📉 急落しきい値</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.rsdrop.threshold">1回のポーリングでこの値以上RSが減少した場合にトースト通知。<br>例：1000 → 1000RS以上の減少で通知<br>BANを受けると数千RS喪失することが多い。</span></span></span>
               <input id="rsDropThreshold" type="number" min="100" max="10000" step="100" value="1000" />
-              <span data-i18n="rsdrop.unit">RS莉･荳翫・貂帛ｰ代〒蜊ｳ騾夂衍</span>
+              <span data-i18n="rsdrop.unit">RS以上の減少で即通知</span>
             </div>
           </div>
         </div>
 
         <div class="advSection">
-          <div class="advLabel"><span data-i18n="adv.estimator">Update Estimator</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.estimator">Embark縺ｮ繝ｪ繝ｼ繝繝ｼ繝懊・繝峨・繝舌ャ繝∝・逅・〒譖ｴ譁ｰ縺輔ｌ縺ｾ縺呻ｼ育ｴ・8蛻・捉譛滂ｼ峨・br>縺薙・繝・・繝ｫ縺ｯ縺昴・繧ｿ繧､繝溘Φ繧ｰ繧定・蜍墓､懷・縺励ヽeflect X 繧定・蜍墓峩譁ｰ縺励∪縺吶・br>3蝗樔ｻ･荳翫ヰ繝・メ繧定ｦｳ貂ｬ縺吶ｋ縺ｨ邊ｾ蠎ｦ縺御ｸ翫′繧翫∪縺吶・/span></span></div>
+          <div class="advLabel"><span data-i18n="adv.estimator">Update Estimator</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.estimator">Embarkのリーダーボードはバッチ処理で更新されます（約48分周期）。<br>このツールはそのタイミングを自動検出し、Reflect X を自動更新します。<br>3回以上バッチを観測すると精度が上がります。</span></span></div>
           <div class="row tight" style="margin-bottom:6px;">
             <label class="checkbox"><input type="checkbox" id="enableEstimator" checked /> <span data-i18n="estimator.enable">Enable</span></label>
-            <span class="muted" data-i18n="estimator.hint">繝舌ャ繝∵峩譁ｰ髢馴囈繧定・蜍墓､懷・繝ｻReflect X 繧定・蜍墓峩譁ｰ</span>
+            <span class="muted" data-i18n="estimator.hint">バッチ更新間隔を自動検出・Reflect X を自動更新</span>
           </div>
           <div class="row tight">
-            <div class="pill sm"><span>Window start <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowstart">繝舌ャ繝∵､懷・縺ｫ菴ｿ縺・Μ繝ｼ繝繝ｼ繝懊・繝峨・髢句ｧ矩・ｽ阪・br>萓具ｼ・000 竊・2001菴堺ｻ･髯阪ｒ逶｣隕悶・br>荳贋ｽ阪☆縺弱ｋ縺ｨ隧ｦ蜷井ｸｭ縺ｮ繝昴う繝ｳ繝亥､牙虚縺ｨ蛹ｺ蛻･縺励↓縺上￥縺ｪ繧翫∪縺吶・/span></span></span><input id="estWindowStart" type="number" min="0" max="200000" step="1" value="2000" /></div>
-            <div class="pill sm"><span>Window size <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowsize">繝舌ャ繝∵､懷・縺ｫ菴ｿ縺・ｻｶ謨ｰ縲・br>萓具ｼ・00 竊・500莉ｶ繧堤屮隕悶ょ､壹＞縺ｻ縺ｩ繝舌ャ繝∵､懷・縺悟ｮ牙ｮ壹＠縺ｾ縺吶・/span></span></span><input id="estWindowSize" type="number" min="50" max="2000" step="50" value="500" /></div>
-            <div class="pill sm"><span>Cache <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.cache">繝ｪ繝ｼ繝繝ｼ繝懊・繝陰PI縺ｮ繧ｭ繝｣繝・す繝･譛牙柑譛滄俣・育ｧ抵ｼ峨・br>Interval 繧医ｊ遏ｭ縺・､縺ｫ縺吶ｋ縺ｨ豈主屓譁ｰ魄ｮ縺ｪ繝・・繧ｿ繧貞叙蠕励〒縺阪∪縺吶・/span></span></span><input id="estCacheSec" type="number" min="10" max="300" step="10" value="30" /><span>s</span></div>
+            <div class="pill sm"><span>Window start <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowstart">バッチ検出に使うリーダーボードの開始順位。<br>例：2000 → 2001位以降を監視。<br>上位すぎると試合中のポイント変動と区別しにくくなります。</span></span></span><input id="estWindowStart" type="number" min="0" max="200000" step="1" value="2000" /></div>
+            <div class="pill sm"><span>Window size <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowsize">バッチ検出に使う件数。<br>例：500 → 500件を監視。多いほどバッチ検出が安定します。</span></span></span><input id="estWindowSize" type="number" min="50" max="2000" step="50" value="500" /></div>
+            <div class="pill sm"><span>Cache <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.cache">リーダーボードAPIのキャッシュ有効期間（秒）。<br>Interval より短い値にすると毎回新鮮なデータを取得できます。</span></span></span><input id="estCacheSec" type="number" min="10" max="300" step="10" value="30" /><span>s</span></div>
           </div>
           <div class="row tight" style="margin-top:6px;">
             <div class="pill sm"><span>Last batch</span><span id="estLastBatch" class="mono">-</span></div>
@@ -262,7 +223,7 @@
         </div>
 
         <div class="advSection">
-          <div class="advLabel"><span data-i18n="adv.proxy">縺昴・莉・/span></div>
+          <div class="advLabel"><span data-i18n="adv.proxy">その他</span></div>
           <div class="row tight" style="flex-wrap:wrap;gap:10px;">
             <div class="field" style="min-width:120px;flex:0 1 auto;">
               <label>Max events</label>
@@ -282,86 +243,86 @@
           </div>
         </div>
 
-        <!-- 笏笏 繧｢繧ｯ繧ｻ繧ｹ邂｡逅・ｼ亥承荳翫・繧ｿ繝ｳ縺九ｉ髢九￥繝｢繝ｼ繝繝ｫ縺ｫ遘ｻ蜍包ｼ・笏笏 -->
+        <!-- ── アクセス管理（右上ボタンから開くモーダルに移動） ── -->
         <div class="advSection">
-          <div class="advLabel" data-i18n="adv.access.title">柏 繧｢繧ｯ繧ｻ繧ｹ邂｡逅・/div>
-          <button onclick="document.getElementById('adminModal').style.display='flex'" style="margin-top:6px;font-size:12px;" data-i18n="adv.access.open">繧｢繧ｫ繧ｦ繝ｳ繝育ｮ｡逅・ｒ髢九￥ 竊・/button>
+          <div class="advLabel" data-i18n="adv.access.title">🔐 アクセス管理</div>
+          <button onclick="document.getElementById('adminModal').style.display='flex'" style="margin-top:6px;font-size:12px;" data-i18n="adv.access.open">アカウント管理を開く →</button>
         </div>
       </details>
 
       <div id="toast" class="toast" aria-live="polite"></div>
     </section>
 
-    <!-- 竭｣.5 迥ｶ諷句､牙喧繝ｭ繧ｰ -->
+    <!-- ④.5 状態変化ログ -->
     <section class="card">
       <details>
         <summary style="cursor:pointer;font-weight:700;color:#b8c4d6;padding:4px 0;font-size:13px;">
-          <span data-i18n="log.title">搭 迥ｶ諷句､牙喧繝ｭ繧ｰ</span> <span id="logCount" style="font-weight:400;color:#5a7aaa;font-size:12px;"></span>
+          <span data-i18n="log.title">📋 状態変化ログ</span> <span id="logCount" style="font-weight:400;color:#5a7aaa;font-size:12px;"></span>
         </summary>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button id="btnLogTimeline">投 繧ｿ繧､繝繝ｩ繧､繝ｳ</button>
-          <button id="btnExportLogs" data-i18n="btn.exportlogs">CSV 繧ｨ繧ｯ繧ｹ繝昴・繝・/button>
-          <button id="btnClearLogs" class="danger" data-i18n="btn.clearlogs">繧ｯ繝ｪ繧｢</button>
-          <span class="hint" style="margin:0;" data-i18n="log.hint">迥ｶ諷矩・遘ｻ・・ffline竊鱈obby 縺ｪ縺ｩ・峨ｒ閾ｪ蜍戊ｨ倬鹸</span>
+          <button id="btnLogTimeline">📊 タイムライン</button>
+          <button id="btnExportLogs" data-i18n="btn.exportlogs">CSV エクスポート</button>
+          <button id="btnClearLogs" class="danger" data-i18n="btn.clearlogs">クリア</button>
+          <span class="hint" style="margin:0;" data-i18n="log.hint">状態遷移（Offline→Lobby など）を自動記録</span>
         </div>
         <div id="logList" class="logList"></div>
       </details>
     </section>
 
-    <!-- 竭､ 霑ｽ蜉縺輔ｌ縺溘・繝ｬ繧､繝､繝ｼ -->
+    <!-- ⑤ 追加されたプレイヤー -->
     <section class="card">
       <div class="modeTabs">
-        <button id="tabPersonal" class="modeTab active" data-i18n="tab.personal">側 閾ｪ蛻・・繝ｪ繧ｹ繝・/button>
-        <button id="tabGlobal" class="modeTab" data-i18n="tab.global">倹 繧ｰ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝・/button>
+        <button id="tabPersonal" class="modeTab active" data-i18n="tab.personal">👤 自分のリスト</button>
+        <button id="tabGlobal" class="modeTab" data-i18n="tab.global">🌐 グローバルリスト</button>
       </div>
       <div class="personalView">
-        <div class="hint" data-i18n-html="personal.hint">Embark ID・・b>name#1234</b>・峨ｒ謾ｹ陦・/ 繧ｫ繝ｳ繝槫玄蛻・ｊ縺ｧ蜈･蜉帙ゆｸ翫・讀懃ｴ｢繝舌・縺九ｉ霑ｽ蜉繧ょ庄縲・/div>
+        <div class="hint" data-i18n-html="personal.hint">Embark ID（<b>name#1234</b>）を改行 / カンマ区切りで入力。上の検索バーから追加も可。</div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;">
           <div class="regionTabs">
-            <button class="personalRegionTab regionTab active" data-pregion="all" data-i18n="region.all">倹 蜈ｨ縺ｦ</button>
-            <button class="personalRegionTab regionTab" data-pregion="AS">件 AS</button>
-            <button class="personalRegionTab regionTab" data-pregion="EU">訣 EU</button>
-            <button class="personalRegionTab regionTab" data-pregion="NA">月 NA</button>
+            <button class="personalRegionTab regionTab active" data-pregion="all" data-i18n="region.all">🌐 全て</button>
+            <button class="personalRegionTab regionTab" data-pregion="AS">🌏 AS</button>
+            <button class="personalRegionTab regionTab" data-pregion="EU">🌍 EU</button>
+            <button class="personalRegionTab regionTab" data-pregion="NA">🌎 NA</button>
           </div>
-          <button id="btnCopyToGlobal" style="padding:5px 14px;font-size:12px;border-radius:999px;" data-i18n="btn.copyToGlobal">搭 繧ｰ繝ｭ繝ｼ繝舌Ν縺ｫ繧ｳ繝斐・</button>
+          <button id="btnCopyToGlobal" style="padding:5px 14px;font-size:12px;border-radius:999px;" data-i18n="btn.copyToGlobal">📋 グローバルにコピー</button>
         </div>
         <textarea id="namesBox" spellcheck="false" placeholder="playerA#1234
 playerB#5678"></textarea>
         <div id="banAlertList" class="banAlertList"></div>
       </div>
       <div id="globalListView" style="display:none">
-        <!-- 繝ｭ繧ｰ繧､繝ｳ迥ｶ諷九ヰ繝ｼ -->
+        <!-- ログイン状態バー -->
         <div id="loginStatusBar" style="display:none;align-items:center;gap:8px;margin-top:6px;margin-bottom:2px;flex-wrap:wrap;">
           <span id="loginStatusText" style="font-size:12px;color:#b8c4d6;"></span>
-          <button id="btnLogout" style="display:none;padding:3px 10px;font-size:11px;border-radius:999px;" data-i18n="btn.logout">繝ｭ繧ｰ繧｢繧ｦ繝・/button>
+          <button id="btnLogout" style="display:none;padding:3px 10px;font-size:11px;border-radius:999px;" data-i18n="btn.logout">ログアウト</button>
         </div>
-        <div id="globalStatus" class="hint" style="margin-top:4px">窶・/div>
-        <!-- 蝨ｰ蝓溘ヵ繧｣繝ｫ繧ｿ繝ｼ繧ｿ繝・-->
+        <div id="globalStatus" class="hint" style="margin-top:4px">—</div>
+        <!-- 地域フィルタータブ -->
         <div class="regionTabs" style="margin-top:10px">
-          <button class="regionTab active" data-region="all" data-i18n="region.all">倹 蜈ｨ縺ｦ</button>
-          <button class="regionTab" data-region="AS">件 AS</button>
-          <button class="regionTab" data-region="EU">訣 EU</button>
-          <button class="regionTab" data-region="NA">月 NA</button>
+          <button class="regionTab active" data-region="all" data-i18n="region.all">🌐 全て</button>
+          <button class="regionTab" data-region="AS">🌏 AS</button>
+          <button class="regionTab" data-region="EU">🌍 EU</button>
+          <button class="regionTab" data-region="NA">🌎 NA</button>
         </div>
         <div id="globalPlayerList" class="globalPlayerList"></div>
-        <!-- 霑ｽ蜉繝輔か繝ｼ繝 -->
+        <!-- 追加フォーム -->
         <details class="communityAddWrap" style="margin-top:12px">
-          <summary class="communityAddSummary" data-i18n="global.add.summary">・・繝√・繧ｿ繝ｼ / 豕ｨ逶ｮ繝励Ξ繧､繝､繝ｼ繧貞ｱ蜻翫・霑ｽ蜉</summary>
+          <summary class="communityAddSummary" data-i18n="global.add.summary">＋ チーター / 注目プレイヤーを報告・追加</summary>
           <div class="communityAddForm">
-            <input id="communityName" type="text" placeholder="Embark ID・・ame#1234・・ autocomplete="off" spellcheck="false" />
+            <input id="communityName" type="text" placeholder="Embark ID（name#1234）" autocomplete="off" spellcheck="false" />
             <select id="communityRegion" data-i18n-opt="opt.region.AS,opt.region.EU,opt.region.NA,opt.region.unknown">
-              <option value="AS">件 AS・医い繧ｸ繧｢・・/option>
-              <option value="EU">訣 EU</option>
-              <option value="NA">月 NA</option>
-              <option value="">倹 蝨ｰ蝓滉ｸ肴・</option>
+              <option value="AS">🌏 AS（アジア）</option>
+              <option value="EU">🌍 EU</option>
+              <option value="NA">🌎 NA</option>
+              <option value="">🌐 地域不明</option>
             </select>
             <select id="communityCategory" data-i18n-opt="opt.cat.cheater,opt.cat.suspicious,opt.cat.notable">
-              <option value="cheater">圻 繝√・繧ｿ繝ｼ</option>
-              <option value="suspicious">笞・・逍代＞</option>
-              <option value="notable">早 豕ｨ逶ｮ</option>
+              <option value="cheater">🚫 チーター</option>
+              <option value="suspicious">⚠️ 疑い</option>
+              <option value="notable">👁 注目</option>
             </select>
-            <input id="communityNote" type="text" placeholder="繝｡繝｢・井ｻｻ諢擾ｼ・ data-i18n-ph="global.note.ph" />
-            <button id="btnCommunityAdd" class="primary" data-i18n="btn.global.add">霑ｽ蜉</button>
+            <input id="communityNote" type="text" placeholder="メモ（任意）" data-i18n-ph="global.note.ph" />
+            <button id="btnCommunityAdd" class="primary" data-i18n="btn.global.add">追加</button>
           </div>
         </details>
       </div>
@@ -373,80 +334,80 @@ playerB#5678"></textarea>
     <div class="footerDesc" data-i18n="footer.desc">Activity tracker for THE FINALS ranked players. Monitors leaderboard point changes to estimate real-time status (Lobby / In Match / Offline). Supports personal watchlists and a shared community global list.</div>
     <div class="footerTitle" data-i18n="footer.title">Feedback / Bug Report</div>
     <div class="footerContacts">
-      <span>・・ Found a bug or have feedback? Contact: <strong>Discord: yatoru</strong></span>
-      <span>・・ 繝舌げ蝣ｱ蜻翫・繝輔ぅ繝ｼ繝峨ヰ繝・け縺ｯ縺薙■繧・ <strong>Discord: yatoru</strong></span>
-      <span>・・ ・・ｷｸ ・罹ｳｴ ・・嵓ｼ・罹ｰｱ: <strong>Discord: yatoru</strong></span>
-      <span>・・ 髞呵ｯｯ謚･蜻頑・蜿埼ｦ郁ｯｷ閨皮ｳｻ: <strong>Discord: yatoru</strong></span>
+      <span>🇬🇧 Found a bug or have feedback? Contact: <strong>Discord: yatoru</strong></span>
+      <span>🇯🇵 バグ報告・フィードバックはこちら: <strong>Discord: yatoru</strong></span>
+      <span>🇰🇷 버그 제보 및 피드백: <strong>Discord: yatoru</strong></span>
+      <span>🇨🇳 错误报告或反馈请联系: <strong>Discord: yatoru</strong></span>
     </div>
     <div class="footerSub">Data source: the-finals-leaderboard API (via proxy if needed).</div>
   </footer>
   <div id="globalTooltip" class="globalTooltip" role="tooltip" aria-hidden="true"></div>
 
-  <!-- 笏笏 繝ｭ繧ｰ繧､繝ｳ繝｢繝ｼ繝繝ｫ 笏笏 -->
+  <!-- ── ログインモーダル ── -->
   <div id="loginModal" class="loginModalOverlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
     <div class="loginModalBox">
-      <div class="loginModalTitle" id="loginModalTitle" data-i18n="modal.login.title">柏 繝ｭ繧ｰ繧､繝ｳ</div>
+      <div class="loginModalTitle" id="loginModalTitle" data-i18n="modal.login.title">🔐 ログイン</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div>
           <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginId" data-i18n="login.id.label">ID</label>
-          <input id="loginId" type="text" placeholder="繝ｦ繝ｼ繧ｶ繝ｼID" autocomplete="username" style="width:100%" data-i18n-ph="login.id.ph" />
+          <input id="loginId" type="text" placeholder="ユーザーID" autocomplete="username" style="width:100%" data-i18n-ph="login.id.ph" />
         </div>
         <div>
-          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginPassword" data-i18n="login.pw.label">繝代せ繝ｯ繝ｼ繝・/label>
-          <input id="loginPassword" type="password" placeholder="繝代せ繝ｯ繝ｼ繝・ autocomplete="current-password" style="width:100%" data-i18n-ph="login.pw.ph" />
+          <label style="font-size:12px;color:#b8c4d6;display:block;margin-bottom:4px" for="loginPassword" data-i18n="login.pw.label">パスワード</label>
+          <input id="loginPassword" type="password" placeholder="パスワード" autocomplete="current-password" style="width:100%" data-i18n-ph="login.pw.ph" />
         </div>
       </div>
       <div id="loginError" class="loginError"></div>
       <div class="loginModalBtns">
-        <button id="btnLoginCancel" data-i18n="btn.login.cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button id="btnLoginSubmit" class="primary" data-i18n="btn.login.submit">繝ｭ繧ｰ繧､繝ｳ</button>
+        <button id="btnLoginCancel" data-i18n="btn.login.cancel">キャンセル</button>
+        <button id="btnLoginSubmit" class="primary" data-i18n="btn.login.submit">ログイン</button>
       </div>
     </div>
   </div>
 
-  <!-- 繧｢繧ｫ繧ｦ繝ｳ繝育ｮ｡逅・Δ繝ｼ繝繝ｫ -->
+  <!-- アカウント管理モーダル -->
   <div id="adminModal" class="loginModalOverlay" style="display:none;" role="dialog" aria-modal="true">
     <div class="loginModalBox" style="max-width:460px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div class="loginModalTitle" data-i18n="modal.admin.title">柏 繧｢繧ｫ繧ｦ繝ｳ繝育ｮ｡逅・/div>
-        <button id="btnAdminModalClose" style="background:none;border:none;color:#b8c4d6;font-size:20px;cursor:pointer;line-height:1;">笨・/button>
+        <div class="loginModalTitle" data-i18n="modal.admin.title">🔐 アカウント管理</div>
+        <button id="btnAdminModalClose" style="background:none;border:none;color:#b8c4d6;font-size:20px;cursor:pointer;line-height:1;">✕</button>
       </div>
       <div class="row tight" style="margin-bottom:8px">
-        <input id="adminPasswordInput" type="password" placeholder="繧｢繝峨Α繝ｳ繝代せ繝ｯ繝ｼ繝会ｼ域悴險ｭ螳壹↑繧画眠隕剰ｨｭ螳夲ｼ・ style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.pw.ph" />
-        <button id="btnAdminUnlock" style="height:34px;font-size:12px" data-i18n="btn.admin.unlock">箔 隗｣髯､ / 險ｭ螳・/button>
+        <input id="adminPasswordInput" type="password" placeholder="アドミンパスワード（未設定なら新規設定）" style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.pw.ph" />
+        <button id="btnAdminUnlock" style="height:34px;font-size:12px" data-i18n="btn.admin.unlock">🔓 解除 / 設定</button>
       </div>
       <div id="adminPanel" style="display:none">
-        <div class="sectionLabel" style="margin-top:6px" data-i18n="admin.users.title">險ｱ蜿ｯ繝ｦ繝ｼ繧ｶ繝ｼ荳隕ｧ</div>
+        <div class="sectionLabel" style="margin-top:6px" data-i18n="admin.users.title">許可ユーザー一覧</div>
         <div id="allowedUserList"></div>
         <div class="row tight" style="margin-top:8px">
-          <input id="newUserId" type="text" placeholder="譁ｰ縺励＞ID" style="flex:1;height:34px;font-size:12px" autocomplete="off" data-i18n-ph="admin.newid.ph" />
-          <input id="newUserPassword" type="password" placeholder="繝代せ繝ｯ繝ｼ繝・ style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.newpw.ph" />
-          <button id="btnAddUser" class="primary" style="height:34px;font-size:12px" data-i18n="btn.adduser">霑ｽ蜉</button>
+          <input id="newUserId" type="text" placeholder="新しいID" style="flex:1;height:34px;font-size:12px" autocomplete="off" data-i18n-ph="admin.newid.ph" />
+          <input id="newUserPassword" type="password" placeholder="パスワード" style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.newpw.ph" />
+          <button id="btnAddUser" class="primary" style="height:34px;font-size:12px" data-i18n="btn.adduser">追加</button>
         </div>
-        <div class="sectionLabel" style="margin-top:12px" data-i18n="admin.changepw">繧｢繝峨Α繝ｳ繝代せ繝ｯ繝ｼ繝牙､画峩</div>
+        <div class="sectionLabel" style="margin-top:12px" data-i18n="admin.changepw">アドミンパスワード変更</div>
         <div class="row tight">
-          <input id="newAdminPassword" type="password" placeholder="譁ｰ縺励＞繧｢繝峨Α繝ｳ繝代せ繝ｯ繝ｼ繝・ style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.newadminpw.ph" />
-          <button id="btnChangeAdminPassword" style="height:34px;font-size:12px" data-i18n="btn.changepw">螟画峩</button>
+          <input id="newAdminPassword" type="password" placeholder="新しいアドミンパスワード" style="flex:1;height:34px;font-size:12px" data-i18n-ph="admin.newadminpw.ph" />
+          <button id="btnChangeAdminPassword" style="height:34px;font-size:12px" data-i18n="btn.changepw">変更</button>
         </div>
-        <div class="sectionLabel" style="margin-top:12px" data-i18n="admin.sync.title">繧､繝ｳ繧ｿ繝ｼ繝阪ャ繝亥・髢九・蜈ｱ譛・/div>
-        <div class="hint" style="margin-bottom:6px" data-i18n="admin.sync.hint">Global Backend URL 縺瑚ｨｭ螳壹＆繧後※縺・ｋ蝣ｴ蜷医∬ｨｱ蜿ｯ繝ｦ繝ｼ繧ｶ繝ｼ繝ｪ繧ｹ繝医ｒ繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓菫晏ｭ倥＠縺ｾ縺吶・/div>
-        <button id="btnSyncAuth" style="height:34px;font-size:12px" data-i18n="btn.syncauth">笘・ｸ・繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓蜷梧悄</button>
+        <div class="sectionLabel" style="margin-top:12px" data-i18n="admin.sync.title">インターネット公開・共有</div>
+        <div class="hint" style="margin-bottom:6px" data-i18n="admin.sync.hint">Global Backend URL が設定されている場合、許可ユーザーリストをバックエンドに保存します。</div>
+        <button id="btnSyncAuth" style="height:34px;font-size:12px" data-i18n="btn.syncauth">☁️ バックエンドに同期</button>
       </div>
     </div>
   </div>
 
   <script src="app.js"></script>
   <script>
-    // 騾夂衍繝懊ち繝ｳ
+    // 通知ボタン
     document.getElementById("btnNotify").addEventListener("click", async () => {
       const granted = await requestNotifyPermission();
       if (granted) setNotifyEnabled(!notifyEnabled);
-      else alert("繝悶Λ繧ｦ繧ｶ縺ｮ險ｭ螳壹〒騾夂衍繧定ｨｱ蜿ｯ縺励※縺上□縺輔＞縲・);
+      else alert("ブラウザの設定で通知を許可してください。");
     });
-    // Service Worker 逋ｻ骭ｲ・・WA・・    if ("serviceWorker" in navigator) {
+    // Service Worker 登録（PWA）
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/finals-tracker/sw.js").catch(() => {});
     }
   </script>
 </body>
 </html>
-
