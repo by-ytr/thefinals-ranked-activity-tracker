@@ -1,4 +1,4 @@
-﻿const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
+const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
 // バックエンド URL 自動解決：明示設定がなければ同オリジン（Worker 配信時）を使用
 function autoOrigin(){const o=location.origin;return(o==="null"||o.startsWith("file:")||o.includes("localhost")||o.includes("127.0.0.1"))?"":o;}
@@ -100,72 +100,96 @@ function buildExpandRow(r,key){
   }
   td.appendChild(panel);
   td.appendChild(buildPlayerSparkEl(r));
-  // ── ポイント推移グラフ ──
-  const evts=getEvents().filter(e=>e.name.toLowerCase()===r.name.toLowerCase()&&e.delta!=null).slice(-48);
-  if(evts.length>=2){
-    const latestPts=evts[evts.length-1]?.points ?? null;
-    const startPts=evts[0]?.points ?? null;
-    const diffPts=(latestPts!=null&&startPts!=null)?latestPts-startPts:null;
-    const chartWrap=document.createElement("div");chartWrap.style.cssText="margin-top:12px;";
-    const chartTitle=document.createElement("div");
-    chartTitle.style.cssText="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;";
-    chartTitle.innerHTML=`<span>📈 ポイント推移（直近${evts.length}回）</span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
-    const canvas=document.createElement("canvas");
-    canvas.width=520;canvas.height=140;
-    canvas.style.cssText="width:100%;max-width:520px;height:140px;display:block;border-radius:8px;background:#081522;border:1px solid #16304a;";
-    chartWrap.appendChild(chartTitle);chartWrap.appendChild(canvas);td.appendChild(chartWrap);
-    requestAnimationFrame(()=>{
-      const ctx=canvas.getContext("2d");if(!ctx)return;
-      const W=canvas.width,H=canvas.height,padL=28,padR=10,padT=12,padB=18;
-      const pts=evts.map(e=>e.points).filter(p=>p!=null);
-      if(pts.length<2)return;
-      const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
-      const sx=(i)=>padL+(i/(pts.length-1))*(W-padL-padR);
-      const sy=(v)=>H-padB-((v-mn)/range)*(H-padT-padB);
-      ctx.clearRect(0,0,W,H);
-      // grid
-      ctx.strokeStyle="rgba(90,122,170,0.18)";
-      ctx.lineWidth=1;
-      for(let g=0;g<4;g++){
-        const y=padT+((H-padT-padB)/3)*g;
-        ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
-      }
-      // fill
-      const grad=ctx.createLinearGradient(0,padT,0,H-padB);
-      grad.addColorStop(0,"rgba(94,168,255,0.30)");
-      grad.addColorStop(1,"rgba(94,168,255,0.02)");
-      ctx.beginPath();ctx.moveTo(sx(0),sy(pts[0]));
-      for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
-      ctx.lineTo(sx(pts.length-1),H-padB);ctx.lineTo(sx(0),H-padB);ctx.closePath();
-      ctx.fillStyle=grad;ctx.fill();
-      // line
-      ctx.beginPath();ctx.moveTo(sx(0),sy(pts[0]));
-      for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
-      ctx.strokeStyle="#73b7ff";ctx.lineWidth=2;ctx.stroke();
-      // points
-      for(let i=0;i<pts.length;i++){
-        const x=sx(i),y=sy(pts[i]);
-        ctx.beginPath();ctx.arc(x,y,i===pts.length-1?4:2.5,0,Math.PI*2);
-        ctx.fillStyle=i===pts.length-1?"#9dd0ff":"#73b7ff";
-        ctx.fill();
-      }
-      // labels
-      ctx.font="10px monospace";ctx.fillStyle="#6f89ab";
-      ctx.fillText(mx.toLocaleString(),2,padT+4);
-      ctx.fillText(mn.toLocaleString(),2,H-padB);
-      const lx=sx(pts.length-1),ly=sy(pts[pts.length-1]);
-      ctx.font="bold 10px monospace";ctx.fillStyle="#a9d4ff";
-      ctx.fillText(pts[pts.length-1].toLocaleString(),Math.max(padL,lx-24),Math.max(padT+10,ly-8));
-      // x axis hints
-      ctx.font="9px monospace";ctx.fillStyle="#4f6b8f";
-      [0,Math.floor((pts.length-1)/2),pts.length-1].forEach((idx,i)=>{
-        const label=i===0?"old":i===1?"mid":"new";
-        const x=sx(idx)-8;
-        ctx.fillText(label,x,H-4);
-      });
+
+// ── ポイント推移グラフ ──
+const evts=getEvents().filter(e=>e.name.toLowerCase()===r.name.toLowerCase()&&e.delta!=null).slice(-48);
+if(evts.length>=2){
+  const chartWrap=document.createElement("div");chartWrap.style.cssText="margin-top:12px;";
+  const chartTitle=document.createElement("div");
+  chartTitle.style.cssText="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;";
+  const pts=evts.map(e=>e.points).filter(p=>p!=null);
+  const latestPts=pts[pts.length-1];
+  const startPts=pts[0];
+  const diffPts=(latestPts!=null&&startPts!=null)?latestPts-startPts:null;
+  chartTitle.innerHTML=`<span>📈 ポイント推移（直近${evts.length}回）</span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
+  const canvas=document.createElement("canvas");
+  canvas.width=720;canvas.height=180;
+  canvas.style.cssText="width:100%;max-width:520px;height:140px;display:block;border-radius:8px;background:#091626;border:1px solid #16314f;";
+  chartWrap.appendChild(chartTitle);chartWrap.appendChild(canvas);td.appendChild(chartWrap);
+  requestAnimationFrame(()=>{
+    const ctx=canvas.getContext("2d");if(!ctx)return;
+    const W=canvas.width,H=canvas.height,padL=42,padR=12,padT=14,padB=24;
+    if(pts.length<2)return;
+    const mn=Math.min(...pts),mx=Math.max(...pts),range=(mx-mn)||1;
+    const sx=(i)=>padL+(i/(pts.length-1))*(W-padL-padR);
+    const sy=(v)=>H-padB-((v-mn)/range)*(H-padT-padB);
+    ctx.clearRect(0,0,W,H);
+
+    // grid
+    ctx.strokeStyle="rgba(120,150,190,0.18)";
+    ctx.lineWidth=1;
+    for(let i=0;i<4;i++){
+      const y=padT+i*((H-padT-padB)/3);
+      ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
+    }
+    for(let i=0;i<4;i++){
+      const x=padL+i*((W-padL-padR)/3);
+      ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,H-padB);ctx.stroke();
+    }
+
+    // y labels
+    ctx.fillStyle="#7f93ad";
+    ctx.font="10px monospace";
+    [mx, mn + range*0.5, mn].forEach((val,idx)=>{
+      const y=idx===0?padT+3:idx===1?padT+(H-padT-padB)/2+3:H-padB+3;
+      ctx.fillText(Math.round(val).toLocaleString(),4,y);
     });
-  }
-  // ── サーバー選択 ──
+
+    // area
+    const grad=ctx.createLinearGradient(0,padT,0,H-padB);
+    grad.addColorStop(0,"rgba(94,168,255,0.38)");
+    grad.addColorStop(1,"rgba(94,168,255,0.05)");
+    ctx.beginPath();
+    ctx.moveTo(sx(0),sy(pts[0]));
+    for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
+    ctx.lineTo(sx(pts.length-1),H-padB);
+    ctx.lineTo(sx(0),H-padB);
+    ctx.closePath();
+    ctx.fillStyle=grad;
+    ctx.fill();
+
+    // line
+    ctx.beginPath();
+    ctx.moveTo(sx(0),sy(pts[0]));
+    for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
+    ctx.strokeStyle="#73b7ff";
+    ctx.lineWidth=2.2;
+    ctx.stroke();
+
+    // points
+    for(let i=0;i<pts.length;i++){
+      const x=sx(i), y=sy(pts[i]);
+      ctx.beginPath();ctx.arc(x,y,i===pts.length-1?4:2.5,0,Math.PI*2);
+      ctx.fillStyle=i===pts.length-1?"#9dd0ff":"#73b7ff";
+      ctx.fill();
+    }
+
+    // last label
+    const lx=sx(pts.length-1),ly=sy(pts[pts.length-1]);
+    ctx.font="bold 11px monospace";
+    ctx.fillStyle="#d9ecff";
+    const lastLabel=pts[pts.length-1].toLocaleString();
+    ctx.fillText(lastLabel,Math.max(padL,Math.min(lx-16,W-padR-ctx.measureText(lastLabel).width)),Math.max(padT+12,ly-8));
+
+    // x labels
+    ctx.font="10px monospace";
+    ctx.fillStyle="#7f93ad";
+    ctx.fillText("old",padL,H-8);
+    ctx.fillText("new",W-padR-18,H-8);
+  });
+}
+// ── サーバー選択 ──
+
   const regionWrap=document.createElement("div");regionWrap.style.cssText="margin-top:10px;display:flex;align-items:center;gap:8px;";
   const rLabel=document.createElement("span");rLabel.textContent="Server";rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
   const rSel=document.createElement("select");rSel.style.cssText="height:28px;font-size:12px;padding:2px 6px;";
@@ -379,10 +403,8 @@ async function fetchAndMergeSnapshots(globalUrl){
       const merged={
         ...locSnap,
         ...remSnap,
-        // 手動遭遇は自端末の操作を優先
         ...(locSnap.manualEvent?{manualEvent:locSnap.manualEvent}:{}),
       };
-      // lastChangeAt が無いデータで current state が落ちるのを防ぐ
       if(!merged.lastChangeAt&&remSnap.lastChangeAt)merged.lastChangeAt=remSnap.lastChangeAt;
       if(!merged.lastRealChangeAt&&remSnap.lastRealChangeAt)merged.lastRealChangeAt=remSnap.lastRealChangeAt;
       if(!merged.lastOkAt&&rts)merged.lastOkAt=rts||now;
@@ -416,16 +438,16 @@ function setGlobalSyncStatus(msg,isError=false){
 function getWriteHeaders(){
   const h={"Content-Type":"application/json"};
   const auth=getAuthData();
-  // admin として設定済みなら admin hash を使う
   if(auth.adminPasswordHash){
     h["X-Write-Key"]=auth.adminPasswordHash;
     return h;
   }
-  // allowed user としてログイン中なら、その user の hash を使う
-  // auth.allowedUsers は fetchAuthConfig() でバックエンドから取得済み ({id, passwordHash}[])
-  if(currentUser&&Array.isArray(auth.allowedUsers)){
-    const u=auth.allowedUsers.find(u=>u.id===currentUser.id);
-    if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+  if(currentUser){
+    const allowed=getEffectiveAllowedUsers();
+    if(Array.isArray(allowed)){
+      const u=allowed.find(u=>String(u.id||"").toLowerCase()===String(currentUser.id||"").toLowerCase());
+      if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
+    }
   }
   return h;
 }
@@ -461,8 +483,9 @@ async function submitCommunityEntryToGlobal(globalUrl,entry){
       category:   entry.category   || "notable",
       note:       entry.note       || "",
       addedAt:    entry.addedAt    || now,
-      updatedAt:  entry.updatedAt  || now,
-      sourceUser: currentUser?.id  || "",
+      updatedAt:  entry.updatedAt  || now,  // merge 判定用タイムスタンプ
+      sourceUser: currentUser?.id  || "",   // 書き込んだユーザーID
+      // status / lastSeen は /submit (snapshots) で管理するためここには含めない
     };
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/community",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify(payload)});
     if(!r.ok){
@@ -477,6 +500,7 @@ async function submitCommunityEntryToGlobal(globalUrl,entry){
 }
 // コミュニティエントリをバックエンドから削除
 async function deleteCommunityEntryFromGlobal(globalUrl,name){
+  // サーバー削除の成否を boolean で返す（呼び出し元がローカル削除を制御するため）
   try{
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/community?name="+encodeURIComponent(name),{method:"DELETE",headers:getWriteHeaders()});
     if(!r.ok){
@@ -494,20 +518,22 @@ async function deleteCommunityEntryFromGlobal(globalUrl,name){
 }
 // 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
 const ENCOUNTER_TYPES=[
-  {key:"won",label:"🏆 勝利",desc:"試合に勝利した（即ロビーへ）",getOffset:s=>0},
-  {key:"final_end",label:"💀 FINAL終了",desc:"FINALラウンド終了（負け）",getOffset:s=>0},
-  {key:"r1",label:"R1",desc:"ラウンド1で遭遇",group:true,sub:[
-    {key:"r1_early",label:"序盤",getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r1_mid",label:"中盤",getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r1_late",label:"終盤",getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+  {key:"won",       label:"🏆 勝利",     desc:"試合に勝利した（即ロビーへ）",     getOffset:s=>0},
+  {key:"final_end", label:"💀 FINAL終了", desc:"FINALラウンド終了（負け）",        getOffset:s=>0},
+  {key:"r1", label:"R1", desc:"ラウンド1で遭遇", group:true, sub:[
+    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
+    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
+    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
   ]},
-  {key:"r2",label:"R2",desc:"ラウンド2で遭遇",group:true,sub:[
-    {key:"r2_early",label:"序盤",getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r2_mid",label:"中盤",getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r2_late",label:"終盤",getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+  {key:"r2", label:"R2", desc:"ラウンド2で遭遇", group:true, sub:[
+    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
+    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
+    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
   ]},
-  {key:"offline",label:"⚫ オフライン",desc:"オフライン確認（5分のみ有効）",overrideDurationMs:300000,getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
+  // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
+  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
 ];
+// サブタイプを含むフラット検索
 function findEncounterType(key){
   for(const et of ENCOUNTER_TYPES){
     if(et.key===key)return et;
@@ -515,21 +541,27 @@ function findEncounterType(key){
   }
   return null;
 }
+// manualEvent 有効期間ヘルパー（overrideDurationMs が未設定なら 1時間）
 function isManualActive(me){if(!me)return false;return(nowMs()-me.recordedAt)<(me.overrideDurationMs??3600000);}
 function manualRem(me){if(!me)return 0;return Math.max(0,Math.round(((me.recordedAt+(me.overrideDurationMs??3600000))-nowMs())/60000));}
+// offline / won / final_end は「遭遇中」ではないので danger 扱いしない
 function isEncounterDanger(me){return isManualActive(me)&&me.type!=="offline"&&me.type!=="won"&&me.type!=="final_end";}
 
+// ── 認証（ID + パスワード制限） ───────────────────────────────
+// SHA-256 ハッシュ（Web Crypto API）
 async function sha256(text){
   const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
+// 認証データ読み書き（LS.auth）
 function getAuthData(){
   try{const r=localStorage.getItem(LS.auth);return r?JSON.parse(r):{adminPasswordHash:"",allowedUsers:[]};}
   catch{return{adminPasswordHash:"",allowedUsers:[]};}
 }
 function saveAuthData(d){try{localStorage.setItem(LS.auth,JSON.stringify(d));}catch{}}
 
-let currentUser=null;
+// セッション（in-memory: ページリロードでクリア）
+let currentUser=null; // {id:string} | null
 function isLoggedIn(){return currentUser!==null;}
 function setCurrentUser(id){
   currentUser=id?{id}:null;
@@ -542,6 +574,7 @@ function restoreSession(){
   if(saved)currentUser={id:saved};
 }
 function updateLoginStatus(){
+  // グローバルリスト内のステータスバー
   const bar=document.getElementById("loginStatusBar");
   if(bar){
     if(getEffectiveAllowedUsers().length===0){bar.style.display="none";}
@@ -553,6 +586,7 @@ function updateLoginStatus(){
       if(logoutBtn)logoutBtn.style.display=currentUser?"":"none";
     }
   }
+  // ヘッダーのログインボタン
   const headerUserInfo=document.getElementById("headerUserInfo");
   const btnHeaderLogout=document.getElementById("btnHeaderLogout");
   const btnHeaderLogin=document.getElementById("btnHeaderLogin");
@@ -569,7 +603,9 @@ function updateLoginStatus(){
   }
 }
 
-let _backendAllowedUsers=null;
+// ── バックエンド認証同期 ──────────────────────────────────────────
+// バックエンドから許可ユーザーリストを取得してセッション変数に保持
+let _backendAllowedUsers=null; // null = 未フェッチ or globalUrl なし
 async function fetchAuthConfig(globalUrl){
   if(!globalUrl)return;
   try{
@@ -578,13 +614,19 @@ async function fetchAuthConfig(globalUrl){
     const d=await r.json();
     if(Array.isArray(d.allowedUsers)){
       _backendAllowedUsers=d.allowedUsers;
-      if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>u.id.toLowerCase()===currentUser.id.toLowerCase())){
+      const auth=getAuthData();
+      saveAuthData({...auth,allowedUsers:d.allowedUsers});
+      if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>String(u.id||"").toLowerCase()===String(currentUser.id||"").toLowerCase())){
         setCurrentUser(null);
       }
+      renderAllowedUserList();
       updateLoginStatus();
     }
-  }catch{}
+  }catch(e){
+    console.error("fetchAuthConfig:",e);
+  }
 }
+// バックエンドに認証設定を同期（アドミンパネルのボタンから呼ぶ）
 async function syncAuthToBackend(globalUrl,adminPasswordHash,allowedUsers){
   if(!globalUrl)return false;
   try{
@@ -596,11 +638,13 @@ async function syncAuthToBackend(globalUrl,adminPasswordHash,allowedUsers){
     return r.ok;
   }catch{return false;}
 }
+// 有効な許可ユーザーリストを返す（バックエンド優先、fallback はローカル）
 function getEffectiveAllowedUsers(){
   if(_backendAllowedUsers!==null)return _backendAllowedUsers;
   return getAuthData().allowedUsers;
 }
 
+// ログインモーダル制御
 let _loginCallback=null;
 function showLoginModal(onSuccess){
   _loginCallback=onSuccess;
@@ -615,6 +659,7 @@ function hideLoginModal(){
   _loginCallback=null;
 }
 
+// 許可ユーザー一覧レンダリング（アドミンパネル内）
 function renderAllowedUserList(){
   const auth=getAuthData();
   const el=document.getElementById("allowedUserList");
@@ -640,7 +685,7 @@ function renderAllowedUserList(){
 function applyEncounterEvent(name,typeKey){
   const settings=currentSettings||getUiSettings();
   const et=findEncounterType(typeKey);
-  if(!et||et.group)return;
+  if(!et||et.group)return; // groupボタン自体は無視（サブボタンで呼ぶ）
   const now=nowMs();
   const offsetMin=et.getOffset(settings);
   const lastChangeAtOverride=now-offsetMin*60000;
@@ -652,6 +697,7 @@ function applyEncounterEvent(name,typeKey){
   saveSnapshots(snapshots);
   const durMin=Math.round(dur/60000);
   toast(et.label+" <b>"+name+"</b> を記録 (offset -"+offsetMin+"分 / "+durMin+"分優先)");
+  // API呼び出しなし → キャッシュ行をその場で更新して即時再描画（フラッシュなし）
   if(lastRows.length>0){
     const manualEventObj={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
     const updatedRows=lastRows.map(r=>{
@@ -666,6 +712,7 @@ function applyEncounterEvent(name,typeKey){
   }
 }
 function getActiveNames(){
+  // 個人リストとグローバルリスト両方を常にポーリング → 状態を共有
   const personal=parseNames(document.getElementById("namesBox").value);
   const community=getCommunityList().map(e=>e.name);
   const seen=new Set();
@@ -676,6 +723,7 @@ function getActiveNames(){
   }
   return all;
 }
+// ────────────────────────────────────────────────────────────
 function applySettingsToUi(s){
   document.getElementById("leaderboardId").value=s.leaderboardId||"s9";
   document.getElementById("platform").value=s.platform||"crossplay";
@@ -753,18 +801,63 @@ function findByAltNames(altNames){
   return null;
 }
 const STATE_I18N_KEY={
-  POST_MATCH_WAIT:"state.LOBBY",
-  LOBBY:"state.LOBBY",
-  IN_MATCH:"state.IN_MATCH_R1",
-  IN_TOURNAMENT_DEEP:"state.IN_MATCH_R2",
-  RETURNING:"state.FINAL",
-  OFFLINE:"state.OFFLINE",
-  UNKNOWN:"state.UNKNOWN",
-  NOT_FOUND:"state.NOT_FOUND",
-  BANNED:"state.BANNED",
-  NAME_CHANGED:"state.NAME_CHANGED",
+  POST_MATCH_WAIT:    "state.LOBBY",
+  LOBBY:              "state.LOBBY",
+  IN_MATCH:           "state.IN_MATCH_R1",
+  IN_TOURNAMENT_DEEP: "state.IN_MATCH_R2",
+  RETURNING:          "state.FINAL",
+  OFFLINE:            "state.OFFLINE",
+  UNKNOWN:            "state.UNKNOWN",
+  NOT_FOUND:          "state.NOT_FOUND",
+  BANNED:             "state.BANNED",
+  NAME_CHANGED:       "state.NAME_CHANGED",
 };
 function stateLabel(s){return(typeof t==="function"?t(STATE_I18N_KEY[s]||"state.UNKNOWN"):s)||s;}
+
+function stateExplain(row,displayState){
+  const manual=row?.manualEvent;
+  if(manual&&isManualActive(manual)){
+    const et=findEncounterType(manual.type);
+    if(manual.type==="offline") return "手動でオフライン状態として記録中";
+    if(manual.type==="won") return "手動で勝利後の戻り時間帯を記録中";
+    if(manual.type==="final_end") return "手動でFinal Round終了後の戻り時間帯を記録中";
+    if(String(manual.type||"").startsWith("r1_")) return "手動でR1試合中として記録中";
+    if(String(manual.type||"").startsWith("r2_")) return "手動でR2以降の試合中として記録中";
+    return `手動記録「${et?et.label:manual.type}」を優先表示中`;
+  }
+  switch(displayState){
+    case "POST_MATCH_WAIT": return "試合終了直後の反映待ち時間帯です。";
+    case "LOBBY": return "試合終了後の待機中と推定。次の試合開始候補です。";
+    case "IN_MATCH": return "R1試合中と推定。次の更新までは試合継続扱いです。";
+    case "IN_TOURNAMENT_DEEP": return "R2以降の試合中と推定。Final進行中の可能性を含みます。";
+    case "RETURNING": return "Final Round終了後の戻り時間帯を推定中。次の更新待ちです。";
+    case "OFFLINE": return "最近の更新がなく、現在は非アクティブと推定。";
+    case "UNKNOWN": return "情報不足のため状態を判定できません。";
+    case "NOT_FOUND": return "リーダーボードで連続未検出。BANまたは名前変更の可能性があります。";
+    case "BANNED": return "リーダーボードから完全消失。BANの可能性が高い状態です。";
+    case "NAME_CHANGED": return "別名義の候補を検出。名前変更の可能性があります。";
+    default: return "";
+  }
+}
+function stateSortPriority(row){
+  const isMissing=row.notFoundCount>=3&&row.lastFoundAt;
+  const displayState=(isMissing&&row.suspectedReason==="BAN")?"BANNED":
+    (isMissing&&row.suspectedReason==="NAME_CHANGE")?"NAME_CHANGED":
+    isMissing?"NOT_FOUND":row.state;
+  switch(displayState){
+    case "POST_MATCH_WAIT": return 0;
+    case "LOBBY": return 1;
+    case "IN_MATCH": return 2;
+    case "IN_TOURNAMENT_DEEP": return 3;
+    case "RETURNING": return 4;
+    case "UNKNOWN": return 5;
+    case "OFFLINE": return 6;
+    case "NOT_FOUND": return 7;
+    case "NAME_CHANGED": return 8;
+    case "BANNED": return 9;
+    default: return 10;
+  }
+}
 function renderBadge(rank,league){
   const tier=league||inferLeagueFromRank(rank);
   const rankStr=rank?"#"+rank.toLocaleString():"—";
@@ -788,40 +881,58 @@ function getPointsFromEntry(entry){
 }
 function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,matchJitterMin,tournamentTotalMin,skipOffline20=false){
   if(!lastChangeAtMs) return { state:"UNKNOWN", nextMatchProb:0 };
-  const tMin=(now-lastChangeAtMs)/60000;
-  const X=reflectDelayMin;
+
+  const tMin = (now - lastChangeAtMs) / 60000;
+  const X = reflectDelayMin;
+
   if(!skipOffline20){
-    const lastBatch=estimator.lastBatchAt;
-    const BATCH_BUF_MS=5*60*1000;
+    // ① バッチ検出済み：lastBatchAt が lastChangeAt より 5分以上新しい
+    //    → 最新バッチでこのプレイヤーのポイント変動なし = OFFLINE確定
+    const lastBatch = estimator.lastBatchAt;
+    const BATCH_BUF_MS = 5 * 60 * 1000; // ポーリングズレ吸収バッファ
     if(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS){
       return { state:"OFFLINE", nextMatchProb:0 };
     }
-    if(!lastBatch && tMin>=20) return { state:"OFFLINE", nextMatchProb:0 };
+    // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック（20分固定）
+    if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
   }
-  const W=Math.max(0,Math.min(30,matchWaitMin??5));
-  const M=Math.max(20,Math.min(60,matchAvgMin||31));
-  const J=Math.max(0,Math.min(10,matchJitterMin??3));
-  const T=Math.max(M+W+5,Math.min(180,tournamentTotalMin||70));
-  let state="LOBBY";
-  if(tMin < X) state="POST_MATCH_WAIT";
-  else if(tMin < X+W) state="LOBBY";
-  else if(tMin < X+W+M) state="IN_MATCH";
-  else if(tMin < X+W+M+J) state="IN_MATCH";
-  else if(tMin < X+T) state="IN_TOURNAMENT_DEEP";
-  else if(tMin < X+T+25) state="RETURNING";
-  else state="OFFLINE";
-  const peak=X+W;
-  const matchEnd=X+W+M+J;
-  let p=0;
-  if(tMin < X){ p = 0.05 * (tMin / Math.max(1,X)); }
-  else if(tMin <= peak){ p = 0.10 + 0.90 * ((tMin-X)/Math.max(1,W)); }
-  else if(tMin <= peak + M*0.25){ p = 1.00 - 0.55 * ((tMin-peak)/Math.max(1,M*0.25)); }
-  else if(tMin <= matchEnd){ p = 0.45 - 0.25 * ((tMin-(peak+M*0.25))/Math.max(1,matchEnd-peak-M*0.25)); }
-  else if(tMin <= X+T){ p = 0.20 - 0.10 * ((tMin-matchEnd)/Math.max(1,X+T-matchEnd)); }
-  else { p = 0.05; }
-  p=Math.min(0.80,clamp01(p));
-  return { state, nextMatchProb:Math.round(p*100) };
+  const W = Math.max(0, Math.min(30, matchWaitMin ?? 5));   // lobby/queue wait before next match
+  const M = Math.max(20, Math.min(60, matchAvgMin || 31));  // minimum match duration (31min fastest)
+  const J = Math.max(0, Math.min(10, matchJitterMin ?? 3)); // +jitter tolerance (one-sided)
+  const T = Math.max(M + W + 5, Math.min(180, tournamentTotalMin || 70));
+
+  // State transitions
+  let state = "LOBBY";
+  if(tMin < X)                 state = "POST_MATCH_WAIT";
+  else if(tMin < X + W)        state = "LOBBY";              // queuing for next match
+  else if(tMin < X + W + M)    state = "IN_MATCH";           // minimum 31min not elapsed → in match
+  else if(tMin < X + W + M + J) state = "IN_MATCH";          // +3min gray zone
+  else if(tMin < X + T)        state = "IN_TOURNAMENT_DEEP";
+  else if(tMin < X + T + 25)   state = "RETURNING";
+  else                         state = "OFFLINE";
+
+  // next_match%: peaks at (X+W) = when next match is expected to start
+  const peak = X + W;
+  const matchEnd = X + W + M + J;
+  let p = 0;
+  if(tMin < X) {
+    p = 0.05 * (tMin / Math.max(1, X));
+  } else if(tMin <= peak) {
+    p = 0.10 + 0.90 * ((tMin - X) / Math.max(1, W));
+  } else if(tMin <= peak + M * 0.25) {
+    p = 1.00 - 0.55 * ((tMin - peak) / Math.max(1, M * 0.25));
+  } else if(tMin <= matchEnd) {
+    p = 0.45 - 0.25 * ((tMin - (peak + M * 0.25)) / Math.max(1, matchEnd - peak - M * 0.25));
+  } else if(tMin <= X + T) {
+    p = 0.20 - 0.10 * ((tMin - matchEnd) / Math.max(1, X + T - matchEnd));
+  } else {
+    p = 0.05;
+  }
+
+  p = Math.min(0.80, clamp01(p)); // 最高80%（100%前提の見え方を避ける）
+  return { state, nextMatchProb: Math.round(p * 100) };
 }
+
 function isCorsLikeError(msg){
   const m=String(msg||"");
   return m.includes("Failed to fetch")||m.includes("NetworkError")||m.includes("CORS");
@@ -840,4 +951,1248 @@ async function fetchPlayer(proxyBase,leaderboardId,platform,name){
     return await r.json();
   }
 }
-// ...
+function renderTable(rows){
+  const tbody=document.getElementById("tbody");tbody.innerHTML="";
+  let filtered=rows;
+  // viewMode に応じて表示プレイヤーを絞り込む（ポーリングは両リスト共通）
+  if(viewMode==="personal"){
+    const pset=new Set(parseNames(document.getElementById("namesBox").value).map(n=>n.toLowerCase()));
+    filtered=filtered.filter(r=>pset.has(r.name.toLowerCase()));
+  }else if(viewMode==="global"){
+    const gset=new Set(getFilteredCommunity(globalFilter).map(e=>e.name.toLowerCase()));
+    filtered=filtered.filter(r=>gset.has(r.name.toLowerCase()));
+  }
+  if(liveTabMode==="pickup") filtered=filtered.filter(r=>pickedUp.has(r.name.toLowerCase()));
+  if(liveRegionFilter!=="all") filtered=filtered.filter(r=>(r.region||"")===liveRegionFilter);
+  if(liveSearchQuery) filtered=filtered.filter(r=>r.name.toLowerCase().includes(liveSearchQuery));
+  personalRegionFilter=liveRegionFilter;
+
+  const statePriority=(r)=>{
+    const isMissing=r.notFoundCount>=3&&r.lastFoundAt;
+    if(isMissing)return 8;
+    switch(r.state){
+      case "LOBBY": return 0;
+      case "POST_MATCH_WAIT": return 1;
+      case "IN_MATCH": return 2;
+      case "IN_TOURNAMENT_DEEP": return 3;
+      case "RETURNING": return 4;
+      case "OFFLINE": return 6;
+      case "UNKNOWN": return 7;
+      default: return 5;
+    }
+  };
+
+  filtered=filtered.slice().sort((a,b)=>{
+    const pa=statePriority(a),pb=statePriority(b);
+    if(pa!==pb)return pa-pb;
+    const ta=a.lastChangeAt?(Date.now()-a.lastChangeAt):1e18;
+    const tb=b.lastChangeAt?(Date.now()-b.lastChangeAt):1e18;
+    if(ta!==tb)return ta-tb;
+    return a.name.localeCompare(b.name);
+  });
+
+  for(const r of filtered){
+    const isMissing=r.notFoundCount>=3&&r.lastFoundAt;
+    const isBan=isMissing&&r.suspectedReason==="BAN";
+    const isNameChange=isMissing&&r.suspectedReason==="NAME_CHANGE";
+    const displayState=isBan?"BANNED":isNameChange?"NAME_CHANGED":isMissing?"NOT_FOUND":r.state;
+    const statusBadge=isBan
+      ?'<span class="badge" style="background:#2a0808;color:#ff5555;border-color:#7a1a1a;margin:0 5px 0 2px">⛔ BAN</span>'
+      :isNameChange
+        ?'<span class="badge" style="background:#082030;color:#6de9ff;border-color:#1e5a8a;margin:0 5px 0 2px">🔵 NC</span>'
+        :"";
+    const missingBadge=(!isBan&&!isNameChange&&isMissing)
+      ?'<span class="badge" style="background:#2a1200;color:#ff9944;border-color:#7a3800;">🟠 Missing</span>'
+      :"";
+    const regionBadge=r.region?`<span class="regionTag regionTag-${r.region}">${r.region}</span>`:"";
+    const key=r.name.toLowerCase();
+    const isExpanded=expandedRows.has(key);
+    const isPicked=pickedUp.has(key);
+    const manualActive=isManualActive(r.manualEvent);
+    const manualType=r.manualEvent?.type;
+    const isWonOrFinal=manualType==="won"||manualType==="final_end";
+    const manualRemMin=manualActive?manualRem(r.manualEvent):0;
+    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualRemMin}m</span>`:"";
+    const tr=document.createElement("tr");
+    if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
+    else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
+    tr.innerHTML=`
+      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="ピックアップ（大型グラフに追加）">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
+      <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
+      <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
+      <td class="num">${r.lastDelta==null?"—":r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
+      <td class="tsCell">${r.lastDelta==null?"—":fmtAgo(r.lastRealChangeAt)}</td>
+      <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
+      <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
+      <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
+      <td class="errCell">${r.error||""}</td>
+      <td class="actCell"><button class="resetBtn" title="遭遇記録（クリックで展開）">⚔</button><button class="deleteBtn" title="削除">✕</button></td>
+    `;
+    tr.querySelector(".pickupBtn").addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
+    tr.querySelector(".nameCell").addEventListener("click",()=>toggleExpand(r,tr,key));
+    tr.querySelector(".resetBtn").addEventListener("click",(e)=>{e.stopPropagation();toggleExpand(r,tr,key);});
+    tr.querySelector(".deleteBtn").addEventListener("click",(e)=>{e.stopPropagation();removePlayer(r.name);});
+    tbody.appendChild(tr);
+    if(isExpanded) tbody.appendChild(buildExpandRow(r,key));
+  }
+}
+function renderSpark(rows){
+  const wrap=document.getElementById("sparkWrap");if(!wrap)return;wrap.innerHTML="";
+  const axis=document.getElementById("sparkAxis");if(axis)axis.innerHTML="";
+  const summary=document.getElementById("sparkSummary");if(summary)summary.innerHTML="";
+  const activeRows=rows.filter(r=>r.lastChangeAt&&!(r.notFoundCount>=3&&r.lastFoundAt));
+  const hotEl=document.getElementById("sparkHotCount");
+  if(hotEl){
+    const now2=nowMs();
+    const dangerNow=activeRows.filter(r=>isEncounterDanger(r.manualEvent)).length;
+    const hotNow=activeRows.filter(r=>!r.manualEvent&&r.nextMatchProb>=60).length;
+    let html="";
+    if(dangerNow>0) html+=`<span class="dangerCount">🚨 ${dangerNow}人遭遇！</span>`;
+    if(hotNow>0)    html+=`<span class="hotCount">${hotNow}人が試合開始近い</span>`;
+    if(!html)       html=`<span style="color:#5a7aaa;font-size:12px;">試合開始が近いプレイヤーなし</span>`;
+    hotEl.innerHTML=html;
+  }
+  if(activeRows.length===0){
+    wrap.innerHTML="<div class='psEmpty'>プレイヤーを追加すると予測グラフが表示されます</div>";
+    return;
+  }
+  for(const r of activeRows){
+    const now2=nowMs();
+    const isDanger=isEncounterDanger(r.manualEvent);
+    const item=document.createElement("div");item.className="psItem"+(isDanger?" psItem--danger":"");
+    const [handle,tag]=r.name.split("#");
+    const prob=r.nextMatchProb??0;
+    const probColor=isDanger?"#ff4444":prob>=60?"#39d98a":prob>=30?"#ffcf5c":"#5a7aaa";
+    const header=document.createElement("div");header.className="psHeader";
+    const dangerBadge=isDanger?`<span class="psDangerBadge">🚨 遭遇</span>`:"";
+    const et=isDanger?findEncounterType(r.manualEvent.type):null;
+    const etLabel=et?et.label:"";
+    header.innerHTML=`<span class="psName">${handle}<span class="psTag">#${tag||""}</span></span>${dangerBadge}<span class="psPct" style="color:${probColor}">${isDanger?etLabel:prob+"%"}</span>`;
+    item.appendChild(header);
+    item.appendChild(buildPlayerSparkEl(r));
+    wrap.appendChild(item);
+  }
+}
+function renderBanList(rows){
+  const el=document.getElementById("banAlertList");
+  if(!el)return;
+  const flagged=rows.filter(r=>r.notFoundCount>=3&&r.lastFoundAt);
+  if(flagged.length===0){el.innerHTML="";return;}
+  const banned=flagged.filter(r=>r.suspectedReason==="BAN");
+  const nameChanged=flagged.filter(r=>r.suspectedReason==="NAME_CHANGE");
+  const unknown=flagged.filter(r=>!r.suspectedReason);
+  function itemHtml(r){
+    const isBan=r.suspectedReason==="BAN";
+    const isNameChange=r.suspectedReason==="NAME_CHANGE";
+    const cls=isBan?"banAlertBan":isNameChange?"banAlertNameChange":"";
+    const icon=isBan?"⛔":isNameChange?"🔵":"🟠";
+    const reasonText=isBan
+      ?"リーダーボードから完全消去"
+      :isNameChange?`新しい名前: <b>${r.suspectedNewName||"不明"}</b>`
+      :"消失中（調査中…）";
+    return `<div class="banAlertItem ${cls}">
+      <span class="banAlertIcon">${icon}</span>
+      <span class="banAlertName">${r.name}</span>
+      <span class="banAlertReason">${reasonText}</span>
+      <span class="banAlertMeta">最終確認: ${fmtTs(r.lastFoundAt)}　連続未検出: ${r.notFoundCount}回</span>
+    </div>`;
+  }
+  let html="";
+  if(banned.length)    html+=`<div class="banAlertTitle banTitleBan">⛔ BANされた可能性</div>`+banned.map(itemHtml).join("");
+  if(nameChanged.length) html+=`<div class="banAlertTitle banTitleNameChange">🔵 名前変更</div>`+nameChanged.map(itemHtml).join("");
+  if(unknown.length)   html+=`<div class="banAlertTitle">🟠 消失中（調査中）</div>`+unknown.map(itemHtml).join("");
+  el.innerHTML=html;
+}
+async function pollOnce(names,settings){
+  const snapshots=getSnapshots();
+  const now=nowMs();
+  const rows=[];
+  let anyCors=false;
+  await Promise.all(names.map(async(name)=>{
+    const key=name.toLowerCase();
+    const prev=snapshots[key]||{};
+    let points=null,stale=false,errMsg="",freshRank=null,freshLeague=null,freshAltNames=null;
+    try{
+      const data=await fetchPlayer(effectiveProxyBase(settings),settings.leaderboardId,settings.platform,name);
+      const entry=(data&&Array.isArray(data.data)&&data.data.length)?data.data[0]:null;
+      points=entry?getPointsFromEntry(entry):null;
+      freshRank=entry?pickRank(entry,null):null;
+      freshLeague=entry?getLeagueFromEntry(entry):null;
+      freshAltNames=entry?getAltNamesFromEntry(entry):{steam:null,psn:null,xbox:null};
+      if(points===null){stale=true;errMsg="No points field / not in leaderboard";}
+    }catch(e){
+      stale=true;errMsg=String(e&&e.message?e.message:e);
+      if(isCorsLikeError(errMsg)) anyCors=true;
+    }
+    let delta=null;
+    let lastDelta=prev.lastDelta??null; // 最後の非ゼロ変動値（表示固定用）
+    let lastChangeAt=prev.lastChangeAt??null;
+    let lastRealChangeAt=prev.lastRealChangeAt??null; // 実際のポイント変動のみ記録（表示用）
+    let manualEvent=prev.manualEvent??null; // 手動遭遇記録
+    let currentPoints=prev.points??null;
+    let lastOkAt=prev.lastOkAt??null;
+    let leaderboardRank=prev.leaderboardRank??null;
+    let league=prev.league??null;
+    let notFoundCount=prev.notFoundCount??0;
+    let lastFoundAt=prev.lastFoundAt??null;
+    let banNotified=prev.banNotified??false;
+    let altNames=prev.altNames||{steam:null,psn:null,xbox:null};
+    let suspectedReason=prev.suspectedReason??null;
+    let suspectedNewName=prev.suspectedNewName??null;
+    if(points!==null){
+      currentPoints=points;lastOkAt=now;
+      leaderboardRank=freshRank??leaderboardRank;
+      league=freshLeague??league;
+      // Merge fresh alt names (prefer non-null, keep saved if API returned null this time)
+      if(freshAltNames){
+        altNames={
+          steam:freshAltNames.steam||altNames.steam,
+          psn:freshAltNames.psn||altNames.psn,
+          xbox:freshAltNames.xbox||altNames.xbox
+        };
+      }
+      notFoundCount=0;lastFoundAt=now;banNotified=false;suspectedReason=null;suspectedNewName=null;
+      if(typeof prev.points==="number"){
+        delta=currentPoints-prev.points;
+        if(delta!==0){lastChangeAt=now;lastRealChangeAt=now;lastDelta=delta;pushEvent({ts:now,name,points:currentPoints,delta,inferred_state:null},settings.maxEvents);}
+        // RS急落アラート
+        if(delta<=-settings.rsDropThreshold){
+          const prevRk=prev.leaderboardRank;
+          const newRk=freshRank??leaderboardRank;
+          const rankPart=(prevRk&&newRk)?" / #"+prevRk.toLocaleString()+" → #"+newRk.toLocaleString():"";
+          toast("📉 <b>"+name+"</b> RS急減: "+prev.points.toLocaleString()+" → "+currentPoints.toLocaleString()+" (<b>"+delta+"</b>)"+rankPart);
+        }
+      }else if(prev.points==null){
+        // 初回観測：優先順位: イベント履歴 → lastBatchAt → null(UNKNOWN)
+        if(!lastChangeAt){
+          const fromHistory=getLastChangeAtFromEvents(key);
+          if(fromHistory) lastChangeAt=fromHistory;
+          else if(estimator.lastBatchAt) lastChangeAt=estimator.lastBatchAt;
+        }
+      }
+    }else if(!isCorsLikeError(errMsg)){
+      notFoundCount++;
+      if(notFoundCount>=3&&lastFoundAt&&!banNotified&&leaderboardCache.length>0){
+        const matchEntry=findByAltNames(altNames);
+        if(matchEntry){
+          suspectedReason="NAME_CHANGE";
+          suspectedNewName=pickName(matchEntry)||null;
+          toast("🔄 <b>"+name+"</b> が名前を変更しました → <b>"+(suspectedNewName||"不明")+"</b>");
+        }else{
+          suspectedReason="BAN";
+          toast("⛔ <b>"+name+"</b> がBANされた可能性があります");
+        }
+        banNotified=true;
+      }
+    }
+    // manualEvent: APIでポイント変化を検出したらクリア。1時間経過でも無効化
+    if(delta!==null&&delta!==0)manualEvent=null;
+    const manualActive=isManualActive(manualEvent);
+    if(!manualActive)manualEvent=null;
+    const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:lastChangeAt;
+    const region=prev.region??"";
+    snapshots[key]={points:currentPoints,lastDelta,lastChangeAt,lastRealChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region,...(manualEvent?{manualEvent}:{})};
+    const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
+    // 状態変化をログ記録
+    const prevRowState=lastRows.find(r=>r.name.toLowerCase()===key)?.state;
+    if(prevRowState && prevRowState!==inf.state){
+      pushStateLog({ts:now,name,from:prevRowState,to:inf.state,points:currentPoints,delta});
+      // ★付きプレイヤーの状態変化通知
+      if(pickedUp.has(key)){
+        const entering=["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(inf.state);
+        const leaving=["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(prevRowState);
+        if(entering)sendNotification(`🎮 ${name} が試合中`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
+        else if(leaving)sendNotification(`🏁 ${name} が試合終了`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
+      }
+    }
+    rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
+  }));
+  saveSnapshots(snapshots);
+  // コミュニティ登録済みプレイヤーのスナップショットをバックエンドに送信（タブに関係なく共有）
+  const _gs=getUiSettings();
+  const _gUrl=effectiveGlobalUrl(_gs);
+  if(_gUrl){
+    const activeKeys=new Set(getCommunityList().map(e=>e.name.toLowerCase()));
+    if(activeKeys.size>0){
+      Object.entries(snapshots).forEach(([k,s])=>{
+        if(activeKeys.has(k))submitSnapshotToGlobal(_gUrl,k,s);
+      });
+    }
+  }
+  rows.sort((a,b)=>{
+    const ta=a.lastChangeAt?(now-a.lastChangeAt):1e18;
+    const tb=b.lastChangeAt?(now-b.lastChangeAt):1e18;
+    if(ta!==tb)return ta-tb;
+    return a.name.localeCompare(b.name);
+  });
+  document.getElementById("lastPoll").textContent=new Date(now).toLocaleTimeString();
+  if(anyCors) setNetHint("CORSっぽい失敗あり → ローカル環境の場合は worker.js をデプロイして使用してください");
+  else setNetHint("");
+  lastRows=rows; // 遭遇ボタンの即時再描画用にキャッシュ
+  renderTable(rows);renderSpark(rows);renderBanList(rows);renderPickupGraph();
+  // リロード後スクロール位置をテーブル描画完了後に復元（1フレーム後）
+  if(pendingScrollY!==null){
+    const y=pendingScrollY;pendingScrollY=null;
+    requestAnimationFrame(()=>window.scrollTo({top:y,behavior:"instant"}));
+  }
+}
+function csvEscape(s){const t=String(s??"");if(/[",\n]/.test(t))return '"'+t.replaceAll('"','""')+'"';return t;}
+function downloadText(filename,text){
+  const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);
+}
+function exportJsonl(){const events=getEvents();downloadText("finals_events.jsonl",events.map(e=>JSON.stringify(e)).join("\n")+"\n");}
+function exportCsv(){
+  const events=getEvents();const header=["ts","name","points","delta","inferred_state"];
+  const lines=[header.join(",")];
+  for(const e of events){lines.push([e.ts,csvEscape(e.name),e.points,e.delta,csvEscape(e.inferred_state||"")].join(","));}
+  downloadText("finals_events.csv",lines.join("\n")+"\n");
+}
+function clearLocal(){localStorage.removeItem(LS.settings);localStorage.removeItem(LS.snapshots);localStorage.removeItem(LS.events);localStorage.removeItem(LS.names);}
+const LS_LOGS="finals_tracker_statelogs_v1";
+function getStateLogs(){try{const r=localStorage.getItem(LS_LOGS);if(!r)return[];return JSON.parse(r);}catch{return[];}}
+function pushStateLog(entry){try{const logs=getStateLogs();logs.push(entry);if(logs.length>2000)logs.splice(0,logs.length-2000);localStorage.setItem(LS_LOGS,JSON.stringify(logs));}catch{}}
+function clearStateLogs(){try{localStorage.removeItem(LS_LOGS);}catch{}}
+function exportStateLogs(){
+  const logs=getStateLogs();
+  const header=["ts","datetime","name","from","to","points","delta"];
+  const lines=[header.join(",")];
+  for(const e of logs){
+    const dt=new Date(e.ts).toLocaleString();
+    lines.push([e.ts,csvEscape(dt),csvEscape(e.name),csvEscape(e.from||""),csvEscape(e.to||""),e.points??"",e.delta??""].join(","));
+  }
+  downloadText("finals_statelogs.csv",lines.join("\n")+"\n");
+}
+function renderPickupGraph(){
+  const section=document.getElementById("pickupSection");if(!section)return;
+  const picked=lastRows.filter(r=>pickedUp.has(r.name.toLowerCase()));
+  if(picked.length===0){section.style.display="none";return;}
+  section.style.display="";
+  const slots=30,now=nowMs();
+  const combined=[];
+  for(let i=0;i<slots;i++){
+    const future=now+(i*60000);
+    let q=1;
+    for(const r of picked){
+      const lca=r.effectiveLCA??r.lastChangeAt;
+      const isDanger=isEncounterDanger(r.manualEvent);
+      const inf=inferState(future,lca,r.reflectDelayMin,r.matchWaitMin,r.matchAvgMin,r.matchJitterMin,r.tournamentTotalMin,isDanger);
+      q*=(1-(inf.nextMatchProb||0)/100);
+    }
+    combined.push(Math.round((1-q)*100));
+  }
+  const peak=combined.indexOf(Math.max(...combined));
+  const barsEl=document.getElementById("pickupBars");
+  if(barsEl){
+    barsEl.innerHTML="";
+    for(let i=0;i<slots;i++){
+      const v=combined[i]/100;
+      const bar=document.createElement("div");
+      bar.className="pickupBar"+(i===peak?" pickupBarPeak":"");
+      bar.style.height=Math.max(4,Math.round(v*100))+"px";
+      bar.title=`+${i}分後: ${combined[i]}%`;
+      barsEl.appendChild(bar);
+    }
+  }
+  const axEl=document.getElementById("pickupAxis");
+  if(axEl){axEl.innerHTML="";[0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"今":"+"+m+"m";axEl.appendChild(s);});}
+  const nameEl=document.getElementById("pickupNames");if(nameEl)nameEl.textContent=picked.map(r=>r.name).join("、");
+  const pctEl=document.getElementById("pickupPeak");if(pctEl)pctEl.textContent=`ピーク ${combined[peak]}% (+${peak}分後)`;
+}
+let logViewMode="list";
+const LOG_STATE_COLOR={OFFLINE:"#8ea0b7",LOBBY:"#5b9cf6",POST_MATCH_WAIT:"#7bb8f0",IN_MATCH:"#39d98a",IN_TOURNAMENT_DEEP:"#c77dff",RETURNING:"#c77dff",UNKNOWN:"#3a4a60",NOT_FOUND:"#ff9944",BANNED:"#ff5555",NAME_CHANGED:"#6de9ff"};
+
+function renderLogList(){
+  const el=document.getElementById("logList");if(!el)return;
+  const allLogs=getStateLogs();
+  const logs=allLogs.slice(-300).reverse();
+  const count=document.getElementById("logCount");
+  if(count)count.textContent=`(${allLogs.length}件)`;
+  if(logs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
+  let html="";let lastDate="";
+  for(const e of logs){
+    const d=new Date(e.ts);
+    const dateStr=d.toLocaleDateString(undefined,{month:"short",day:"numeric",weekday:"short"});
+    const timeStr=d.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+    if(dateStr!==lastDate){html+=`<div class="logDateSep">${dateStr}</div>`;lastDate=dateStr;}
+    const fromC=LOG_STATE_COLOR[e.from]||"#8ea0b7";
+    const toC=LOG_STATE_COLOR[e.to]||"#e7edf5";
+    const delta=e.delta!=null?(e.delta>0?`<span class="logDelta pos">+${e.delta}</span>`:`<span class="logDelta neg">${e.delta}</span>`):"";
+    html+=`<div class="logEntry"><span class="logTime">${timeStr}</span><span class="logName">${e.name}</span><span class="logState" style="color:${fromC}">${stateLabel(e.from)}</span><span class="logArrow">→</span><span class="logState" style="color:${toC}">${stateLabel(e.to)}</span>${delta}</div>`;
+  }
+  el.innerHTML=html;
+}
+
+function renderLogTimeline(){
+  const el=document.getElementById("logList");if(!el)return;
+  const allLogs=getStateLogs();
+  const count=document.getElementById("logCount");
+  if(count)count.textContent=`(${allLogs.length}件)`;
+  if(allLogs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
+
+  // プレイヤー別にグループ化
+  const playerMap={};
+  for(const log of allLogs){
+    if(!playerMap[log.name])playerMap[log.name]=[];
+    playerMap[log.name].push(log);
+  }
+  // 最新のログがあるプレイヤーから並べる（最大20名）
+  const playerNames=Object.keys(playerMap)
+    .sort((a,b)=>Math.max(...playerMap[b].map(l=>l.ts))-Math.max(...playerMap[a].map(l=>l.ts)))
+    .slice(0,20);
+
+  const now=Date.now();
+  // 本日 00:00:00（ローカル）〜 翌 00:00:00 の固定 24 時間軸
+  const todayMidnight=new Date(now);todayMidnight.setHours(0,0,0,0);
+  const timeStart=todayMidnight.getTime();
+  const timeEnd=timeStart+24*60*60*1000;
+  const totalDur=timeEnd-timeStart; // 86400000
+
+  const rowH=22;const rowGap=5;const labelW=130;const axisH=24;const padTop=16;
+  const W=Math.max(el.clientWidth||600,400);
+  const trackW=W-labelW-8;
+  const svgH=playerNames.length*(rowH+rowGap)+axisH+padTop;
+
+  let svgRows="";
+
+  playerNames.forEach((name,i)=>{
+    const y=padTop+i*(rowH+rowGap);
+    const logs=[...playerMap[name]].sort((a,b)=>a.ts-b.ts);
+
+    // セグメント計算（今日 0:00〜現在にクリップ）
+    const segs=[];
+    if(logs[0].ts>timeStart){
+      segs.push({start:timeStart,end:Math.min(logs[0].ts,now),state:logs[0].from});
+    }
+    for(let j=0;j<logs.length;j++){
+      const segStart=Math.max(logs[j].ts,timeStart);
+      const segEnd=j+1<logs.length?Math.min(logs[j+1].ts,now):Math.min(now,timeEnd);
+      if(segStart<timeEnd&&segEnd>timeStart){
+        segs.push({start:segStart,end:segEnd,state:logs[j].to});
+      }
+    }
+
+    // ラベル（省略）
+    const label=name.length>16?name.slice(0,14)+"…":name;
+    svgRows+=`<text x="${labelW-6}" y="${y+rowH/2+4}" text-anchor="end" fill="#b8c4d6" font-size="11" font-family="system-ui,sans-serif">${label}</text>`;
+
+    // セグメント描画
+    for(const seg of segs){
+      const x=labelW+((seg.start-timeStart)/totalDur)*trackW;
+      const w=Math.max(((seg.end-seg.start)/totalDur)*trackW,1);
+      const color=LOG_STATE_COLOR[seg.state]||"#8ea0b7";
+      const startStr=new Date(seg.start).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
+      const endStr=new Date(seg.end).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
+      svgRows+=`<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH}" fill="${color}" opacity="0.82" rx="2"><title>${stateLabel(seg.state)}\n${startStr} → ${endStr}</title></rect>`;
+    }
+    // 区切り線
+    svgRows+=`<line x1="${labelW}" y1="${y+rowH+2}" x2="${W-4}" y2="${y+rowH+2}" stroke="#1e2a3a" stroke-width="1"/>`;
+  });
+
+  // 時刻軸（2時間ごと: 00:00, 02:00, ..., 24:00）
+  const axisY=padTop+playerNames.length*(rowH+rowGap)+4;
+  let axis=`<line x1="${labelW}" y1="${axisY}" x2="${W-4}" y2="${axisY}" stroke="#2a3a50" stroke-width="1"/>`;
+  for(let h=0;h<=24;h+=2){
+    const x=labelW+(h/24)*trackW;
+    const lbl=String(h%24).padStart(2,"0")+":00";
+    const isMajor=(h%6===0);
+    axis+=`<line x1="${x.toFixed(1)}" y1="${axisY}" x2="${x.toFixed(1)}" y2="${axisY+(isMajor?6:3)}" stroke="${isMajor?"#4a6a90":"#3a4a60"}" stroke-width="1"/>`;
+    if(isMajor){
+      axis+=`<text x="${x.toFixed(1)}" y="${axisY+17}" text-anchor="middle" fill="#6a8aaa" font-size="10" font-family="system-ui,sans-serif">${lbl}</text>`;
+    }
+  }
+
+  // 現在時刻の垂直 NOW ライン
+  const nowX=labelW+((now-timeStart)/totalDur)*trackW;
+  axis+=`<line x1="${nowX.toFixed(1)}" y1="${padTop}" x2="${nowX.toFixed(1)}" y2="${axisY}" stroke="#ff9944" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.8"/>`;
+  axis+=`<text x="${nowX.toFixed(1)}" y="${padTop-3}" text-anchor="middle" fill="#ff9944" font-size="9" font-weight="bold" font-family="system-ui,sans-serif">NOW</text>`;
+
+  // 凡例
+  const legendStates=[["OFFLINE","#8ea0b7","Offline"],["LOBBY","#5b9cf6","Lobby"],["IN_MATCH","#39d98a","In Match"],["IN_TOURNAMENT_DEEP","#c77dff","Final/Tournament"],["NOT_FOUND","#ff9944","Missing"],["BANNED","#ff5555","Banned"]];
+  let legend=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
+  for(const [,color,label] of legendStates){
+    legend+=`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#b8c4d6;"><span style="width:14px;height:14px;border-radius:3px;background:${color};opacity:0.85;display:inline-block;"></span>${label}</span>`;
+  }
+  legend+=`</div>`;
+
+  el.innerHTML=`<div style="overflow-x:auto;margin-top:8px;"><svg width="${W}" height="${svgH}" viewBox="0 0 ${W} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="display:block;">${svgRows}${axis}</svg></div>${legend}`;
+}
+function saveNamesToUrl(names){
+  const qp=new URLSearchParams(window.location.search);
+  qp.set("names",names.join(","));
+  const next=window.location.pathname+"?"+qp.toString();
+  history.replaceState(null,"",next);
+}
+function saveNamesToLocal(names){
+  try{localStorage.setItem(LS.names,JSON.stringify(names));}catch{}
+}
+function loadNamesFromLocal(){
+  try{const raw=localStorage.getItem(LS.names);if(!raw)return null;const arr=JSON.parse(raw);return Array.isArray(arr)&&arr.length?arr:null;}catch{return null;}
+}
+function loadNamesFromUrl(){
+  const qp=new URLSearchParams(window.location.search);
+  const raw=qp.get("names");
+  if(!raw)return null;
+  return parseNames(raw);
+}
+async function ensureLeaderboardCache(){
+  if(leaderboardCache.length>0||leaderboardFetching)return;
+  leaderboardFetching=true;
+  try{
+    const s=currentSettings||getUiSettings();
+    const json=await fetchLeaderboardViaProxy(s);
+    leaderboardCache=normalizeLeaderboardArray(json);
+  }catch(e){}finally{leaderboardFetching=false;}
+}
+function searchLeaderboard(query){
+  if(!query||query.length<2||leaderboardCache.length===0)return[];
+  const q=query.toLowerCase();
+  const results=[];
+  for(const e of leaderboardCache){
+    if(results.length>=5)break;
+    if((e.name||"").toLowerCase().includes(q)||(e.steamName||"").toLowerCase().includes(q)||(e.psnName||"").toLowerCase().includes(q)||(e.xboxName||"").toLowerCase().includes(q))results.push(e);
+  }
+  return results;
+}
+function hideSearchDropdown(){
+  const box=document.getElementById("searchDropdown");
+  if(box){box.innerHTML="";box.classList.remove("open");}
+}
+function renderSearchDropdown(entries){
+  const box=document.getElementById("searchDropdown");
+  if(!box)return;
+  if(entries.length===0){box.innerHTML="";box.classList.remove("open");return;}
+  box.innerHTML=entries.map(e=>{
+    const alts=[e.steamName,e.psnName,e.xboxName].filter(Boolean).join(" · ");
+    return `<div class="suggItem" data-name="${e.name}"><span class="suggRank">#${e.rank}</span><span class="suggName">${e.name}</span>${alts?`<span class="suggAlt">${alts}</span>`:""}</div>`;
+  }).join("");
+  box.classList.add("open");
+  box.querySelectorAll(".suggItem").forEach(el=>{
+    el.addEventListener("mousedown",ev=>{
+      ev.preventDefault();
+      addPlayerAndStart(el.dataset.name);
+    });
+  });
+}
+function doStart(){
+  if(timer){clearTimeout(timer);timer=null;}
+  const settings=getUiSettings();saveSettings(settings);
+  const names=getActiveNames();
+  if(names.length===0)return;
+  if(viewMode==="personal"){
+    // namesBox の内容だけを保存（community との union を保存すると community players が
+    // namesBox に混入してしまうため、ここでは personal 分のみを対象にする）
+    const personalOnly=parseNames(document.getElementById("namesBox").value);
+    try{saveNamesToUrl(personalOnly);}catch{}
+    saveNamesToLocal(personalOnly);
+  }
+  currentSettings=settings;
+  setRunning(true);
+  (function schedulePoll(){
+    // グローバルリストを 120 秒ごとにバックエンドと自動同期（他ユーザーの追加を反映）
+    const now=Date.now();
+    const communitySync=effectiveGlobalUrl(settings)&&(now-lastCommunitySync>120000)
+      // コミュニティリスト同期（追加・更新・削除） + スナップショット状態同期 を並列実行
+      ?Promise.all([
+          fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
+          fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
+        ]).then(()=>{
+          lastCommunitySync=Date.now();
+          renderGlobalPlayerList();
+        })
+      :Promise.resolve();
+    communitySync.finally(()=>pollOnce(getActiveNames(),settings).finally(()=>{
+      if(!running)return;
+      const hasActive=lastRows.some(r=>["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(r.state));
+      const secs=hasActive?Math.max(20,Math.floor(settings.pollIntervalSec/2)):settings.pollIntervalSec;
+      timer=setTimeout(schedulePoll,secs*1000);
+    }));
+  })();
+}
+// グローバルモード: バックエンドのスナップショットを取得してテーブルに先行表示
+async function preloadRemoteSnapshots(settings){
+  const remote=await fetchGlobalSnapshots(effectiveGlobalUrl(settings));
+  if(!remote||typeof remote!=="object")return;
+  const localSnaps=getSnapshots();
+  let snapshotsMerged=false;
+  const remoteTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,s?.updatedAt||0,0);
+  const localTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,0);
+  for(const [key,remSnap] of Object.entries(remote)){
+    if(!remSnap||typeof remSnap!=="object")continue;
+    const loc=localSnaps[key]||{};
+    if(remoteTs(remSnap) >= localTs(loc)){
+      localSnaps[key]={...loc,...remSnap,...(loc.manualEvent?{manualEvent:loc.manualEvent}:{})};
+      snapshotsMerged=true;
+    }
+  }
+  if(snapshotsMerged)saveSnapshots(localSnaps);
+  const names=getActiveNames();
+  const now=Date.now();
+  const rows=names.map(name=>{
+    const snap=(localSnaps[name.toLowerCase()]||remote[name.toLowerCase()]);
+    if(!snap||snap.points==null)return null;
+    const manualEvent=snap.manualEvent??null;
+    const manualActive=isManualActive(manualEvent);
+    const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:(snap.lastChangeAt??null);
+    const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
+    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
+  }).filter(Boolean);
+  if(rows.length>0&&lastRows.length===0){lastRows=rows;renderTable(rows);renderSpark(rows);}
+}
+async function switchToGlobal(){
+  viewMode="global";
+  document.getElementById("tabPersonal").classList.remove("active");
+  document.getElementById("tabGlobal").classList.add("active");
+  document.getElementById("liveTabPersonal")?.classList.remove("active");
+  document.getElementById("liveTabGlobal")?.classList.add("active");
+  document.getElementById("namesBox").closest("section").querySelector(".personalView").style.display="none";
+  document.getElementById("globalListView").style.display="";
+  const settings=getUiSettings();
+  // バックエンドがあればリモートとマージ
+  if(effectiveGlobalUrl(settings)){
+    document.getElementById("globalStatus").textContent="🌐 同期中...";
+    await Promise.all([
+      fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
+      fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
+    ]);
+  }
+  renderGlobalPlayerList();
+  const total=getCommunityList().length;
+  const filtered=getFilteredCommunity(globalFilter).length;
+  document.getElementById("globalStatus").textContent=
+    total===0?"ℹ️ まだ登録がありません。下のフォームから追加してください"
+    :`🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
+  if(effectiveGlobalUrl(settings)) preloadRemoteSnapshots(settings);
+  if(filtered>0)doStart();
+}
+function switchToPersonal(){
+  viewMode="personal";globalNames=[];
+  document.getElementById("tabGlobal").classList.remove("active");
+  document.getElementById("tabPersonal").classList.add("active");
+  document.getElementById("liveTabGlobal")?.classList.remove("active");
+  document.getElementById("liveTabPersonal")?.classList.add("active");
+  document.getElementById("namesBox").closest("section").querySelector(".personalView").style.display="";
+  document.getElementById("globalListView").style.display="none";
+  doStart();
+}
+function renderGlobalPlayerList(){
+  const el=document.getElementById("globalPlayerList");if(!el)return;
+  // フィルタータブのアクティブ状態更新
+  document.querySelectorAll(".regionTab").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.region===globalFilter);
+  });
+  const entries=getFilteredCommunity(globalFilter);
+  const personalSet=new Set(parseNames(document.getElementById("namesBox").value).map(n=>n.toLowerCase()));
+  if(entries.length===0){
+    el.innerHTML="<div class='hint' style='padding:12px 0'>このフィルターには登録がありません</div>";
+    return;
+  }
+  // 地域ごとにグループ表示（全て選択時）
+  const groups=globalFilter==="all"
+    ?REGION_ORDER.map(r=>({region:r,items:entries.filter(e=>(e.region||"")===r)})).filter(g=>g.items.length>0)
+    :[{region:globalFilter,items:entries}];
+  el.innerHTML=groups.map(g=>{
+    const header=globalFilter==="all"?`<div class="regionGroupLabel">${REGION_LABEL[g.region]}</div>`:"";
+    return header+g.items.map(e=>{
+      const inPersonal=personalSet.has(e.name.toLowerCase());
+      const catLabel=CAT_LABEL[e.category]||e.category||"";
+      const catClass=e.category==="cheater"?"catCheater":e.category==="suspicious"?"catSuspicious":"catNotable";
+      return `<div class="globalPlayerItem">
+        <span class="globalPlayerName">${e.name}</span>
+        <span class="catBadge ${catClass}">${catLabel}</span>
+        ${e.note?`<span class="communityNote">${e.note}</span>`:""}
+        ${inPersonal?'<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">監視中</span>'
+          :`<button class="globalAddBtn" data-name="${e.name}">＋監視</button>`}
+        <button class="communityDelBtn" data-name="${e.name}" title="削除">×</button>
+      </div>`;
+    }).join("");
+  }).join("");
+  el.querySelectorAll(".globalAddBtn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const ta=document.getElementById("namesBox");
+      const existing=parseNames(ta.value);
+      if(!existing.map(x=>x.toLowerCase()).includes(btn.dataset.name.toLowerCase())){
+        ta.value=ta.value.trim()+(ta.value.trim()?"\n":"")+btn.dataset.name;
+        saveNamesToLocal(parseNames(ta.value));
+        toast("＋ <b>"+btn.dataset.name+"</b> を自分のリストに追加");
+        renderGlobalPlayerList();
+      }
+    });
+  });
+  el.querySelectorAll(".communityDelBtn").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      if(!confirm(btn.dataset.name+" をリストから削除しますか？"))return;
+      const _ds=getUiSettings();
+      const _gUrl=effectiveGlobalUrl(_ds);
+      // サーバー削除を先に実行し、成功時のみローカルから除去
+      // （失敗時は UI を変えず、次回 fetchAndMergeCommunity でもサーバーが正として維持される）
+      if(_gUrl){
+        const ok=await deleteCommunityEntryFromGlobal(_gUrl,btn.dataset.name);
+        if(!ok)return;
+      }
+      removeCommunityEntry(btn.dataset.name);
+      renderGlobalPlayerList();
+      const total=getCommunityList().length;
+      document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+    });
+  });
+}
+function removePlayer(name){
+  const ta=document.getElementById("namesBox");
+  const remaining=parseNames(ta.value).filter(n=>n.toLowerCase()!==name.toLowerCase());
+  ta.value=remaining.join("\n");
+  saveNamesToLocal(remaining);
+  lastRows=lastRows.filter(r=>r.name.toLowerCase()!==name.toLowerCase());
+  expandedRows.delete(name.toLowerCase());
+  renderTable(lastRows);renderSpark(lastRows);
+  toast("削除: <b>"+name+"</b>");
+  if(timer){clearTimeout(timer);timer=null;}
+  if(remaining.length>0){doStart();}else{setRunning(false);}
+}
+function addPlayerAndStart(name){
+  const ta=document.getElementById("namesBox");
+  const existing=parseNames(ta.value);
+  const isNew=!existing.map(n=>n.toLowerCase()).includes(name.toLowerCase());
+  if(isNew) ta.value=ta.value.trim()+(ta.value.trim()?"\n":"")+name;
+  document.getElementById("playerSearch").value="";
+  hideSearchDropdown();
+  // 即時テーブル表示（APIレスポンス前でもプレイヤーを表示）
+  if(isNew){
+    const s=currentSettings||getUiSettings();
+    const now=nowMs();
+    const snap=getSnapshots();
+    const prev=snap[name.toLowerCase()]||{};
+    const prevManual=prev.manualEvent??null;
+    const prevManualActive=isManualActive(prevManual);
+    const effectiveLCA=prevManualActive?prevManual.lastChangeAtOverride:(prev.lastChangeAt??null);
+    const inf=inferState(now,effectiveLCA,s.reflectDelayMin,s.matchWaitMin,s.matchAvgMin,s.matchJitterMin,s.tournamentTotalMin,prevManualActive);
+    const newRow={name,points:prev.points??null,delta:null,lastChangeAt:prev.lastChangeAt??null,effectiveLCA,manualEvent:prevManualActive?prevManual:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:s.reflectDelayMin,matchWaitMin:s.matchWaitMin,matchAvgMin:s.matchAvgMin,matchJitterMin:s.matchJitterMin,tournamentTotalMin:s.tournamentTotalMin,lastOkAt:prev.lastOkAt??null,leaderboardRank:prev.leaderboardRank??null,league:prev.league??null,notFoundCount:0,lastFoundAt:null,suspectedReason:null,suspectedNewName:null,error:""};
+    const updated=[...lastRows.filter(r=>r.name.toLowerCase()!==name.toLowerCase()),newRow];
+    lastRows=updated;
+    renderTable(updated);renderSpark(updated);
+    toast("追加: <b>"+name+"</b>");
+  }
+  doStart();
+}
+async function init(){
+  // ── リロード後のシームレス復元 ──────────────────────────────
+  let reloadScroll=null;
+  try{
+    const exp=sessionStorage.getItem("fr_expanded");
+    const vm=sessionStorage.getItem("fr_viewMode");
+    const ft=sessionStorage.getItem("fr_filter");
+    const sc=sessionStorage.getItem("fr_scroll");
+    if(exp){JSON.parse(exp).forEach(k=>expandedRows.add(k));}
+    if(vm)viewMode=vm;
+    if(ft)globalFilter=ft;
+    if(sc)reloadScroll=parseInt(sc);
+    ["fr_expanded","fr_viewMode","fr_filter","fr_scroll"].forEach(k=>sessionStorage.removeItem(k));
+    // viewMode=globalなら UI をグローバル表示に切り替え（アニメなし）
+    if(viewMode==="global"){
+      document.getElementById("tabPersonal")?.classList.remove("active");
+      document.getElementById("tabGlobal")?.classList.add("active");
+      document.querySelector(".personalView")?.style.setProperty("display","none");
+      document.getElementById("globalListView")?.style.setProperty("display","");
+    }
+    // globalFilterのタブ表示を更新
+    document.querySelectorAll(".regionTab").forEach(btn=>{
+      btn.classList.toggle("active",btn.dataset.region===globalFilter);
+    });
+  }catch{}
+  // ────────────────────────────────────────────────────────────
+  try{
+    const s=loadSettings();applySettingsToUi(s);
+    // URL → localStorage の優先順でプレイヤーリストを復元
+    const urlNames=loadNamesFromUrl();
+    const savedNames=urlNames&&urlNames.length?urlNames:loadNamesFromLocal();
+    if(savedNames && savedNames.length){
+      document.getElementById("namesBox").value=savedNames.join("\n");
+      if(reloadScroll!==null)pendingScrollY=reloadScroll; // pollOnce完了後に復元
+      // スナップショットから即時プレビュー描画（API応答前に状態予測を表示）
+      const snap=getSnapshots();
+      const now=nowMs();
+      const preRows=savedNames.map(name=>{
+        const key=name.toLowerCase();
+        const prev=snap[key]||{};
+        const manualEvent=prev.manualEvent??null;
+        const manualActive=isManualActive(manualEvent);
+        const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:(prev.lastChangeAt??null);
+        const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,s.reflectDelayMin,s.matchWaitMin,s.matchAvgMin,s.matchJitterMin,s.tournamentTotalMin,manualActive);
+        return {name,points:prev.points??null,delta:null,lastChangeAt:prev.lastChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:s.reflectDelayMin,matchWaitMin:s.matchWaitMin,matchAvgMin:s.matchAvgMin,matchJitterMin:s.matchJitterMin,tournamentTotalMin:s.tournamentTotalMin,lastOkAt:prev.lastOkAt??null,leaderboardRank:prev.leaderboardRank??null,league:prev.league??null,notFoundCount:prev.notFoundCount??0,lastFoundAt:prev.lastFoundAt??null,suspectedReason:prev.suspectedReason??null,suspectedNewName:prev.suspectedNewName??null,error:""};
+      });
+      lastRows=preRows;
+      renderTable(preRows);renderSpark(preRows);
+      doStart(); // 名前があれば自動スタート（リロード・再訪問後も継続）
+    }
+  }catch(e){console.error("init:",e);}
+  // テキストエリア変更時にlocalStorageへ随時保存
+  const ta=document.getElementById("namesBox");
+  if(ta) ta.addEventListener("input",()=>{
+    const names=parseNames(ta.value);
+    if(names.length) saveNamesToLocal(names);
+  });
+  document.getElementById("btnStop").addEventListener("click",()=>{
+    if(timer){clearTimeout(timer);timer=null;}
+    setRunning(false);toast("stopped");
+  });
+  document.getElementById("btnAdd").addEventListener("click",()=>{
+    const si=document.getElementById("playerSearch");
+    const name=si.value.trim();
+    if(name){addPlayerAndStart(name);return;}
+    // 検索バーが空の場合 → namesBox の内容でモニタリング開始
+    const names=parseNames(document.getElementById("namesBox").value);
+    if(names.length>0){doStart();toast("監視開始：<b>"+names.length+"人</b>");}
+    else{toast("名前を入力してください");}
+  });
+  document.getElementById("btnShare").addEventListener("click",async()=>{
+    const names=parseNames(document.getElementById("namesBox").value);
+    if(names.length===0){toast("Share: 名前が空です");return;}
+    saveNamesToUrl(names);
+    const url=window.location.href;
+    try{await navigator.clipboard.writeText(url);toast("Share link をコピーしました：<b>"+url+"</b>");}
+    catch{toast("コピーできません。URLを手動コピーしてください：<b>"+url+"</b>");}
+  });
+  document.getElementById("btnExportCsv").addEventListener("click",exportCsv);
+  document.getElementById("btnExportJsonl").addEventListener("click",exportJsonl);
+  document.getElementById("btnClear").addEventListener("click",()=>{
+    if(!confirm("localStorage の settings/snapshots/events を削除します。よろしいですか？"))return;
+    clearLocal();toast("local data cleared");
+  });
+  document.getElementById("btnTest").addEventListener("click",async()=>{
+    const settings=getUiSettings();saveSettings(settings);
+    const names=parseNames(document.getElementById("namesBox").value);
+    if(names.length===0){toast("Test: 名前が空です");return;}
+    const first=names[0];
+    try{
+      const data=await fetchPlayer(effectiveProxyBase(settings),settings.leaderboardId,settings.platform,first);
+      const entry=(data&&Array.isArray(data.data)&&data.data.length)?data.data[0]:null;
+      const pts=entry?getPointsFromEntry(entry):null;
+      if(pts==null) toast("Test: <b>"+first+"</b> → points が取れません（season/platform/対象外の可能性）");
+      else toast("Test: <b>"+first+"</b> → points=<b>"+pts+"</b>");
+    }catch(e){
+      const msg=String(e&&e.message?e.message:e);
+      if(isCorsLikeError(msg)) toast("Test失敗（CORSの可能性）→ ローカル環境では Worker が必要です");
+      else toast("Test失敗：<b>"+msg+"</b>");
+    }
+  });
+  const si=document.getElementById("playerSearch");
+  if(si){
+    si.addEventListener("input",async()=>{
+      const q=si.value.trim();
+      if(q.length<2){hideSearchDropdown();return;}
+      await ensureLeaderboardCache();
+      renderSearchDropdown(searchLeaderboard(q));
+    });
+    si.addEventListener("blur",()=>setTimeout(hideSearchDropdown,200));
+    si.addEventListener("keydown",ev=>{
+      if(ev.key==="Escape"){si.value="";hideSearchDropdown();}
+      if(ev.key==="Enter"){const name=si.value.trim();if(name)addPlayerAndStart(name);}
+    });
+  }
+  document.getElementById("tabPersonal").addEventListener("click",()=>{if(viewMode!=="personal")switchToPersonal();});
+  document.getElementById("tabGlobal").addEventListener("click",()=>{if(viewMode!=="global")switchToGlobal();});
+  // 地域フィルタータブ
+  document.querySelectorAll(".regionTab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      globalFilter=btn.dataset.region;
+      renderGlobalPlayerList();
+      const filtered=getFilteredCommunity(globalFilter).length;
+      const total=getCommunityList().length;
+      document.getElementById("globalStatus").textContent=
+        `🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
+      if(running&&currentSettings)pollOnce(getActiveNames(),currentSettings);
+    });
+  });
+  // コミュニティ追加フォーム
+  document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
+    // 認証チェック：許可ユーザーが設定済みで未ログインならモーダルを表示
+    if(getEffectiveAllowedUsers().length>0&&!isLoggedIn()){
+      showLoginModal(()=>document.getElementById("btnCommunityAdd").click());
+      return;
+    }
+    const name=(document.getElementById("communityName").value||"").trim();
+    if(!name){toast("名前を入力してください");return;}
+    const entry={
+      name,
+      region:document.getElementById("communityRegion").value,
+      category:document.getElementById("communityCategory").value,
+      note:(document.getElementById("communityNote").value||"").trim(),
+    };
+    addCommunityEntry(entry);
+    document.getElementById("communityName").value="";
+    document.getElementById("communityNote").value="";
+    toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
+    // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
+    const settings=getUiSettings();
+    if(effectiveGlobalUrl(settings))await submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),entry);
+    renderGlobalPlayerList();
+    const total=getCommunityList().length;
+    document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+    if(viewMode==="global")doStart();
+  });
+  // 設定の自動保存（リロード・タブ閉じ時にも反映）
+  window.addEventListener("beforeunload",()=>{try{saveSettings(getUiSettings());}catch{}});
+  // よく変更するマッチ設定入力を変更したら即保存
+  ["matchWait","matchAvg","matchJitter","reflectDelay","pollInterval","tournamentTotal","rsDropThreshold"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.addEventListener("change",()=>saveSettings(getUiSettings()));
+  });
+  // personalRegionFilter タブ
+  document.querySelectorAll(".personalRegionTab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      personalRegionFilter=btn.dataset.pregion;
+      document.querySelectorAll(".personalRegionTab").forEach(b=>b.classList.toggle("active",b.dataset.pregion===personalRegionFilter));
+      renderTable(lastRows);
+    });
+  });
+  // 自分のリスト → グローバルにコピー
+  document.getElementById("btnCopyToGlobal")?.addEventListener("click",async()=>{
+    const names=parseNames(document.getElementById("namesBox").value);
+    if(!names.length){toast("リストが空です");return;}
+    const settings=getUiSettings();
+    let added=0;
+    const newEntries=[];
+    for(const name of names){
+      if(!getCommunityList().find(e=>e.name.toLowerCase()===name.toLowerCase())){
+        const entry={name,region:"",category:"notable",note:""};
+        addCommunityEntry(entry);
+        newEntries.push(entry);
+        added++;
+      }
+    }
+    if(effectiveGlobalUrl(settings)){
+      await Promise.all(newEntries.map(e=>submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),e)));
+    }
+    toast(`🌐 <b>${added}人</b> をグローバルリストにコピーしました`);
+    if(viewMode==="global")renderGlobalPlayerList();
+  });
+  // ログ
+  document.getElementById("btnLogTimeline")?.addEventListener("click",()=>{
+    logViewMode=logViewMode==="list"?"timeline":"list";
+    const btn=document.getElementById("btnLogTimeline");
+    if(btn)btn.textContent=logViewMode==="list"?"📊 タイムライン":"📋 リスト";
+    logViewMode==="timeline"?renderLogTimeline():renderLogList();
+  });
+  document.getElementById("btnExportLogs")?.addEventListener("click",exportStateLogs);
+  document.getElementById("btnClearLogs")?.addEventListener("click",()=>{
+    if(!confirm("ログをクリアしますか？"))return;
+    clearStateLogs();renderLogList();toast("ログをクリアしました");
+    logViewMode="list";
+    const btn=document.getElementById("btnLogTimeline");
+    if(btn)btn.textContent="📊 タイムライン";
+  });
+  // ── テーブルヘッダー ? アイコン: fixed グローバルツールチップ ──────────
+  // tableWrap の overflow:auto / position:sticky による clipping を回避
+  const gTip=document.getElementById("globalTooltip");
+  if(gTip){
+    let gTipTimer=null;
+    document.querySelectorAll("th .thHelpIcon").forEach(icon=>{
+      const tipEl=icon.nextElementSibling; // .thHelpTip
+      if(!tipEl)return;
+      icon.addEventListener("mouseenter",()=>{
+        clearTimeout(gTipTimer);
+        gTip.innerHTML=tipEl.innerHTML;
+        gTip.classList.add("show");
+        // 初期表示（幅計算前）
+        const rect=icon.getBoundingClientRect();
+        let left=rect.left;
+        let top=rect.bottom+6;
+        gTip.style.left=left+"px";
+        gTip.style.top=top+"px";
+        // 1フレーム後にサイズが確定してから位置補正
+        requestAnimationFrame(()=>{
+          const tw=gTip.offsetWidth, th2=gTip.offsetHeight;
+          if(left+tw>window.innerWidth-8) left=Math.max(8,window.innerWidth-tw-8);
+          if(top+th2>window.innerHeight-8) top=Math.max(8,rect.top-th2-6);
+          gTip.style.left=left+"px";
+          gTip.style.top=top+"px";
+        });
+      });
+      icon.addEventListener("mouseleave",()=>{
+        gTipTimer=setTimeout(()=>gTip.classList.remove("show"),80);
+      });
+    });
+  }
+  // ── ログインモーダル イベント ────────────────────────────────
+  document.getElementById("btnLoginSubmit").addEventListener("click",async()=>{
+    const id=document.getElementById("loginId").value.trim();
+    const pw=document.getElementById("loginPassword").value;
+    if(!id||!pw){document.getElementById("loginError").textContent="IDとパスワードを入力してください";return;}
+    const hash=await sha256(pw);
+    const ok=getEffectiveAllowedUsers().find(u=>u.id.toLowerCase()===id.toLowerCase()&&u.passwordHash===hash);
+    if(ok){setCurrentUser(id);hideLoginModal();if(_loginCallback)_loginCallback();}
+    else{document.getElementById("loginError").textContent="IDまたはパスワードが正しくありません";}
+  });
+  document.getElementById("btnLoginCancel").addEventListener("click",hideLoginModal);
+  document.getElementById("loginPassword").addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("btnLoginSubmit").click();});
+  document.getElementById("btnLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
+  // モーダル背景クリックで閉じる
+  document.getElementById("loginModal").addEventListener("click",(e)=>{if(e.target===e.currentTarget)hideLoginModal();});
+
+  // ── アドミンパネル イベント ──────────────────────────────────
+  document.getElementById("btnAdminUnlock").addEventListener("click",async()=>{
+    const pw=document.getElementById("adminPasswordInput").value;
+    if(!pw)return;
+    const auth=getAuthData();
+    if(!auth.adminPasswordHash){
+      // 初回：パスワードを新規設定
+      auth.adminPasswordHash=await sha256(pw);
+      saveAuthData(auth);
+      toast("🔑 アドミンパスワードを設定しました");
+    }else{
+      if(await sha256(pw)!==auth.adminPasswordHash){toast("❌ パスワードが正しくありません");return;}
+    }
+    document.getElementById("adminPanel").style.display="";
+    renderAllowedUserList();
+  });
+  document.getElementById("btnAddUser").addEventListener("click",async()=>{
+    const id=document.getElementById("newUserId").value.trim();
+    const pw=document.getElementById("newUserPassword").value;
+    if(!id||!pw){toast("IDとパスワードを入力してください");return;}
+    const auth=getAuthData();
+    if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast("そのIDは既に登録されています");return;}
+    auth.allowedUsers.push({id,passwordHash:await sha256(pw)});
+    saveAuthData(auth);
+    // バックエンドキャッシュを無効化してローカルリストにフォールバックさせる。
+    // fetchAuthConfig がページロード時に _backendAllowedUsers=[] をセットしているため、
+    // null に戻さないと作成直後のログイン照合でバックエンドの空リストが使われてしまう。
+    _backendAllowedUsers=null;
+    document.getElementById("newUserId").value="";
+    document.getElementById("newUserPassword").value="";
+    renderAllowedUserList();
+    updateLoginStatus();
+    toast("✅ ユーザー <b>"+id+"</b> を追加しました");
+  });
+  document.getElementById("btnChangeAdminPassword").addEventListener("click",async()=>{
+    const pw=document.getElementById("newAdminPassword").value;
+    if(!pw){toast("新しいパスワードを入力してください");return;}
+    const auth=getAuthData();
+    auth.adminPasswordHash=await sha256(pw);
+    saveAuthData(auth);
+    document.getElementById("newAdminPassword").value="";
+    toast("🔑 アドミンパスワードを変更しました");
+  });
+
+  // ── バックエンドに同期ボタン ─────────────────────────────────
+  document.getElementById("btnSyncAuth").addEventListener("click",async()=>{
+    const settings=getUiSettings();
+    if(!effectiveGlobalUrl(settings)){toast("⚠️ バックエンドに接続できません（ローカル環境では Worker URL の設定が必要です）");return;}
+    const auth=getAuthData();
+    if(!auth.adminPasswordHash){toast("⚠️ アドミンパスワードを先に設定してください");return;}
+    document.getElementById("btnSyncAuth").textContent="同期中...";
+    const ok=await syncAuthToBackend(effectiveGlobalUrl(settings),auth.adminPasswordHash,auth.allowedUsers);
+    document.getElementById("btnSyncAuth").textContent="☁️ バックエンドに同期";
+    if(ok){
+      toast("✅ 認証設定をバックエンドに同期しました");
+      _backendAllowedUsers=auth.allowedUsers;
+    }else{
+      toast("❌ 同期に失敗しました（URL・パスワードを確認してください）");
+    }
+  });
+
+  // ── Live tableソース切替タブ ──
+  document.getElementById("liveTabPersonal").addEventListener("click",()=>{
+    liveTabMode="personal";
+    document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
+    document.getElementById("liveTabPersonal").classList.add("active");
+    if(viewMode!=="personal")switchToPersonal(); else renderTable(lastRows);
+  });
+  document.getElementById("liveTabGlobal").addEventListener("click",()=>{
+    liveTabMode="global";
+    document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
+    document.getElementById("liveTabGlobal").classList.add("active");
+    if(viewMode!=="global")switchToGlobal(); else renderTable(lastRows);
+  });
+  document.getElementById("liveTabPickup").addEventListener("click",()=>{
+    liveTabMode="pickup";
+    document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
+    document.getElementById("liveTabPickup").classList.add("active");
+    renderTable(lastRows);
+  });
+  // ── Live tableリージョンフィルター ──
+  document.querySelectorAll(".liveRegionTab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      liveRegionFilter=btn.dataset.lregion;
+      document.querySelectorAll(".liveRegionTab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      renderTable(lastRows);
+    });
+  });
+
+  // ── Live table 検索 ──
+  document.getElementById("liveSearch").addEventListener("input",e=>{
+    liveSearchQuery=e.target.value.trim().toLowerCase();
+    renderTable(lastRows);
+  });
+
+  // ── ヘッダー認証ボタン ──
+  document.getElementById("btnHeaderLogin").addEventListener("click",()=>showLoginModal());
+  document.getElementById("btnHeaderLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
+  document.getElementById("btnHeaderAdmin").addEventListener("click",()=>{document.getElementById("adminModal").style.display="flex";});
+  document.getElementById("btnAdminModalClose").addEventListener("click",()=>{document.getElementById("adminModal").style.display="none";});
+
+  // ── 初期ログイン状態を反映 + globalUrl があればバックエンドから取得 ──
+  restoreSession(); // ページリロード後もログイン状態を復元
+  updateLoginStatus();
+  // 通知ボタンの初期状態
+  setNotifyEnabled(notifyEnabled);
+  const _initSettings=getUiSettings();
+  if(effectiveGlobalUrl(_initSettings)){
+    fetchAuthConfig(effectiveGlobalUrl(_initSettings));
+    // 起動時にコミュニティリストをバックエンドと同期（全ユーザーで共有リストを反映）
+    fetchAndMergeCommunity(effectiveGlobalUrl(_initSettings)).then(()=>{
+      if(viewMode==="global")renderGlobalPlayerList();
+    });
+  }
+
+  setRunning(false);
+  toast(t("toast.ready"));
+}
+init();
+
+async function fetchLeaderboardViaProxy(settings){
+  const base = effectiveProxyBase(settings);
+  const url = base
+    ? `${base}/api/leaderboard?season=${encodeURIComponent(settings.leaderboardId)}&platform=${encodeURIComponent(settings.platform)}&cache=${encodeURIComponent(settings.estCacheSec||30)}`
+    : `https://api.the-finals-leaderboard.com/v1/leaderboard/${encodeURIComponent(settings.leaderboardId)}/${encodeURIComponent(settings.platform)}`;
+  const r = await fetch(url, { cache: "no-store" });
+  if(!r.ok) throw new Error(`leaderboard ${r.status}`);
+  return await r.json();
+}
+
+function normalizeLeaderboardArray(json){
+  if(Array.isArray(json)) return json;
+  if(json && Array.isArray(json.data)) return json.data;
+  if(json && Array.isArray(json.entries)) return json.entries;
+  return [];
+}
+
+function pickPoints(entry){
+  if(!entry || typeof entry!=="object") return null;
+  const candidates=["points","score","rankScore","rank_score","rank_points","fame","value"];
+  for(const k of candidates){
+    if(entry[k]!==undefined && entry[k]!==null && entry[k]!=="" && !Number.isNaN(Number(entry[k]))) return Number(entry[k]);
+  }
+  return null;
+}
+
+function pickRank(entry, fallback){
+  const candidates=["rank","position","place","leaderboardRank","leaderboard_rank","index"];
+  for(const k of candidates){
+    if(entry && entry[k]!==undefined && entry[k]!==null && !Number.isNaN(Number(entry[k]))) return Number(entry[k]);
+  }
+  return fallback;
+}
+
+function pickName(entry){
+  const candidates=["name","displayName","display_name","userName","username","playerName","player_name","accountName","account_name","id"];
+  for(const k of candidates){
+    if(entry && typeof entry[k]==="string" && entry[k].trim()) return entry[k].trim();
+  }
+  return "";
+}
+
+function leaderboardFingerprint(entries, start, size){
+  const s = Math.max(0, start|0);
+  const n = Math.max(1, size|0);
+  const slice = entries.slice(s, s+n);
+  let changedRows=0;
+
+  const parts=[];
+  for(let i=0;i<slice.length;i++){
+    const e=slice[i];
+    const rank = pickRank(e, s+i+1);
+    const name = pickName(e);
+    const pts = pickPoints(e);
+    parts.push(`${rank}|${name}|${pts}`);
+  }
+  const joined = parts.join("\n");
+  const hash = fnv1a(joined);
+
+  if(estimator.lastSnapshot){
+    const prev = estimator.lastSnapshot;
+    const m = Math.min(prev.length, slice.length);
+    for(let i=0;i<m;i++){
+      const a = prev[i], b = slice[i];
+      const ar = pickRank(a, s+i+1), br = pickRank(b, s+i+1);
+      const an = pickName(a), bn = pickName(b);
+      const ap = pickPoints(a), bp = pickPoints(b);
+      if(ar!==br || an!==bn || ap!==bp) changedRows++;
+    }
+    if(slice.length!==prev.length) changedRows += Math.abs(slice.length-prev.length);
+  }
+
+  estimator.lastSnapshot = slice;
+  return {hash, changedRows};
+}
+
+function addInterval(ms){
+  if(ms<=0) return;
+  estimator.intervals.push(ms);
+  if(estimator.intervals.length>200) estimator.intervals.shift();
+}
+
+function statsFromIntervals(){
+  const arr = estimator.intervals.slice().sort((a,b)=>a-b);
+  if(arr.length===0) return null;
+  const mean = arr.reduce((s,x)=>s+x,0)/arr.length;
+  const median = arr[Math.floor(arr.length*0.5)];
+  const p90 = arr[Math.floor(arr.length*0.9)];
+  return {mean, median, p90, n: arr.length};
+}
+
+function fmtMin(ms){
+  if(!ms) return "-";
+  return `${(ms/60000).toFixed(1)}m`;
+}
+
+function autoUpdateReflect(){
+  const s = statsFromIntervals();
+  if(!s || s.n < 3) return;
+  const newMin = Math.max(1, Math.round(s.median / 60000));
+  const el = document.getElementById("reflectDelay");
+  if(!el || parseInt(el.value,10) === newMin) return;
+  el.value = String(newMin);
+  if(currentSettings) currentSettings.reflectDelayMin = newMin;
+  const hint = document.getElementById("estReflectHint");
+  if(hint) hint.textContent = `→ Reflect X を ${newMin}m に自動更新`;
+}
+function updateEstimatorUi(){
+  const last = document.getElementById("estLastBatch");
+  if(!last) return;
+  last.textContent = estimator.lastBatchAt ? new Date(estimator.lastBatchAt).toLocaleTimeString() : "-";
+  const s = statsFromIntervals();
+  document.getElementById("estMean").textContent = s?fmtMin(s.mean):"-";
+  document.getElementById("estMedian").textContent = s?fmtMin(s.median):"-";
+  document.getElementById("estP90").textContent = s?fmtMin(s.p90):"-";
+  document.getElementById("estChanged").textContent = String(estimator.lastChangedRows||0);
+  autoUpdateReflect();
+}
+
+async function pollLeaderboardEstimator(settings){
+  if(!settings.estimatorEnabled) return;
+  try{
+    const json = await fetchLeaderboardViaProxy(settings);
+    const entries = normalizeLeaderboardArray(json);
+    if(entries.length===0) return;
+
+    leaderboardCache=entries;
+    const {hash, changedRows} = leaderboardFingerprint(entries, settings.estWindowStart||0, settings.estWindowSize||500);
+    estimator.lastChangedRows = changedRows;
+
+    if(estimator.lastHash!==null && hash!==estimator.lastHash){
+      const now = Date.now();
+      if(estimator.lastBatchAt){
+        addInterval(now - estimator.lastBatchAt);
+      }
+      estimator.lastBatchAt = now;
+    }
+    estimator.lastHash = hash;
+    updateEstimatorUi();
+  }catch(e){
+    updateEstimatorUi();
+  }
+}
+
+;
