@@ -830,7 +830,7 @@ function stateExplain(row,displayState){
     case "LOBBY": return "試合終了後の待機中と推定。次の試合開始候補です。";
     case "IN_MATCH": return "R1試合中と推定。次の更新までは試合継続扱いです。";
     case "IN_TOURNAMENT_DEEP": return "R2以降の試合中と推定。Final進行中の可能性を含みます。";
-    case "RETURNING": return "Final Round終了後、まもなくロビーに戻る状態と推定。";
+    case "RETURNING": return "Final Round終了後の戻り時間帯を推定中。次の更新待ちです。";
     case "OFFLINE": return "最近の更新がなく、現在は非アクティブと推定。";
     case "UNKNOWN": return "情報不足のため状態を判定できません。";
     case "NOT_FOUND": return "リーダーボードで連続未検出。BANまたは名前変更の可能性があります。";
@@ -885,27 +885,14 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
   const tMin = (now - lastChangeAtMs) / 60000;
   const X = reflectDelayMin;
 
-if(!skipOffline20){
-  const lastBatch=estimator.lastBatchAt;
-  const BATCH_BUF_MS=5*60*1000;
-
-  const W=Math.max(0,Math.min(30,matchWaitMin??5));
-  const M=Math.max(20,Math.min(60,matchAvgMin||31));
-  const J=Math.max(0,Math.min(10,matchJitterMin??3));
-  const T=Math.max(M+W+5,Math.min(180,tournamentTotalMin||70));
-
-  const lobbyWindowEnd = reflectDelayMin + W;
-
-  const shouldOfflineByBatch =
-    lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS && tMin <= lobbyWindowEnd;
-
-  const shouldOfflineByTimeout =
-    !lastBatch && tMin >= 20 && tMin <= lobbyWindowEnd;
-
-  if(shouldOfflineByBatch || shouldOfflineByTimeout){
-    return { state:"OFFLINE", nextMatchProb:0 };
-  }
-}
+  if(!skipOffline20){
+    // ① バッチ検出済み：lastBatchAt が lastChangeAt より 5分以上新しい
+    //    → 最新バッチでこのプレイヤーのポイント変動なし = OFFLINE確定
+    const lastBatch = estimator.lastBatchAt;
+    const BATCH_BUF_MS = 5 * 60 * 1000; // ポーリングズレ吸収バッファ
+    if(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS){
+      return { state:"OFFLINE", nextMatchProb:0 };
+    }
     // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック（20分固定）
     if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
   }
@@ -1837,16 +1824,12 @@ async function init(){
     document.getElementById("communityNote").value="";
     toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
     // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
-const settings=getUiSettings();
-const gUrl=effectiveGlobalUrl(settings);
-if(gUrl){
-  await submitCommunityEntryToGlobal(gUrl,entry);
-  await fetchAndMergeCommunity(gUrl);
-}
-renderGlobalPlayerList();
-const total=getCommunityList().length;
-document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
-if(viewMode==="global")doStart();
+    const settings=getUiSettings();
+    if(effectiveGlobalUrl(settings))await submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),entry);
+    renderGlobalPlayerList();
+    const total=getCommunityList().length;
+    document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+    if(viewMode==="global")doStart();
   });
   // 設定の自動保存（リロード・タブ閉じ時にも反映）
   window.addEventListener("beforeunload",()=>{try{saveSettings(getUiSettings());}catch{}});
