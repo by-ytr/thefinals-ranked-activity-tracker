@@ -281,7 +281,7 @@ function setNotifyEnabled(on){
   notifyEnabled=on;
   localStorage.setItem("finals_notify",on?"1":"0");
   const btn=document.getElementById("btnNotify");
-  if(btn)btn.title=on?"騾夂衍ON・医け繝ｪ繝・け縺ｧOFF・・:"騾夂衍OFF・医け繝ｪ繝・け縺ｧON・・;
+  if(btn)btn.title=on?"Notifications ON (click to turn OFF)":"Notifications OFF (click to turn ON)";
   if(btn)btn.style.opacity=on?"1":"0.45";
 }
 function setNetHint(text){document.getElementById("netHint").textContent=text||"";}
