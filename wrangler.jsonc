@@ -1,29 +1,19 @@
-{
+﻿{
   "$schema": "node_modules/wrangler/config-schema.json",
 
-  // Worker 名
-  "name": "ranked-activity-tracker",
-
-  // エントリポイント
+  "name": "thefinals-ranked-activity-tracker",
   "main": "worker.js",
-
-  // 互換日付
   "compatibility_date": "2025-09-27",
-
-  // Node.js 互換
   "compatibility_flags": ["nodejs_compat"],
 
-  // 静的ファイル配信
   "assets": {
     "directory": "."
   },
 
-  // 可観測性
   "observability": {
     "enabled": true
   },
 
-  // Durable Objects
   "durable_objects": {
     "bindings": [
       {
@@ -33,17 +23,15 @@
     ]
   },
 
-  // Durable Objects migration
   "migrations": [
     {
-      "tag": "v1",
+      "tag": "v1-snapshot-do",
       "new_sqlite_classes": [
         "SnapshotStateDO"
       ]
     }
   ],
 
-  // KV Namespace
   "kv_namespaces": [
     {
       "binding": "DATA",
