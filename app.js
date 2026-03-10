@@ -1,20 +1,18 @@
-const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
+﻿const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
-// バックエンド URL 自動解決：明示設定がなければ同オリジン（Worker 配信時）を使用
+// 繝舌ャ繧ｯ繧ｨ繝ｳ繝・URL 閾ｪ蜍戊ｧ｣豎ｺ・壽・遉ｺ險ｭ螳壹′縺ｪ縺代ｌ縺ｰ蜷後が繝ｪ繧ｸ繝ｳ・・orker 驟堺ｿ｡譎ゑｼ峨ｒ菴ｿ逕ｨ
 function autoOrigin(){const o=location.origin;return(o==="null"||o.startsWith("file:")||o.includes("localhost")||o.includes("127.0.0.1"))?"":o;}
 function effectiveProxyBase(s){return(s.proxyBase||"").replace(/\/$/,"")||autoOrigin();}
 function effectiveGlobalUrl(s){return(s.globalUrl||"").replace(/\/$/,"")||autoOrigin();}
 let timer=null,running=false,currentSettings=null;
-let lastCommunitySync=0; // グローバルリスト自動同期の最終実行時刻
+let lastCommunitySync=0; // 繧ｰ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝郁・蜍募酔譛溘・譛邨ょｮ溯｡梧凾蛻ｻ
 let viewMode="personal",globalNames=[],globalFilter="all";
 const expandedRows=new Set();
-let pendingScrollY=null; // リロード後スクロール位置復元用
-let lastRows=[]; // 最後に描画した行データ（遭遇ボタン即時再描画用）
-let pickedUp=new Set(); // pickup（大型グラフ対象）
-let personalRegionFilter="all"; // 自分のリスト サーバーフィルター
-let liveRegionFilter="all";    // Live tableリージョンフィルター
+let pendingScrollY=null; // 繝ｪ繝ｭ繝ｼ繝牙ｾ後せ繧ｯ繝ｭ繝ｼ繝ｫ菴咲ｽｮ蠕ｩ蜈・畑
+let lastRows=[]; // 譛蠕後↓謠冗判縺励◆陦後ョ繝ｼ繧ｿ・磯・驕・・繧ｿ繝ｳ蜊ｳ譎ょ・謠冗判逕ｨ・・let pickedUp=new Set(); // pickup・亥､ｧ蝙九げ繝ｩ繝募ｯｾ雎｡・・let personalRegionFilter="all"; // 閾ｪ蛻・・繝ｪ繧ｹ繝・繧ｵ繝ｼ繝舌・繝輔ぅ繝ｫ繧ｿ繝ｼ
+let liveRegionFilter="all";    // Live table繝ｪ繝ｼ繧ｸ繝ｧ繝ｳ繝輔ぅ繝ｫ繧ｿ繝ｼ
 let liveTabMode="personal";    // "personal" | "global" | "pickup"
-let liveSearchQuery="";        // Live table検索
+let liveSearchQuery="";        // Live table讀懃ｴ｢
 function buildPlayerSparkEl(row){
   const slots=30,slotMin=1,now=nowMs();
   const lca=row.effectiveLCA??row.lastChangeAt;
@@ -34,74 +32,73 @@ function buildPlayerSparkEl(row){
     const lvl=v<0.33?"low":v<0.66?"mid":"high";
     bar.className="sparkBar "+(isDanger?"d-":"")+lvl+(i===peakSlot?" peak":"");
     bar.style.height=(4+Math.round(v*56))+"px";
-    bar.title=`+${i}分後: ${probs[i]}%`;
+    bar.title=`+${i}蛻・ｾ・ ${probs[i]}%`;
     barsEl.appendChild(bar);
   }
   const axisEl=document.createElement("div");axisEl.className="psAxis";
-  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"今":"+"+m+"m";axisEl.appendChild(s);});
+  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"莉・:"+"+m+"m";axisEl.appendChild(s);});
   wrap.appendChild(barsEl);wrap.appendChild(axisEl);
   return wrap;
 }
 function buildExpandRow(r,key){
   const tr=document.createElement("tr");tr.className="expandRow";tr.dataset.for=key;
   const td=document.createElement("td");td.colSpan=10;td.className="expandCell";
-  // ── 遭遇記録パネル ──
+  // 笏笏 驕ｭ驕・ｨ倬鹸繝代ロ繝ｫ 笏笏
   const panel=document.createElement("div");panel.className="encounterPanel";
-  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent="📝 遭遇記録";panel.appendChild(elabel);
+  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent="統 驕ｭ驕・ｨ倬鹸";panel.appendChild(elabel);
   const btns=document.createElement("div");btns.className="encounterBtns";
   const s=currentSettings||getUiSettings();
   for(const et of ENCOUNTER_TYPES){
     if(et.group){
-      // ── グループボタン（R1/R2）：クリックでサブパネル展開 ──
+      // 笏笏 繧ｰ繝ｫ繝ｼ繝励・繧ｿ繝ｳ・・1/R2・会ｼ壹け繝ｪ繝・け縺ｧ繧ｵ繝悶ヱ繝阪Ν螻暮幕 笏笏
       const wrap=document.createElement("div");wrap.className="encounterGroup";
       const gBtn=document.createElement("button");gBtn.className="encounterBtn encounterGroupBtn";
       gBtn.title=et.desc;
-      gBtn.innerHTML=et.label+' <span class="groupCaret">▾</span>';
+      gBtn.innerHTML=et.label+' <span class="groupCaret">笆ｾ</span>';
       const subPanel=document.createElement("div");subPanel.className="encounterSubPanel";
       for(const sub of et.sub){
         const sBtn=document.createElement("button");sBtn.className="encounterSubBtn";
-        sBtn.textContent=sub.label;sBtn.title="offset: -"+sub.getOffset(s)+"分";
+        sBtn.textContent=sub.label;sBtn.title="offset: -"+sub.getOffset(s)+"蛻・;
         sBtn.addEventListener("click",(e)=>{
           e.stopPropagation();
           applyEncounterEvent(r.name,sub.key);
           subPanel.classList.remove("open");
-          gBtn.querySelector(".groupCaret").textContent="▾";
+          gBtn.querySelector(".groupCaret").textContent="笆ｾ";
         });
         subPanel.appendChild(sBtn);
       }
       gBtn.addEventListener("click",(e)=>{
         e.stopPropagation();
         const isOpen=subPanel.classList.contains("open");
-        // 他のサブパネルを全部閉じる
-        btns.querySelectorAll(".encounterSubPanel.open").forEach(p=>{
+        // 莉悶・繧ｵ繝悶ヱ繝阪Ν繧貞・驛ｨ髢峨§繧・        btns.querySelectorAll(".encounterSubPanel.open").forEach(p=>{
           p.classList.remove("open");
-          const gc=p.previousElementSibling&&p.previousElementSibling.querySelector(".groupCaret");if(gc)gc.textContent="▾";
+          const gc=p.previousElementSibling&&p.previousElementSibling.querySelector(".groupCaret");if(gc)gc.textContent="笆ｾ";
         });
-        if(!isOpen){subPanel.classList.add("open");gBtn.querySelector(".groupCaret").textContent="▴";}
+        if(!isOpen){subPanel.classList.add("open");gBtn.querySelector(".groupCaret").textContent="笆ｴ";}
       });
       wrap.appendChild(gBtn);wrap.appendChild(subPanel);btns.appendChild(wrap);
     }else{
       const btn=document.createElement("button");
       btn.className="encounterBtn"+(et.key==="offline"?" encounterBtn--offline":"");
-      btn.title=et.desc;btn.textContent=et.label+(et.overrideDurationMs?" ("+Math.round(et.overrideDurationMs/60000)+"分)":"");
+      btn.title=et.desc;btn.textContent=et.label+(et.overrideDurationMs?" ("+Math.round(et.overrideDurationMs/60000)+"蛻・":"");
       btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);});
       btns.appendChild(btn);
     }
   }
   panel.appendChild(btns);
-  // アクティブな手動記録があれば残り時間を表示
+  // 繧｢繧ｯ繝・ぅ繝悶↑謇句虚險倬鹸縺後≠繧後・谿九ｊ譎る俣繧定｡ｨ遉ｺ
   if(r.manualEvent){
     const now2=nowMs();
     const rem=manualRem(r.manualEvent);
     const activeEl=document.createElement("div");activeEl.className="encounterActive";
     const et=findEncounterType(r.manualEvent.type);
-    activeEl.innerHTML="📌 <b>"+(et?et.label:r.manualEvent.type)+"</b> 記録中・残 <b>"+rem+"分</b> 優先予測";
+    activeEl.innerHTML="東 <b>"+(et?et.label:r.manualEvent.type)+"</b> 險倬鹸荳ｭ繝ｻ谿・<b>"+rem+"蛻・/b> 蜆ｪ蜈井ｺ域ｸｬ";
     panel.appendChild(activeEl);
   }
   td.appendChild(panel);
   td.appendChild(buildPlayerSparkEl(r));
 
-// ── ポイント推移グラフ ──
+// 笏笏 繝昴う繝ｳ繝域耳遘ｻ繧ｰ繝ｩ繝・笏笏
 const evts=getEvents().filter(e=>e.name.toLowerCase()===r.name.toLowerCase()&&e.delta!=null).slice(-48);
 if(evts.length>=2){
   const chartWrap=document.createElement("div");chartWrap.style.cssText="margin-top:12px;";
@@ -111,7 +108,7 @@ if(evts.length>=2){
   const latestPts=pts[pts.length-1];
   const startPts=pts[0];
   const diffPts=(latestPts!=null&&startPts!=null)?latestPts-startPts:null;
-  chartTitle.innerHTML=`<span>📈 ポイント推移（直近${evts.length}回）</span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
+  chartTitle.innerHTML=`<span>嶋 繝昴う繝ｳ繝域耳遘ｻ・育峩霑・{evts.length}蝗橸ｼ・/span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
   const canvas=document.createElement("canvas");
   canvas.width=520;canvas.height=140;
   canvas.style.cssText="width:100%;max-width:520px;height:140px;display:block;border-radius:8px;background:#091626;border:1px solid #16314f;";
@@ -188,20 +185,20 @@ if(evts.length>=2){
     ctx.fillText("new",W-padR-18,H-8);
   });
 }
-// ── サーバー選択 ──
+// 笏笏 繧ｵ繝ｼ繝舌・驕ｸ謚・笏笏
 
   const regionWrap=document.createElement("div");regionWrap.style.cssText="margin-top:10px;display:flex;align-items:center;gap:8px;";
   const rLabel=document.createElement("span");rLabel.textContent="Server";rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
   const rSel=document.createElement("select");rSel.style.cssText="height:28px;font-size:12px;padding:2px 6px;";
-  [["","—"],["AS","🌏 AS"],["EU","🌍 EU"],["NA","🌎 NA"]].forEach(([v,l])=>{
+  [["","窶・],["AS","件 AS"],["EU","訣 EU"],["NA","月 NA"]].forEach(([v,l])=>{
     const o=document.createElement("option");o.value=v;o.textContent=l;if((r.region||"")===v)o.selected=true;rSel.appendChild(o);
   });
   rSel.addEventListener("change",()=>{
     const snaps=getSnapshots();const k2=r.name.toLowerCase();
     if(!snaps[k2])snaps[k2]={};snaps[k2].region=rSel.value;saveSnapshots(snaps);
     lastRows=lastRows.map(row=>row.name.toLowerCase()===k2?{...row,region:rSel.value}:row);
-    renderTable(lastRows);toast("Server: <b>"+r.name+"</b> → "+(rSel.value||"—"));
-    // グローバルリスト編集の backend 同期
+    renderTable(lastRows);toast("Server: <b>"+r.name+"</b> 竊・"+(rSel.value||"窶・));
+    // 繧ｰ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝育ｷｨ髮・・ backend 蜷梧悄
     const _rs=getUiSettings();
     {
       const _re=getCommunityList().find(e=>e.name.toLowerCase()===k2);
@@ -209,12 +206,12 @@ if(evts.length>=2){
     }
   });
   regionWrap.appendChild(rLabel);regionWrap.appendChild(rSel);td.appendChild(regionWrap);
-  // ── メモ ──
+  // 笏笏 繝｡繝｢ 笏笏
   const memoWrap=document.createElement("div");memoWrap.style.cssText="margin-top:8px;display:flex;align-items:flex-start;gap:8px;";
-  const memoLbl=document.createElement("span");memoLbl.textContent="📝 Memo";memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
+  const memoLbl=document.createElement("span");memoLbl.textContent="統 Memo";memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
   const memoTa=document.createElement("textarea");memoTa.style.cssText="flex:1;height:44px;font-size:12px;padding:4px 6px;background:#0a1a2e;border:1px solid #1e2e40;color:#e7edf5;border-radius:4px;resize:vertical;font-family:inherit;";
   memoTa.value=(getSnapshots()[r.name.toLowerCase()]||{}).memo||"";
-  memoTa.placeholder="個人メモ（自分のみ表示）";
+  memoTa.placeholder="蛟倶ｺｺ繝｡繝｢・郁・蛻・・縺ｿ陦ｨ遉ｺ・・;
   let _memoTimer=null;
   memoTa.addEventListener("input",()=>{
     clearTimeout(_memoTimer);
@@ -230,10 +227,10 @@ function toggleExpand(r,rowEl,key){
   const next=rowEl.nextElementSibling;
   if(next&&next.classList.contains("expandRow")&&next.dataset.for===key){
     next.remove();expandedRows.delete(key);
-    const c=rowEl.querySelector(".expandCaret");if(c)c.textContent="▾";
+    const c=rowEl.querySelector(".expandCaret");if(c)c.textContent="笆ｾ";
   }else{
     expandedRows.add(key);rowEl.insertAdjacentElement("afterend",buildExpandRow(r,key));
-    const c=rowEl.querySelector(".expandCaret");if(c)c.textContent="▴";
+    const c=rowEl.querySelector(".expandCaret");if(c)c.textContent="笆ｴ";
   }
 }
 const estimator={lastHash:null,lastBatchAt:null,lastSnapshot:null,intervals:[],lastChangedRows:0};
@@ -241,7 +238,7 @@ let leaderboardCache=[],leaderboardFetching=false;
 function fnv1a(str){let h=2166136261;for(let i=0;i<str.length;i++){h=(h^str.charCodeAt(i))>>>0;h=Math.imul(h,16777619)>>>0;}return h>>>0;}
 const nowMs=()=>Date.now();
 const fmtTs=(ms)=>{
-  if(!ms)return"—";
+  if(!ms)return"窶・;
   const diff=Date.now()-ms;
   const min=Math.floor(diff/60000);
   const t=new Date(ms).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
@@ -251,7 +248,7 @@ const fmtTs=(ms)=>{
   return`${h}h${min%60|0}m (${t})`;
 };
 const fmtAgo=(ms)=>{
-  if(!ms)return"—";
+  if(!ms)return"窶・;
   const min=Math.floor((Date.now()-ms)/60000);
   const ago=typeof t==="function"?t("time.ago"):"ago";
   if(min<1)return`< 1m ${ago}`;
@@ -267,7 +264,7 @@ function toast(msg){
   el.classList.add("show");
   setTimeout(()=>el.classList.remove("show"),4500);
 }
-// ── ブラウザ通知 ─────────────────────────────────────────────────
+// 笏笏 繝悶Λ繧ｦ繧ｶ騾夂衍 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 let notifyEnabled=localStorage.getItem("finals_notify")==="1";
 async function requestNotifyPermission(){
   if(!("Notification"in window))return false;
@@ -284,7 +281,7 @@ function setNotifyEnabled(on){
   notifyEnabled=on;
   localStorage.setItem("finals_notify",on?"1":"0");
   const btn=document.getElementById("btnNotify");
-  if(btn)btn.title=on?"通知ON（クリックでOFF）":"通知OFF（クリックでON）";
+  if(btn)btn.title=on?"騾夂衍ON・医け繝ｪ繝・け縺ｧOFF・・:"騾夂衍OFF・医け繝ｪ繝・け縺ｧON・・;
   if(btn)btn.style.opacity=on?"1":"0.45";
 }
 function setNetHint(text){document.getElementById("netHint").textContent=text||"";}
@@ -306,8 +303,7 @@ function pushEvent(ev,maxEvents){
   const trimmed=events.slice(Math.max(0,events.length-maxEvents));
   localStorage.setItem(LS.events,JSON.stringify(trimmed));
 }
-// イベント履歴から指定プレイヤーの最後のポイント変動時刻を取得
-function getLastChangeAtFromEvents(key){
+// 繧､繝吶Φ繝亥ｱ･豁ｴ縺九ｉ謖・ｮ壹・繝ｬ繧､繝､繝ｼ縺ｮ譛蠕後・繝昴う繝ｳ繝亥､牙虚譎ょ綾繧貞叙蠕・function getLastChangeAtFromEvents(key){
   const events=getEvents();
   for(let i=events.length-1;i>=0;i--){
     const e=events[i];
@@ -321,11 +317,11 @@ function parseNames(text){
   for(const n of parts){const k=n.toLowerCase();if(seen.has(k))continue;seen.add(k);out.push(n);}
   return out;
 }
-// ── コミュニティリスト（ローカル + バックエンド同期） ─────────
+// 笏笏 繧ｳ繝溘Η繝九ユ繧｣繝ｪ繧ｹ繝茨ｼ医Ο繝ｼ繧ｫ繝ｫ + 繝舌ャ繧ｯ繧ｨ繝ｳ繝牙酔譛滂ｼ・笏笏笏笏笏笏笏笏笏
 // entry: { name, region:"AS"|"EU"|"NA"|"", category:"cheater"|"suspicious"|"notable", note, addedAt }
-const REGION_LABEL={"AS":"🌏 AS","EU":"🌍 EU","NA":"🌎 NA","":"🌐 不明"};
+const REGION_LABEL={"AS":"件 AS","EU":"訣 EU","NA":"月 NA","":"倹 荳肴・"};
 const REGION_ORDER=["AS","EU","NA",""];
-const CAT_LABEL={"cheater":"🚫 チーター","suspicious":"⚠️ 疑い","notable":"👁 注目"};
+const CAT_LABEL={"cheater":"圻 繝√・繧ｿ繝ｼ","suspicious":"笞・・逍代＞","notable":"早 豕ｨ逶ｮ"};
 function getCommunityList(){try{const r=localStorage.getItem(LS.community);if(!r)return[];const a=JSON.parse(r);return Array.isArray(a)?a:[];}catch{return[];}}
 function saveCommunityList(list){try{localStorage.setItem(LS.community,JSON.stringify(list));}catch{}}
 function addCommunityEntry(entry){
@@ -349,15 +345,11 @@ async function fetchAndMergeCommunity(globalUrl){
   if(!globalUrl)return;
   try{
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/community",{cache:"no-store"});
-    if(!r.ok){setGlobalSyncStatus("⚠️ 同期失敗 (HTTP "+r.status+")",true);return;}
+    if(!r.ok){setGlobalSyncStatus("笞・・蜷梧悄螟ｱ謨・(HTTP "+r.status+")",true);return;}
     const remote=await r.json();
     const arr=Array.isArray(remote)?remote:(remote.entries||[]);
     const localMap=new Map(getCommunityList().map(e=>[e.name.toLowerCase(),e]));
-    // サーバーリストを正として同期（推測なし）
-    // ・server に無いエントリは除外（削除反映）
-    // ・server にあるエントリは採用。ただし local の updatedAt がより新しければ local 優先
-    //   （submitCommunityEntryToGlobal 直後など、サーバーへの反映前を保護するため）
-    const merged=arr.map(re=>{
+    // 繧ｵ繝ｼ繝舌・繝ｪ繧ｹ繝医ｒ豁｣縺ｨ縺励※蜷梧悄・域耳貂ｬ縺ｪ縺暦ｼ・    // 繝ｻserver 縺ｫ辟｡縺・お繝ｳ繝医Μ縺ｯ髯､螟厄ｼ亥炎髯､蜿肴丐・・    // 繝ｻserver 縺ｫ縺ゅｋ繧ｨ繝ｳ繝医Μ縺ｯ謗｡逕ｨ縲ゅ◆縺縺・local 縺ｮ updatedAt 縺後ｈ繧頑眠縺励￠繧後・ local 蜆ｪ蜈・    //   ・・ubmitCommunityEntryToGlobal 逶ｴ蠕後↑縺ｩ縲√し繝ｼ繝舌・縺ｸ縺ｮ蜿肴丐蜑阪ｒ菫晁ｭｷ縺吶ｋ縺溘ａ・・    const merged=arr.map(re=>{
       const k=re.name.toLowerCase();
       const loc=localMap.get(k);
       if(loc&&loc.updatedAt&&re.updatedAt&&loc.updatedAt>re.updatedAt)return loc;
@@ -365,13 +357,12 @@ async function fetchAndMergeCommunity(globalUrl){
     });
     saveCommunityList(merged);
   }catch(e){
-    setGlobalSyncStatus("⚠️ 同期エラー",true);
+    setGlobalSyncStatus("笞・・蜷梧悄繧ｨ繝ｩ繝ｼ",true);
     console.error("fetchAndMergeCommunity:",e);
   }
 }
-// スナップショット（状態タイミング）をバックエンドと定期同期
-// 責務: /community = 共有リスト本体、/snapshots = 状態共有（lastChangeAt timing）
-// ポーリングで直接取得した points/state は上書きしない。lastChangeAt timing のみ更新する
+// 繧ｹ繝翫ャ繝励す繝ｧ繝・ヨ・育憾諷九ち繧､繝溘Φ繧ｰ・峨ｒ繝舌ャ繧ｯ繧ｨ繝ｳ繝峨→螳壽悄蜷梧悄
+// 雋ｬ蜍・ /community = 蜈ｱ譛峨Μ繧ｹ繝域悽菴薙・snapshots = 迥ｶ諷句・譛会ｼ・astChangeAt timing・・// 繝昴・繝ｪ繝ｳ繧ｰ縺ｧ逶ｴ謗･蜿門ｾ励＠縺・points/state 縺ｯ荳頑嶌縺阪＠縺ｪ縺・ＭastChangeAt timing 縺ｮ縺ｿ譖ｴ譁ｰ縺吶ｋ
 async function fetchAndMergeSnapshots(globalUrl){
   if(!globalUrl)return;
   try{
@@ -416,7 +407,7 @@ async function fetchAndMergeSnapshots(globalUrl){
     console.error("fetchAndMergeSnapshots:",e);
   }
 }
-// ── グローバルバックエンド API ──────────────────────────────
+// 笏笏 繧ｰ繝ｭ繝ｼ繝舌Ν繝舌ャ繧ｯ繧ｨ繝ｳ繝・API 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 async function fetchGlobalNames(globalUrl){
   const r=await fetch(globalUrl.replace(/\/$/,"")+"/names",{cache:"no-store"});
   if(!r.ok)throw new Error("global /names failed: "+r.status);
@@ -425,17 +416,15 @@ async function fetchGlobalNames(globalUrl){
 async function fetchGlobalSnapshots(globalUrl){
   try{const r=await fetch(globalUrl.replace(/\/$/,"")+"/snapshots",{cache:"no-store"});if(!r.ok)return{};return await r.json();}catch{return{};}
 }
-// UI エラー表示ヘルパー（#globalStatus に最大10秒表示）
-function setGlobalSyncStatus(msg,isError=false){
+// UI 繧ｨ繝ｩ繝ｼ陦ｨ遉ｺ繝倥Ν繝代・・・globalStatus 縺ｫ譛螟ｧ10遘定｡ｨ遉ｺ・・function setGlobalSyncStatus(msg,isError=false){
   const el=document.getElementById("globalStatus");
   if(!el)return;
   el.textContent=msg;
   el.style.color=isError?"#ff6b6b":"";
   if(isError)setTimeout(()=>{if(el.textContent===msg)el.style.color="";},10000);
 }
-// 書き込みリクエスト用ヘッダー
-// 優先順位: admin hash → ログイン中 allowed user の hash → 無し（未ログイン）
-function getWriteHeaders(){
+// 譖ｸ縺崎ｾｼ縺ｿ繝ｪ繧ｯ繧ｨ繧ｹ繝育畑繝倥ャ繝繝ｼ
+// 蜆ｪ蜈磯・ｽ・ admin hash 竊・繝ｭ繧ｰ繧､繝ｳ荳ｭ allowed user 縺ｮ hash 竊・辟｡縺暦ｼ域悴繝ｭ繧ｰ繧､繝ｳ・・function getWriteHeaders(){
   const h={"Content-Type":"application/json"};
   const auth=getAuthData();
   if(auth.adminPasswordHash){
@@ -471,9 +460,7 @@ async function submitSnapshotToGlobal(globalUrl,name,snap){
 async function addNameToGlobal(globalUrl,name){
   try{await fetch(globalUrl.replace(/\/$/,"")+"/names",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name})});}catch{}
 }
-// コミュニティエントリをバックエンドの /community に送信（他ユーザーへ即時反映）
-// /community は共有リスト本体のみ（status/lastSeen 等の状態は /submit で管理）
-// updatedAt / sourceUser を付与して worker 側の条件 merge を有効にする
+// 繧ｳ繝溘Η繝九ユ繧｣繧ｨ繝ｳ繝医Μ繧偵ヰ繝・け繧ｨ繝ｳ繝峨・ /community 縺ｫ騾∽ｿ｡・井ｻ悶Θ繝ｼ繧ｶ繝ｼ縺ｸ蜊ｳ譎ょ渚譏・・// /community 縺ｯ蜈ｱ譛峨Μ繧ｹ繝域悽菴薙・縺ｿ・・tatus/lastSeen 遲峨・迥ｶ諷九・ /submit 縺ｧ邂｡逅・ｼ・// updatedAt / sourceUser 繧剃ｻ倅ｸ弱＠縺ｦ worker 蛛ｴ縺ｮ譚｡莉ｶ merge 繧呈怏蜉ｹ縺ｫ縺吶ｋ
 async function submitCommunityEntryToGlobal(globalUrl,entry){
   try{
     const now=Date.now();
@@ -483,57 +470,54 @@ async function submitCommunityEntryToGlobal(globalUrl,entry){
       category:   entry.category   || "notable",
       note:       entry.note       || "",
       addedAt:    entry.addedAt    || now,
-      updatedAt:  entry.updatedAt  || now,  // merge 判定用タイムスタンプ
-      sourceUser: currentUser?.id  || "",   // 書き込んだユーザーID
-      // status / lastSeen は /submit (snapshots) で管理するためここには含めない
-    };
+      updatedAt:  entry.updatedAt  || now,  // merge 蛻､螳夂畑繧ｿ繧､繝繧ｹ繧ｿ繝ｳ繝・      sourceUser: currentUser?.id  || "",   // 譖ｸ縺崎ｾｼ繧薙□繝ｦ繝ｼ繧ｶ繝ｼID
+      // status / lastSeen 縺ｯ /submit (snapshots) 縺ｧ邂｡逅・☆繧九◆繧√％縺薙↓縺ｯ蜷ｫ繧√↑縺・    };
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/community",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify(payload)});
     if(!r.ok){
       const err=await r.json().catch(()=>({}));
-      setGlobalSyncStatus("⚠️ 追加失敗: "+(err.error||r.status),true);
+      setGlobalSyncStatus("笞・・霑ｽ蜉螟ｱ謨・ "+(err.error||r.status),true);
       console.error("submitCommunityEntryToGlobal HTTP",r.status,err);
     }
   }catch(e){
-    setGlobalSyncStatus("⚠️ 追加エラー",true);
+    setGlobalSyncStatus("笞・・霑ｽ蜉繧ｨ繝ｩ繝ｼ",true);
     console.error("submitCommunityEntryToGlobal:",e);
   }
 }
-// コミュニティエントリをバックエンドから削除
+// 繧ｳ繝溘Η繝九ユ繧｣繧ｨ繝ｳ繝医Μ繧偵ヰ繝・け繧ｨ繝ｳ繝峨°繧牙炎髯､
 async function deleteCommunityEntryFromGlobal(globalUrl,name){
-  // サーバー削除の成否を boolean で返す（呼び出し元がローカル削除を制御するため）
-  try{
+  // 繧ｵ繝ｼ繝舌・蜑企勁縺ｮ謌仙凄繧・boolean 縺ｧ霑斐☆・亥他縺ｳ蜃ｺ縺怜・縺後Ο繝ｼ繧ｫ繝ｫ蜑企勁繧貞宛蠕｡縺吶ｋ縺溘ａ・・  try{
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/community?name="+encodeURIComponent(name),{method:"DELETE",headers:getWriteHeaders()});
     if(!r.ok){
       const err=await r.json().catch(()=>({}));
-      setGlobalSyncStatus("⚠️ 削除失敗: "+(err.error||r.status),true);
+      setGlobalSyncStatus("笞・・蜑企勁螟ｱ謨・ "+(err.error||r.status),true);
       console.error("deleteCommunityEntryFromGlobal HTTP",r.status,err);
       return false;
     }
     return true;
   }catch(e){
-    setGlobalSyncStatus("⚠️ 削除エラー",true);
+    setGlobalSyncStatus("笞・・蜑企勁繧ｨ繝ｩ繝ｼ",true);
     console.error("deleteCommunityEntryFromGlobal:",e);
     return false;
   }
 }
-// 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
+// 驕ｭ驕・ち繧､繝・ group:true 縺ｮ繧ゅ・縺ｯ sub[] 繧偵ラ繝ｭ繝・・繝繧ｦ繝ｳ陦ｨ遉ｺ
 const ENCOUNTER_TYPES=[
-  {key:"won",       label:"🏆 勝利",     desc:"試合に勝利した（即ロビーへ）",     getOffset:s=>0},
-  {key:"final_end", label:"💀 FINAL終了", desc:"FINALラウンド終了（負け）",        getOffset:s=>0},
-  {key:"r1", label:"R1", desc:"ラウンド1で遭遇", group:true, sub:[
-    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+  {key:"won",       label:"醇 蜍晏茜",     desc:"隧ｦ蜷医↓蜍晏茜縺励◆・亥叉繝ｭ繝薙・縺ｸ・・,     getOffset:s=>0},
+  {key:"final_end", label:"逐 FINAL邨ゆｺ・, desc:"FINAL繝ｩ繧ｦ繝ｳ繝臥ｵゆｺ・ｼ郁ｲ縺托ｼ・,        getOffset:s=>0},
+  {key:"r1", label:"R1", desc:"繝ｩ繧ｦ繝ｳ繝・縺ｧ驕ｭ驕・, group:true, sub:[
+    {key:"r1_early", label:"蠎冗乢", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
+    {key:"r1_mid",   label:"荳ｭ逶､", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
+    {key:"r1_late",  label:"邨ら乢", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
   ]},
-  {key:"r2", label:"R2", desc:"ラウンド2で遭遇", group:true, sub:[
-    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+  {key:"r2", label:"R2", desc:"繝ｩ繧ｦ繝ｳ繝・縺ｧ驕ｭ驕・, group:true, sub:[
+    {key:"r2_early", label:"蠎冗乢", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
+    {key:"r2_mid",   label:"荳ｭ逶､", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
+    {key:"r2_late",  label:"邨ら乢", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
   ]},
-  // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
-  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
+  // 繧ｪ繝輔Λ繧､繝ｳ縺ｮ縺ｿ譛牙柑譛滄俣5蛻・崋螳壹・offset 縺ｯ蠢・★OFFLINE迥ｶ諷九↓縺ｪ繧句､
+  {key:"offline", label:"笞ｫ 繧ｪ繝輔Λ繧､繝ｳ", desc:"繧ｪ繝輔Λ繧､繝ｳ遒ｺ隱搾ｼ・蛻・・縺ｿ譛牙柑・・, overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
 ];
-// サブタイプを含むフラット検索
+// 繧ｵ繝悶ち繧､繝励ｒ蜷ｫ繧繝輔Λ繝・ヨ讀懃ｴ｢
 function findEncounterType(key){
   for(const et of ENCOUNTER_TYPES){
     if(et.key===key)return et;
@@ -541,27 +525,22 @@ function findEncounterType(key){
   }
   return null;
 }
-// manualEvent 有効期間ヘルパー（overrideDurationMs が未設定なら 1時間）
-function isManualActive(me){if(!me)return false;return(nowMs()-me.recordedAt)<(me.overrideDurationMs??3600000);}
+// manualEvent 譛牙柑譛滄俣繝倥Ν繝代・・・verrideDurationMs 縺梧悴險ｭ螳壹↑繧・1譎る俣・・function isManualActive(me){if(!me)return false;return(nowMs()-me.recordedAt)<(me.overrideDurationMs??3600000);}
 function manualRem(me){if(!me)return 0;return Math.max(0,Math.round(((me.recordedAt+(me.overrideDurationMs??3600000))-nowMs())/60000));}
-// offline / won / final_end は「遭遇中」ではないので danger 扱いしない
-function isEncounterDanger(me){return isManualActive(me)&&me.type!=="offline"&&me.type!=="won"&&me.type!=="final_end";}
+// offline / won / final_end 縺ｯ縲碁・驕・ｸｭ縲阪〒縺ｯ縺ｪ縺・・縺ｧ danger 謇ｱ縺・＠縺ｪ縺・function isEncounterDanger(me){return isManualActive(me)&&me.type!=="offline"&&me.type!=="won"&&me.type!=="final_end";}
 
-// ── 認証（ID + パスワード制限） ───────────────────────────────
-// SHA-256 ハッシュ（Web Crypto API）
-async function sha256(text){
+// 笏笏 隱崎ｨｼ・・D + 繝代せ繝ｯ繝ｼ繝牙宛髯撰ｼ・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// SHA-256 繝上ャ繧ｷ繝･・・eb Crypto API・・async function sha256(text){
   const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
-// 認証データ読み書き（LS.auth）
-function getAuthData(){
+// 隱崎ｨｼ繝・・繧ｿ隱ｭ縺ｿ譖ｸ縺搾ｼ・S.auth・・function getAuthData(){
   try{const r=localStorage.getItem(LS.auth);return r?JSON.parse(r):{adminPasswordHash:"",allowedUsers:[]};}
   catch{return{adminPasswordHash:"",allowedUsers:[]};}
 }
 function saveAuthData(d){try{localStorage.setItem(LS.auth,JSON.stringify(d));}catch{}}
 
-// セッション（in-memory: ページリロードでクリア）
-let currentUser=null; // {id:string} | null
+// 繧ｻ繝・す繝ｧ繝ｳ・・n-memory: 繝壹・繧ｸ繝ｪ繝ｭ繝ｼ繝峨〒繧ｯ繝ｪ繧｢・・let currentUser=null; // {id:string} | null
 function isLoggedIn(){return currentUser!==null;}
 function setCurrentUser(id){
   currentUser=id?{id}:null;
@@ -574,7 +553,7 @@ function restoreSession(){
   if(saved)currentUser={id:saved};
 }
 function updateLoginStatus(){
-  // グローバルリスト内のステータスバー
+  // 繧ｰ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝亥・縺ｮ繧ｹ繝・・繧ｿ繧ｹ繝舌・
   const bar=document.getElementById("loginStatusBar");
   if(bar){
     if(getEffectiveAllowedUsers().length===0){bar.style.display="none";}
@@ -586,13 +565,13 @@ function updateLoginStatus(){
       if(logoutBtn)logoutBtn.style.display=currentUser?"":"none";
     }
   }
-  // ヘッダーのログインボタン
+  // 繝倥ャ繝繝ｼ縺ｮ繝ｭ繧ｰ繧､繝ｳ繝懊ち繝ｳ
   const headerUserInfo=document.getElementById("headerUserInfo");
   const btnHeaderLogout=document.getElementById("btnHeaderLogout");
   const btnHeaderLogin=document.getElementById("btnHeaderLogin");
   if(!headerUserInfo)return;
   if(currentUser){
-    headerUserInfo.textContent="👤 "+currentUser.id;
+    headerUserInfo.textContent="側 "+currentUser.id;
     headerUserInfo.style.display="";
     btnHeaderLogout.style.display="";
     btnHeaderLogin.style.display="none";
@@ -603,10 +582,9 @@ function updateLoginStatus(){
   }
 }
 
-// ── バックエンド認証同期 ──────────────────────────────────────────
-// バックエンドから許可ユーザーリストを取得してセッション変数に保持
-let _backendAllowedUsers=null; // null = 未フェッチ or globalUrl なし
-async function fetchAuthConfig(globalUrl){
+// 笏笏 繝舌ャ繧ｯ繧ｨ繝ｳ繝芽ｪ崎ｨｼ蜷梧悄 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// 繝舌ャ繧ｯ繧ｨ繝ｳ繝峨°繧芽ｨｱ蜿ｯ繝ｦ繝ｼ繧ｶ繝ｼ繝ｪ繧ｹ繝医ｒ蜿門ｾ励＠縺ｦ繧ｻ繝・す繝ｧ繝ｳ螟画焚縺ｫ菫晄戟
+let _backendAllowedUsers=null; // null = 譛ｪ繝輔ぉ繝・メ or globalUrl 縺ｪ縺・async function fetchAuthConfig(globalUrl){
   if(!globalUrl)return;
   try{
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/auth",{cache:"no-store"});
@@ -626,8 +604,7 @@ async function fetchAuthConfig(globalUrl){
     console.error("fetchAuthConfig:",e);
   }
 }
-// バックエンドに認証設定を同期（アドミンパネルのボタンから呼ぶ）
-async function syncAuthToBackend(globalUrl,adminPasswordHash,allowedUsers){
+// 繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓隱崎ｨｼ險ｭ螳壹ｒ蜷梧悄・医い繝峨Α繝ｳ繝代ロ繝ｫ縺ｮ繝懊ち繝ｳ縺九ｉ蜻ｼ縺ｶ・・async function syncAuthToBackend(globalUrl,adminPasswordHash,allowedUsers){
   if(!globalUrl)return false;
   try{
     const r=await fetch(globalUrl.replace(/\/$/,"")+"/auth",{
@@ -638,13 +615,12 @@ async function syncAuthToBackend(globalUrl,adminPasswordHash,allowedUsers){
     return r.ok;
   }catch{return false;}
 }
-// 有効な許可ユーザーリストを返す（バックエンド優先、fallback はローカル）
-function getEffectiveAllowedUsers(){
+// 譛牙柑縺ｪ險ｱ蜿ｯ繝ｦ繝ｼ繧ｶ繝ｼ繝ｪ繧ｹ繝医ｒ霑斐☆・医ヰ繝・け繧ｨ繝ｳ繝牙━蜈医’allback 縺ｯ繝ｭ繝ｼ繧ｫ繝ｫ・・function getEffectiveAllowedUsers(){
   if(_backendAllowedUsers!==null)return _backendAllowedUsers;
   return getAuthData().allowedUsers;
 }
 
-// ログインモーダル制御
+// 繝ｭ繧ｰ繧､繝ｳ繝｢繝ｼ繝繝ｫ蛻ｶ蠕｡
 let _loginCallback=null;
 function showLoginModal(onSuccess){
   _loginCallback=onSuccess;
@@ -659,18 +635,17 @@ function hideLoginModal(){
   _loginCallback=null;
 }
 
-// 許可ユーザー一覧レンダリング（アドミンパネル内）
-function renderAllowedUserList(){
+// 險ｱ蜿ｯ繝ｦ繝ｼ繧ｶ繝ｼ荳隕ｧ繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ・医い繝峨Α繝ｳ繝代ロ繝ｫ蜀・ｼ・function renderAllowedUserList(){
   const auth=getAuthData();
   const el=document.getElementById("allowedUserList");
   if(!el)return;
   if(auth.allowedUsers.length===0){
-    el.innerHTML="<div class='hint' style='margin:6px 0'>許可ユーザーなし（空の場合は誰でも追加可能）</div>";
+    el.innerHTML="<div class='hint' style='margin:6px 0'>險ｱ蜿ｯ繝ｦ繝ｼ繧ｶ繝ｼ縺ｪ縺暦ｼ育ｩｺ縺ｮ蝣ｴ蜷医・隱ｰ縺ｧ繧りｿｽ蜉蜿ｯ閭ｽ・・/div>";
     return;
   }
   el.innerHTML=auth.allowedUsers.map(u=>
     `<div class="allowedUserRow"><span class="allowedUserId">${u.id}</span>`+
-    `<button class="deleteBtn allowedDelBtn" data-id="${u.id}" title="${u.id}を削除">✕</button></div>`
+    `<button class="deleteBtn allowedDelBtn" data-id="${u.id}" title="${u.id}繧貞炎髯､">笨・/button></div>`
   ).join("");
   el.querySelectorAll(".allowedDelBtn").forEach(btn=>{
     btn.addEventListener("click",()=>{
@@ -685,8 +660,7 @@ function renderAllowedUserList(){
 function applyEncounterEvent(name,typeKey){
   const settings=currentSettings||getUiSettings();
   const et=findEncounterType(typeKey);
-  if(!et||et.group)return; // groupボタン自体は無視（サブボタンで呼ぶ）
-  const now=nowMs();
+  if(!et||et.group)return; // group繝懊ち繝ｳ閾ｪ菴薙・辟｡隕厄ｼ医し繝悶・繧ｿ繝ｳ縺ｧ蜻ｼ縺ｶ・・  const now=nowMs();
   const offsetMin=et.getOffset(settings);
   const lastChangeAtOverride=now-offsetMin*60000;
   const snapshots=getSnapshots();
@@ -696,9 +670,8 @@ function applyEncounterEvent(name,typeKey){
   snapshots[key].manualEvent={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
   saveSnapshots(snapshots);
   const durMin=Math.round(dur/60000);
-  toast(et.label+" <b>"+name+"</b> を記録 (offset -"+offsetMin+"分 / "+durMin+"分優先)");
-  // API呼び出しなし → キャッシュ行をその場で更新して即時再描画（フラッシュなし）
-  if(lastRows.length>0){
+  toast(et.label+" <b>"+name+"</b> 繧定ｨ倬鹸 (offset -"+offsetMin+"蛻・/ "+durMin+"蛻・━蜈・");
+  // API蜻ｼ縺ｳ蜃ｺ縺励↑縺・竊・繧ｭ繝｣繝・す繝･陦後ｒ縺昴・蝣ｴ縺ｧ譖ｴ譁ｰ縺励※蜊ｳ譎ょ・謠冗判・医ヵ繝ｩ繝・す繝･縺ｪ縺暦ｼ・  if(lastRows.length>0){
     const manualEventObj={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
     const updatedRows=lastRows.map(r=>{
       if(r.name.toLowerCase()!==key)return r;
@@ -712,8 +685,7 @@ function applyEncounterEvent(name,typeKey){
   }
 }
 function getActiveNames(){
-  // 個人リストとグローバルリスト両方を常にポーリング → 状態を共有
-  const personal=parseNames(document.getElementById("namesBox").value);
+  // 蛟倶ｺｺ繝ｪ繧ｹ繝医→繧ｰ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝井ｸ｡譁ｹ繧貞ｸｸ縺ｫ繝昴・繝ｪ繝ｳ繧ｰ 竊・迥ｶ諷九ｒ蜈ｱ譛・  const personal=parseNames(document.getElementById("namesBox").value);
   const community=getCommunityList().map(e=>e.name);
   const seen=new Set();
   const all=[];
@@ -723,7 +695,7 @@ function getActiveNames(){
   }
   return all;
 }
-// ────────────────────────────────────────────────────────────
+// 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 function applySettingsToUi(s){
   document.getElementById("leaderboardId").value=s.leaderboardId||"s9";
   document.getElementById("platform").value=s.platform||"crossplay";
@@ -818,22 +790,22 @@ function stateExplain(row,displayState){
   const manual=row?.manualEvent;
   if(manual&&isManualActive(manual)){
     const et=findEncounterType(manual.type);
-    if(manual.type==="offline") return "手動でオフライン記録中";
-    if(manual.type==="won") return "手動で勝利後ロビー戻りを記録中";
-    if(manual.type==="final_end") return "手動でFINAL終了後の戻りを記録中";
-    return `手動記録「${et?et.label:manual.type}」を優先表示中`;
+    if(manual.type==="offline") return "謇句虚縺ｧ繧ｪ繝輔Λ繧､繝ｳ險倬鹸荳ｭ";
+    if(manual.type==="won") return "謇句虚縺ｧ蜍晏茜蠕後Ο繝薙・謌ｻ繧翫ｒ險倬鹸荳ｭ";
+    if(manual.type==="final_end") return "謇句虚縺ｧFINAL邨ゆｺ・ｾ後・謌ｻ繧翫ｒ險倬鹸荳ｭ";
+    return `謇句虚險倬鹸縲・{et?et.label:manual.type}縲阪ｒ蜆ｪ蜈郁｡ｨ遉ｺ荳ｭ`;
   }
   switch(displayState){
-    case "POST_MATCH_WAIT": return "更新直後。反映待ちの待機時間です";
-    case "LOBBY": return "ロビー待機・次の試合準備中の推定です";
-    case "IN_MATCH": return "試合中前半〜中盤の推定です";
-    case "IN_TOURNAMENT_DEEP": return "試合後半〜深いラウンド進行中の推定です";
-    case "RETURNING": return "試合終盤〜終了後、ロビーへ戻る途中の推定です";
-    case "OFFLINE": return "最近の更新がなく、現在は非アクティブ寄りです";
-    case "UNKNOWN": return "情報不足で状態を確定できません";
-    case "NOT_FOUND": return "リーダーボードで一時的に確認できません";
-    case "BANNED": return "BAN の可能性があります";
-    case "NAME_CHANGED": return "名前変更の可能性があります";
+    case "POST_MATCH_WAIT": return "譖ｴ譁ｰ逶ｴ蠕後ょ渚譏蠕・■縺ｮ蠕・ｩ滓凾髢薙〒縺・;
+    case "LOBBY": return "繝ｭ繝薙・蠕・ｩ溘・谺｡縺ｮ隧ｦ蜷域ｺ門ｙ荳ｭ縺ｮ謗ｨ螳壹〒縺・;
+    case "IN_MATCH": return "隧ｦ蜷井ｸｭ蜑榊濠縲應ｸｭ逶､縺ｮ謗ｨ螳壹〒縺・;
+    case "IN_TOURNAMENT_DEEP": return "隧ｦ蜷亥ｾ悟濠縲懈ｷｱ縺・Λ繧ｦ繝ｳ繝蛾ｲ陦御ｸｭ縺ｮ謗ｨ螳壹〒縺・;
+    case "RETURNING": return "隧ｦ蜷育ｵら乢縲懃ｵゆｺ・ｾ後√Ο繝薙・縺ｸ謌ｻ繧矩比ｸｭ縺ｮ謗ｨ螳壹〒縺・;
+    case "OFFLINE": return "譛霑代・譖ｴ譁ｰ縺後↑縺上∫樟蝨ｨ縺ｯ髱槭い繧ｯ繝・ぅ繝門ｯ・ｊ縺ｧ縺・;
+    case "UNKNOWN": return "諠・ｱ荳崎ｶｳ縺ｧ迥ｶ諷九ｒ遒ｺ螳壹〒縺阪∪縺帙ｓ";
+    case "NOT_FOUND": return "繝ｪ繝ｼ繝繝ｼ繝懊・繝峨〒荳譎ら噪縺ｫ遒ｺ隱阪〒縺阪∪縺帙ｓ";
+    case "BANNED": return "BAN 縺ｮ蜿ｯ閭ｽ諤ｧ縺後≠繧翫∪縺・;
+    case "NAME_CHANGED": return "蜷榊燕螟画峩縺ｮ蜿ｯ閭ｽ諤ｧ縺後≠繧翫∪縺・;
     default: return "";
   }
 }
@@ -858,7 +830,7 @@ function stateSortPriority(row){
 }
 function renderBadge(rank,league){
   const tier=league||inferLeagueFromRank(rank);
-  const rankStr=rank?"#"+rank.toLocaleString():"—";
+  const rankStr=rank?"#"+rank.toLocaleString():"窶・;
   const badge=tier?`<span class="badge badge-${tier.toLowerCase()}">${tier}</span>`:"";
   return `${badge}<span class="rankNum">${rankStr}</span>`;
 }
@@ -884,15 +856,13 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
   const X = reflectDelayMin;
 
   if(!skipOffline20){
-    // ① バッチ検出済み：lastBatchAt が lastChangeAt より 5分以上新しい
-    //    → 最新バッチでこのプレイヤーのポイント変動なし = OFFLINE確定
-    const lastBatch = estimator.lastBatchAt;
-    const BATCH_BUF_MS = 5 * 60 * 1000; // ポーリングズレ吸収バッファ
+    // 竭 繝舌ャ繝∵､懷・貂医∩・嗟astBatchAt 縺・lastChangeAt 繧医ｊ 5蛻・ｻ･荳頑眠縺励＞
+    //    竊・譛譁ｰ繝舌ャ繝√〒縺薙・繝励Ξ繧､繝､繝ｼ縺ｮ繝昴う繝ｳ繝亥､牙虚縺ｪ縺・= OFFLINE遒ｺ螳・    const lastBatch = estimator.lastBatchAt;
+    const BATCH_BUF_MS = 5 * 60 * 1000; // 繝昴・繝ｪ繝ｳ繧ｰ繧ｺ繝ｬ蜷ｸ蜿弱ヰ繝・ヵ繧｡
     if(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS){
       return { state:"OFFLINE", nextMatchProb:0 };
     }
-    // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック（20分固定）
-    if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
+    // 竭｡ 繝舌ャ繝√ョ繝ｼ繧ｿ縺ｪ縺暦ｼ医お繧ｹ繝・ぅ繝｡繝ｼ繧ｿ繝ｼ譛ｪ襍ｷ蜍包ｼ俄・ 譎る俣繝吶・繧ｹ縺ｮ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ・・0蛻・崋螳夲ｼ・    if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
   }
   const W = Math.max(0, Math.min(30, matchWaitMin ?? 5));   // lobby/queue wait before next match
   const M = Math.max(20, Math.min(60, matchAvgMin || 31));  // minimum match duration (31min fastest)
@@ -903,7 +873,7 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
   let state = "LOBBY";
   if(tMin < X)                 state = "POST_MATCH_WAIT";
   else if(tMin < X + W)        state = "LOBBY";              // queuing for next match
-  else if(tMin < X + W + M)    state = "IN_MATCH";           // minimum 31min not elapsed → in match
+  else if(tMin < X + W + M)    state = "IN_MATCH";           // minimum 31min not elapsed 竊・in match
   else if(tMin < X + W + M + J) state = "IN_MATCH";          // +3min gray zone
   else if(tMin < X + T)        state = "IN_TOURNAMENT_DEEP";
   else if(tMin < X + T + 25)   state = "RETURNING";
@@ -927,8 +897,7 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
     p = 0.05;
   }
 
-  p = Math.min(0.80, clamp01(p)); // 最高80%（100%前提の見え方を避ける）
-  return { state, nextMatchProb: Math.round(p * 100) };
+  p = Math.min(0.80, clamp01(p)); // 譛鬮・0%・・00%蜑肴署縺ｮ隕九∴譁ｹ繧帝∩縺代ｋ・・  return { state, nextMatchProb: Math.round(p * 100) };
 }
 
 function isCorsLikeError(msg){
@@ -952,8 +921,7 @@ async function fetchPlayer(proxyBase,leaderboardId,platform,name){
 function renderTable(rows){
   const tbody=document.getElementById("tbody");tbody.innerHTML="";
   let filtered=rows;
-  // viewMode に応じて表示プレイヤーを絞り込む（ポーリングは両リスト共通）
-  if(viewMode==="personal"){
+  // viewMode 縺ｫ蠢懊§縺ｦ陦ｨ遉ｺ繝励Ξ繧､繝､繝ｼ繧堤ｵ槭ｊ霎ｼ繧・医・繝ｼ繝ｪ繝ｳ繧ｰ縺ｯ荳｡繝ｪ繧ｹ繝亥・騾夲ｼ・  if(viewMode==="personal"){
     const pset=new Set(parseNames(document.getElementById("namesBox").value).map(n=>n.toLowerCase()));
     filtered=filtered.filter(r=>pset.has(r.name.toLowerCase()));
   }else if(viewMode==="global"){
@@ -970,12 +938,12 @@ function renderTable(rows){
     const isNameChange=isMissing&&r.suspectedReason==="NAME_CHANGE";
     const displayState=isBan?"BANNED":isNameChange?"NAME_CHANGED":isMissing?"NOT_FOUND":r.state;
     const statusBadge=isBan
-      ?'<span class="badge" style="background:#2a0808;color:#ff5555;border-color:#7a1a1a;margin:0 5px 0 2px">⛔ BAN</span>'
+      ?'<span class="badge" style="background:#2a0808;color:#ff5555;border-color:#7a1a1a;margin:0 5px 0 2px">笵・BAN</span>'
       :isNameChange
-        ?'<span class="badge" style="background:#082030;color:#6de9ff;border-color:#1e5a8a;margin:0 5px 0 2px">🔵 NC</span>'
+        ?'<span class="badge" style="background:#082030;color:#6de9ff;border-color:#1e5a8a;margin:0 5px 0 2px">鳩 NC</span>'
         :"";
     const missingBadge=(!isBan&&!isNameChange&&isMissing)
-      ?'<span class="badge" style="background:#2a1200;color:#ff9944;border-color:#7a3800;">🟠 Missing</span>'
+      ?'<span class="badge" style="background:#2a1200;color:#ff9944;border-color:#7a3800;">泛 Missing</span>'
       :"";
     const regionBadge=r.region?`<span class="regionTag regionTag-${r.region}">${r.region}</span>`:"";
     const key=r.name.toLowerCase();
@@ -985,21 +953,21 @@ function renderTable(rows){
     const manualType=r.manualEvent?.type;
     const isWonOrFinal=manualType==="won"||manualType==="final_end";
     const manualRemMin=manualActive?manualRem(r.manualEvent):0;
-    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualRemMin}m</span>`:"";
+    const manualBadge=manualActive?`<span class="manualBadge">東 ${manualRemMin}m</span>`:"";
     const tr=document.createElement("tr");
     if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
     else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
     tr.innerHTML=`
-      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="ピックアップ（大型グラフに追加）">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
+      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="繝斐ャ繧ｯ繧｢繝・・・亥､ｧ蝙九げ繝ｩ繝輔↓霑ｽ蜉・・>笘・/button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"笆ｴ":"笆ｾ"}</span></td>
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
-      <td class="num">${r.lastDelta==null?"—":r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
-      <td class="tsCell">${r.lastDelta==null?"—":fmtAgo(r.lastRealChangeAt)}</td>
-      <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}<div style="font-size:11px;color:#7f93ad;margin-top:2px;line-height:1.25;">${stateExplain(r,displayState)}</div></td>
-      <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
-      <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
+      <td class="num">${r.lastDelta==null?"窶・:r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
+      <td class="tsCell">${r.lastDelta==null?"窶・:fmtAgo(r.lastRealChangeAt)}</td>
+      <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
+      <td class="num">${isMissing?"窶・:r.nextMatchProb??0}%</td>
+      <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"窶・}</td>
       <td class="errCell">${r.error||""}</td>
-      <td class="actCell"><button class="resetBtn" title="遭遇記録（クリックで展開）">⚔</button><button class="deleteBtn" title="削除">✕</button></td>
+      <td class="actCell"><button class="resetBtn" title="驕ｭ驕・ｨ倬鹸・医け繝ｪ繝・け縺ｧ螻暮幕・・>笞・/button><button class="deleteBtn" title="蜑企勁">笨・/button></td>
     `;
     tr.querySelector(".pickupBtn").addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
     tr.querySelector(".nameCell").addEventListener("click",()=>toggleExpand(r,tr,key));
@@ -1020,13 +988,13 @@ function renderSpark(rows){
     const dangerNow=activeRows.filter(r=>isEncounterDanger(r.manualEvent)).length;
     const hotNow=activeRows.filter(r=>!r.manualEvent&&r.nextMatchProb>=60).length;
     let html="";
-    if(dangerNow>0) html+=`<span class="dangerCount">🚨 ${dangerNow}人遭遇！</span>`;
-    if(hotNow>0)    html+=`<span class="hotCount">${hotNow}人が試合開始近い</span>`;
-    if(!html)       html=`<span style="color:#5a7aaa;font-size:12px;">試合開始が近いプレイヤーなし</span>`;
+    if(dangerNow>0) html+=`<span class="dangerCount">圷 ${dangerNow}莠ｺ驕ｭ驕・ｼ・/span>`;
+    if(hotNow>0)    html+=`<span class="hotCount">${hotNow}莠ｺ縺瑚ｩｦ蜷磯幕蟋玖ｿ代＞</span>`;
+    if(!html)       html=`<span style="color:#5a7aaa;font-size:12px;">隧ｦ蜷磯幕蟋九′霑代＞繝励Ξ繧､繝､繝ｼ縺ｪ縺・/span>`;
     hotEl.innerHTML=html;
   }
   if(activeRows.length===0){
-    wrap.innerHTML="<div class='psEmpty'>プレイヤーを追加すると予測グラフが表示されます</div>";
+    wrap.innerHTML="<div class='psEmpty'>繝励Ξ繧､繝､繝ｼ繧定ｿｽ蜉縺吶ｋ縺ｨ莠域ｸｬ繧ｰ繝ｩ繝輔′陦ｨ遉ｺ縺輔ｌ縺ｾ縺・/div>";
     return;
   }
   for(const r of activeRows){
@@ -1037,7 +1005,7 @@ function renderSpark(rows){
     const prob=r.nextMatchProb??0;
     const probColor=isDanger?"#ff4444":prob>=60?"#39d98a":prob>=30?"#ffcf5c":"#5a7aaa";
     const header=document.createElement("div");header.className="psHeader";
-    const dangerBadge=isDanger?`<span class="psDangerBadge">🚨 遭遇</span>`:"";
+    const dangerBadge=isDanger?`<span class="psDangerBadge">圷 驕ｭ驕・/span>`:"";
     const et=isDanger?findEncounterType(r.manualEvent.type):null;
     const etLabel=et?et.label:"";
     header.innerHTML=`<span class="psName">${handle}<span class="psTag">#${tag||""}</span></span>${dangerBadge}<span class="psPct" style="color:${probColor}">${isDanger?etLabel:prob+"%"}</span>`;
@@ -1058,22 +1026,22 @@ function renderBanList(rows){
     const isBan=r.suspectedReason==="BAN";
     const isNameChange=r.suspectedReason==="NAME_CHANGE";
     const cls=isBan?"banAlertBan":isNameChange?"banAlertNameChange":"";
-    const icon=isBan?"⛔":isNameChange?"🔵":"🟠";
+    const icon=isBan?"笵・:isNameChange?"鳩":"泛";
     const reasonText=isBan
-      ?"リーダーボードから完全消去"
-      :isNameChange?`新しい名前: <b>${r.suspectedNewName||"不明"}</b>`
-      :"消失中（調査中…）";
+      ?"繝ｪ繝ｼ繝繝ｼ繝懊・繝峨°繧牙ｮ悟・豸亥悉"
+      :isNameChange?`譁ｰ縺励＞蜷榊燕: <b>${r.suspectedNewName||"荳肴・"}</b>`
+      :"豸亥､ｱ荳ｭ・郁ｪｿ譟ｻ荳ｭ窶ｦ・・;
     return `<div class="banAlertItem ${cls}">
       <span class="banAlertIcon">${icon}</span>
       <span class="banAlertName">${r.name}</span>
       <span class="banAlertReason">${reasonText}</span>
-      <span class="banAlertMeta">最終確認: ${fmtTs(r.lastFoundAt)}　連続未検出: ${r.notFoundCount}回</span>
+      <span class="banAlertMeta">譛邨ら｢ｺ隱・ ${fmtTs(r.lastFoundAt)}縲騾｣邯壽悴讀懷・: ${r.notFoundCount}蝗・/span>
     </div>`;
   }
   let html="";
-  if(banned.length)    html+=`<div class="banAlertTitle banTitleBan">⛔ BANされた可能性</div>`+banned.map(itemHtml).join("");
-  if(nameChanged.length) html+=`<div class="banAlertTitle banTitleNameChange">🔵 名前変更</div>`+nameChanged.map(itemHtml).join("");
-  if(unknown.length)   html+=`<div class="banAlertTitle">🟠 消失中（調査中）</div>`+unknown.map(itemHtml).join("");
+  if(banned.length)    html+=`<div class="banAlertTitle banTitleBan">笵・BAN縺輔ｌ縺溷庄閭ｽ諤ｧ</div>`+banned.map(itemHtml).join("");
+  if(nameChanged.length) html+=`<div class="banAlertTitle banTitleNameChange">鳩 蜷榊燕螟画峩</div>`+nameChanged.map(itemHtml).join("");
+  if(unknown.length)   html+=`<div class="banAlertTitle">泛 豸亥､ｱ荳ｭ・郁ｪｿ譟ｻ荳ｭ・・/div>`+unknown.map(itemHtml).join("");
   el.innerHTML=html;
 }
 async function pollOnce(names,settings){
@@ -1098,10 +1066,8 @@ async function pollOnce(names,settings){
       if(isCorsLikeError(errMsg)) anyCors=true;
     }
     let delta=null;
-    let lastDelta=prev.lastDelta??null; // 最後の非ゼロ変動値（表示固定用）
-    let lastChangeAt=prev.lastChangeAt??null;
-    let lastRealChangeAt=prev.lastRealChangeAt??null; // 実際のポイント変動のみ記録（表示用）
-    let manualEvent=prev.manualEvent??null; // 手動遭遇記録
+    let lastDelta=prev.lastDelta??null; // 譛蠕後・髱槭ぞ繝ｭ螟牙虚蛟､・郁｡ｨ遉ｺ蝗ｺ螳夂畑・・    let lastChangeAt=prev.lastChangeAt??null;
+    let lastRealChangeAt=prev.lastRealChangeAt??null; // 螳滄圀縺ｮ繝昴う繝ｳ繝亥､牙虚縺ｮ縺ｿ險倬鹸・郁｡ｨ遉ｺ逕ｨ・・    let manualEvent=prev.manualEvent??null; // 謇句虚驕ｭ驕・ｨ倬鹸
     let currentPoints=prev.points??null;
     let lastOkAt=prev.lastOkAt??null;
     let leaderboardRank=prev.leaderboardRank??null;
@@ -1128,15 +1094,14 @@ async function pollOnce(names,settings){
       if(typeof prev.points==="number"){
         delta=currentPoints-prev.points;
         if(delta!==0){lastChangeAt=now;lastRealChangeAt=now;lastDelta=delta;pushEvent({ts:now,name,points:currentPoints,delta,inferred_state:null},settings.maxEvents);}
-        // RS急落アラート
-        if(delta<=-settings.rsDropThreshold){
+        // RS諤･關ｽ繧｢繝ｩ繝ｼ繝・        if(delta<=-settings.rsDropThreshold){
           const prevRk=prev.leaderboardRank;
           const newRk=freshRank??leaderboardRank;
-          const rankPart=(prevRk&&newRk)?" / #"+prevRk.toLocaleString()+" → #"+newRk.toLocaleString():"";
-          toast("📉 <b>"+name+"</b> RS急減: "+prev.points.toLocaleString()+" → "+currentPoints.toLocaleString()+" (<b>"+delta+"</b>)"+rankPart);
+          const rankPart=(prevRk&&newRk)?" / #"+prevRk.toLocaleString()+" 竊・#"+newRk.toLocaleString():"";
+          toast("悼 <b>"+name+"</b> RS諤･貂・ "+prev.points.toLocaleString()+" 竊・"+currentPoints.toLocaleString()+" (<b>"+delta+"</b>)"+rankPart);
         }
       }else if(prev.points==null){
-        // 初回観測：優先順位: イベント履歴 → lastBatchAt → null(UNKNOWN)
+        // 蛻晏屓隕ｳ貂ｬ・壼━蜈磯・ｽ・ 繧､繝吶Φ繝亥ｱ･豁ｴ 竊・lastBatchAt 竊・null(UNKNOWN)
         if(!lastChangeAt){
           const fromHistory=getLastChangeAtFromEvents(key);
           if(fromHistory) lastChangeAt=fromHistory;
@@ -1150,39 +1115,37 @@ async function pollOnce(names,settings){
         if(matchEntry){
           suspectedReason="NAME_CHANGE";
           suspectedNewName=pickName(matchEntry)||null;
-          toast("🔄 <b>"+name+"</b> が名前を変更しました → <b>"+(suspectedNewName||"不明")+"</b>");
+          toast("売 <b>"+name+"</b> 縺悟錐蜑阪ｒ螟画峩縺励∪縺励◆ 竊・<b>"+(suspectedNewName||"荳肴・")+"</b>");
         }else{
           suspectedReason="BAN";
-          toast("⛔ <b>"+name+"</b> がBANされた可能性があります");
+          toast("笵・<b>"+name+"</b> 縺沓AN縺輔ｌ縺溷庄閭ｽ諤ｧ縺後≠繧翫∪縺・);
         }
         banNotified=true;
       }
     }
-    // manualEvent: APIでポイント変化を検出したらクリア。1時間経過でも無効化
-    if(delta!==null&&delta!==0)manualEvent=null;
+    // manualEvent: API縺ｧ繝昴う繝ｳ繝亥､牙喧繧呈､懷・縺励◆繧峨け繝ｪ繧｢縲・譎る俣邨碁℃縺ｧ繧ら┌蜉ｹ蛹・    if(delta!==null&&delta!==0)manualEvent=null;
     const manualActive=isManualActive(manualEvent);
     if(!manualActive)manualEvent=null;
     const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:lastChangeAt;
     const region=prev.region??"";
     snapshots[key]={points:currentPoints,lastDelta,lastChangeAt,lastRealChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region,...(manualEvent?{manualEvent}:{})};
     const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
-    // 状態変化をログ記録
+    // 迥ｶ諷句､牙喧繧偵Ο繧ｰ險倬鹸
     const prevRowState=lastRows.find(r=>r.name.toLowerCase()===key)?.state;
     if(prevRowState && prevRowState!==inf.state){
       pushStateLog({ts:now,name,from:prevRowState,to:inf.state,points:currentPoints,delta});
-      // ★付きプレイヤーの状態変化通知
+      // 笘・ｻ倥″繝励Ξ繧､繝､繝ｼ縺ｮ迥ｶ諷句､牙喧騾夂衍
       if(pickedUp.has(key)){
         const entering=["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(inf.state);
         const leaving=["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(prevRowState);
-        if(entering)sendNotification(`🎮 ${name} が試合中`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
-        else if(leaving)sendNotification(`🏁 ${name} が試合終了`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
+        if(entering)sendNotification(`式 ${name} 縺瑚ｩｦ蜷井ｸｭ`,`${stateLabel(prevRowState)} 竊・${stateLabel(inf.state)}`);
+        else if(leaving)sendNotification(`潤 ${name} 縺瑚ｩｦ蜷育ｵゆｺ・,`${stateLabel(prevRowState)} 竊・${stateLabel(inf.state)}`);
       }
     }
     rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
-  // コミュニティ登録済みプレイヤーのスナップショットをバックエンドに送信（タブに関係なく共有）
-  const _gs=getUiSettings();
+  // 繧ｳ繝溘Η繝九ユ繧｣逋ｻ骭ｲ貂医∩繝励Ξ繧､繝､繝ｼ縺ｮ繧ｹ繝翫ャ繝励す繝ｧ繝・ヨ繧偵ヰ繝・け繧ｨ繝ｳ繝峨↓騾∽ｿ｡・医ち繝悶↓髢｢菫ゅ↑縺丞・譛会ｼ・  const _gs=getUiSettings();
   const _gUrl=effectiveGlobalUrl(_gs);
   if(_gUrl){
     const activeKeys=new Set(getCommunityList().map(e=>e.name.toLowerCase()));
@@ -1199,12 +1162,11 @@ async function pollOnce(names,settings){
     return a.name.localeCompare(b.name);
   });
   document.getElementById("lastPoll").textContent=new Date(now).toLocaleTimeString();
-  if(anyCors) setNetHint("CORSっぽい失敗あり → ローカル環境の場合は worker.js をデプロイして使用してください");
+  if(anyCors) setNetHint("CORS縺｣縺ｽ縺・､ｱ謨励≠繧・竊・繝ｭ繝ｼ繧ｫ繝ｫ迺ｰ蠅・・蝣ｴ蜷医・ worker.js 繧偵ョ繝励Ο繧､縺励※菴ｿ逕ｨ縺励※縺上□縺輔＞");
   else setNetHint("");
-  lastRows=rows; // 遭遇ボタンの即時再描画用にキャッシュ
+  lastRows=rows; // 驕ｭ驕・・繧ｿ繝ｳ縺ｮ蜊ｳ譎ょ・謠冗判逕ｨ縺ｫ繧ｭ繝｣繝・す繝･
   renderTable(rows);renderSpark(rows);renderBanList(rows);renderPickupGraph();
-  // リロード後スクロール位置をテーブル描画完了後に復元（1フレーム後）
-  if(pendingScrollY!==null){
+  // 繝ｪ繝ｭ繝ｼ繝牙ｾ後せ繧ｯ繝ｭ繝ｼ繝ｫ菴咲ｽｮ繧偵ユ繝ｼ繝悶Ν謠冗判螳御ｺ・ｾ後↓蠕ｩ蜈・ｼ・繝輔Ξ繝ｼ繝蠕鯉ｼ・  if(pendingScrollY!==null){
     const y=pendingScrollY;pendingScrollY=null;
     requestAnimationFrame(()=>window.scrollTo({top:y,behavior:"instant"}));
   }
@@ -1264,14 +1226,14 @@ function renderPickupGraph(){
       const bar=document.createElement("div");
       bar.className="pickupBar"+(i===peak?" pickupBarPeak":"");
       bar.style.height=Math.max(4,Math.round(v*100))+"px";
-      bar.title=`+${i}分後: ${combined[i]}%`;
+      bar.title=`+${i}蛻・ｾ・ ${combined[i]}%`;
       barsEl.appendChild(bar);
     }
   }
   const axEl=document.getElementById("pickupAxis");
-  if(axEl){axEl.innerHTML="";[0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"今":"+"+m+"m";axEl.appendChild(s);});}
-  const nameEl=document.getElementById("pickupNames");if(nameEl)nameEl.textContent=picked.map(r=>r.name).join("、");
-  const pctEl=document.getElementById("pickupPeak");if(pctEl)pctEl.textContent=`ピーク ${combined[peak]}% (+${peak}分後)`;
+  if(axEl){axEl.innerHTML="";[0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"莉・:"+"+m+"m";axEl.appendChild(s);});}
+  const nameEl=document.getElementById("pickupNames");if(nameEl)nameEl.textContent=picked.map(r=>r.name).join("縲・);
+  const pctEl=document.getElementById("pickupPeak");if(pctEl)pctEl.textContent=`繝斐・繧ｯ ${combined[peak]}% (+${peak}蛻・ｾ・`;
 }
 let logViewMode="list";
 const LOG_STATE_COLOR={OFFLINE:"#8ea0b7",LOBBY:"#5b9cf6",POST_MATCH_WAIT:"#7bb8f0",IN_MATCH:"#39d98a",IN_TOURNAMENT_DEEP:"#c77dff",RETURNING:"#c77dff",UNKNOWN:"#3a4a60",NOT_FOUND:"#ff9944",BANNED:"#ff5555",NAME_CHANGED:"#6de9ff"};
@@ -1281,8 +1243,8 @@ function renderLogList(){
   const allLogs=getStateLogs();
   const logs=allLogs.slice(-300).reverse();
   const count=document.getElementById("logCount");
-  if(count)count.textContent=`(${allLogs.length}件)`;
-  if(logs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
+  if(count)count.textContent=`(${allLogs.length}莉ｶ)`;
+  if(logs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">繝ｭ繧ｰ縺ｪ縺・/div>';return;}
   let html="";let lastDate="";
   for(const e of logs){
     const d=new Date(e.ts);
@@ -1292,7 +1254,7 @@ function renderLogList(){
     const fromC=LOG_STATE_COLOR[e.from]||"#8ea0b7";
     const toC=LOG_STATE_COLOR[e.to]||"#e7edf5";
     const delta=e.delta!=null?(e.delta>0?`<span class="logDelta pos">+${e.delta}</span>`:`<span class="logDelta neg">${e.delta}</span>`):"";
-    html+=`<div class="logEntry"><span class="logTime">${timeStr}</span><span class="logName">${e.name}</span><span class="logState" style="color:${fromC}">${stateLabel(e.from)}</span><span class="logArrow">→</span><span class="logState" style="color:${toC}">${stateLabel(e.to)}</span>${delta}</div>`;
+    html+=`<div class="logEntry"><span class="logTime">${timeStr}</span><span class="logName">${e.name}</span><span class="logState" style="color:${fromC}">${stateLabel(e.from)}</span><span class="logArrow">竊・/span><span class="logState" style="color:${toC}">${stateLabel(e.to)}</span>${delta}</div>`;
   }
   el.innerHTML=html;
 }
@@ -1301,22 +1263,21 @@ function renderLogTimeline(){
   const el=document.getElementById("logList");if(!el)return;
   const allLogs=getStateLogs();
   const count=document.getElementById("logCount");
-  if(count)count.textContent=`(${allLogs.length}件)`;
-  if(allLogs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
+  if(count)count.textContent=`(${allLogs.length}莉ｶ)`;
+  if(allLogs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">繝ｭ繧ｰ縺ｪ縺・/div>';return;}
 
-  // プレイヤー別にグループ化
+  // 繝励Ξ繧､繝､繝ｼ蛻･縺ｫ繧ｰ繝ｫ繝ｼ繝怜喧
   const playerMap={};
   for(const log of allLogs){
     if(!playerMap[log.name])playerMap[log.name]=[];
     playerMap[log.name].push(log);
   }
-  // 最新のログがあるプレイヤーから並べる（最大20名）
-  const playerNames=Object.keys(playerMap)
+  // 譛譁ｰ縺ｮ繝ｭ繧ｰ縺後≠繧九・繝ｬ繧､繝､繝ｼ縺九ｉ荳ｦ縺ｹ繧具ｼ域怙螟ｧ20蜷搾ｼ・  const playerNames=Object.keys(playerMap)
     .sort((a,b)=>Math.max(...playerMap[b].map(l=>l.ts))-Math.max(...playerMap[a].map(l=>l.ts)))
     .slice(0,20);
 
   const now=Date.now();
-  // 本日 00:00:00（ローカル）〜 翌 00:00:00 の固定 24 時間軸
+  // 譛ｬ譌･ 00:00:00・医Ο繝ｼ繧ｫ繝ｫ・峨・鄙・00:00:00 縺ｮ蝗ｺ螳・24 譎る俣霆ｸ
   const todayMidnight=new Date(now);todayMidnight.setHours(0,0,0,0);
   const timeStart=todayMidnight.getTime();
   const timeEnd=timeStart+24*60*60*1000;
@@ -1333,8 +1294,7 @@ function renderLogTimeline(){
     const y=padTop+i*(rowH+rowGap);
     const logs=[...playerMap[name]].sort((a,b)=>a.ts-b.ts);
 
-    // セグメント計算（今日 0:00〜現在にクリップ）
-    const segs=[];
+    // 繧ｻ繧ｰ繝｡繝ｳ繝郁ｨ育ｮ暦ｼ井ｻ頑律 0:00縲懃樟蝨ｨ縺ｫ繧ｯ繝ｪ繝・・・・    const segs=[];
     if(logs[0].ts>timeStart){
       segs.push({start:timeStart,end:Math.min(logs[0].ts,now),state:logs[0].from});
     }
@@ -1346,25 +1306,22 @@ function renderLogTimeline(){
       }
     }
 
-    // ラベル（省略）
-    const label=name.length>16?name.slice(0,14)+"…":name;
+    // 繝ｩ繝吶Ν・育怐逡･・・    const label=name.length>16?name.slice(0,14)+"窶ｦ":name;
     svgRows+=`<text x="${labelW-6}" y="${y+rowH/2+4}" text-anchor="end" fill="#b8c4d6" font-size="11" font-family="system-ui,sans-serif">${label}</text>`;
 
-    // セグメント描画
+    // 繧ｻ繧ｰ繝｡繝ｳ繝域緒逕ｻ
     for(const seg of segs){
       const x=labelW+((seg.start-timeStart)/totalDur)*trackW;
       const w=Math.max(((seg.end-seg.start)/totalDur)*trackW,1);
       const color=LOG_STATE_COLOR[seg.state]||"#8ea0b7";
       const startStr=new Date(seg.start).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
       const endStr=new Date(seg.end).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
-      svgRows+=`<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH}" fill="${color}" opacity="0.82" rx="2"><title>${stateLabel(seg.state)}\n${startStr} → ${endStr}</title></rect>`;
+      svgRows+=`<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH}" fill="${color}" opacity="0.82" rx="2"><title>${stateLabel(seg.state)}\n${startStr} 竊・${endStr}</title></rect>`;
     }
-    // 区切り線
-    svgRows+=`<line x1="${labelW}" y1="${y+rowH+2}" x2="${W-4}" y2="${y+rowH+2}" stroke="#1e2a3a" stroke-width="1"/>`;
+    // 蛹ｺ蛻・ｊ邱・    svgRows+=`<line x1="${labelW}" y1="${y+rowH+2}" x2="${W-4}" y2="${y+rowH+2}" stroke="#1e2a3a" stroke-width="1"/>`;
   });
 
-  // 時刻軸（2時間ごと: 00:00, 02:00, ..., 24:00）
-  const axisY=padTop+playerNames.length*(rowH+rowGap)+4;
+  // 譎ょ綾霆ｸ・・譎る俣縺斐→: 00:00, 02:00, ..., 24:00・・  const axisY=padTop+playerNames.length*(rowH+rowGap)+4;
   let axis=`<line x1="${labelW}" y1="${axisY}" x2="${W-4}" y2="${axisY}" stroke="#2a3a50" stroke-width="1"/>`;
   for(let h=0;h<=24;h+=2){
     const x=labelW+(h/24)*trackW;
@@ -1376,13 +1333,12 @@ function renderLogTimeline(){
     }
   }
 
-  // 現在時刻の垂直 NOW ライン
+  // 迴ｾ蝨ｨ譎ょ綾縺ｮ蝙ら峩 NOW 繝ｩ繧､繝ｳ
   const nowX=labelW+((now-timeStart)/totalDur)*trackW;
   axis+=`<line x1="${nowX.toFixed(1)}" y1="${padTop}" x2="${nowX.toFixed(1)}" y2="${axisY}" stroke="#ff9944" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.8"/>`;
   axis+=`<text x="${nowX.toFixed(1)}" y="${padTop-3}" text-anchor="middle" fill="#ff9944" font-size="9" font-weight="bold" font-family="system-ui,sans-serif">NOW</text>`;
 
-  // 凡例
-  const legendStates=[["OFFLINE","#8ea0b7","Offline"],["LOBBY","#5b9cf6","Lobby"],["IN_MATCH","#39d98a","In Match"],["IN_TOURNAMENT_DEEP","#c77dff","Final/Tournament"],["NOT_FOUND","#ff9944","Missing"],["BANNED","#ff5555","Banned"]];
+  // 蜃｡萓・  const legendStates=[["OFFLINE","#8ea0b7","Offline"],["LOBBY","#5b9cf6","Lobby"],["IN_MATCH","#39d98a","In Match"],["IN_TOURNAMENT_DEEP","#c77dff","Final/Tournament"],["NOT_FOUND","#ff9944","Missing"],["BANNED","#ff5555","Banned"]];
   let legend=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
   for(const [,color,label] of legendStates){
     legend+=`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#b8c4d6;"><span style="width:14px;height:14px;border-radius:3px;background:${color};opacity:0.85;display:inline-block;"></span>${label}</span>`;
@@ -1437,7 +1393,7 @@ function renderSearchDropdown(entries){
   if(!box)return;
   if(entries.length===0){box.innerHTML="";box.classList.remove("open");return;}
   box.innerHTML=entries.map(e=>{
-    const alts=[e.steamName,e.psnName,e.xboxName].filter(Boolean).join(" · ");
+    const alts=[e.steamName,e.psnName,e.xboxName].filter(Boolean).join(" ﾂｷ ");
     return `<div class="suggItem" data-name="${e.name}"><span class="suggRank">#${e.rank}</span><span class="suggName">${e.name}</span>${alts?`<span class="suggAlt">${alts}</span>`:""}</div>`;
   }).join("");
   box.classList.add("open");
@@ -1454,20 +1410,16 @@ function doStart(){
   const names=getActiveNames();
   if(names.length===0)return;
   if(viewMode==="personal"){
-    // namesBox の内容だけを保存（community との union を保存すると community players が
-    // namesBox に混入してしまうため、ここでは personal 分のみを対象にする）
-    const personalOnly=parseNames(document.getElementById("namesBox").value);
+    // namesBox 縺ｮ蜀・ｮｹ縺縺代ｒ菫晏ｭ假ｼ・ommunity 縺ｨ縺ｮ union 繧剃ｿ晏ｭ倥☆繧九→ community players 縺・    // namesBox 縺ｫ豺ｷ蜈･縺励※縺励∪縺・◆繧√√％縺薙〒縺ｯ personal 蛻・・縺ｿ繧貞ｯｾ雎｡縺ｫ縺吶ｋ・・    const personalOnly=parseNames(document.getElementById("namesBox").value);
     try{saveNamesToUrl(personalOnly);}catch{}
     saveNamesToLocal(personalOnly);
   }
   currentSettings=settings;
   setRunning(true);
   (function schedulePoll(){
-    // グローバルリストを 120 秒ごとにバックエンドと自動同期（他ユーザーの追加を反映）
-    const now=Date.now();
+    // 繧ｰ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝医ｒ 120 遘偵＃縺ｨ縺ｫ繝舌ャ繧ｯ繧ｨ繝ｳ繝峨→閾ｪ蜍募酔譛滂ｼ井ｻ悶Θ繝ｼ繧ｶ繝ｼ縺ｮ霑ｽ蜉繧貞渚譏・・    const now=Date.now();
     const communitySync=effectiveGlobalUrl(settings)&&(now-lastCommunitySync>120000)
-      // コミュニティリスト同期（追加・更新・削除） + スナップショット状態同期 を並列実行
-      ?Promise.all([
+      // 繧ｳ繝溘Η繝九ユ繧｣繝ｪ繧ｹ繝亥酔譛滂ｼ郁ｿｽ蜉繝ｻ譖ｴ譁ｰ繝ｻ蜑企勁・・+ 繧ｹ繝翫ャ繝励す繝ｧ繝・ヨ迥ｶ諷句酔譛・繧剃ｸｦ蛻怜ｮ溯｡・      ?Promise.all([
           fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
           fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
         ]).then(()=>{
@@ -1483,7 +1435,7 @@ function doStart(){
     }));
   })();
 }
-// グローバルモード: バックエンドのスナップショットを取得してテーブルに先行表示
+// 繧ｰ繝ｭ繝ｼ繝舌Ν繝｢繝ｼ繝・ 繝舌ャ繧ｯ繧ｨ繝ｳ繝峨・繧ｹ繝翫ャ繝励す繝ｧ繝・ヨ繧貞叙蠕励＠縺ｦ繝・・繝悶Ν縺ｫ蜈郁｡瑚｡ｨ遉ｺ
 async function preloadRemoteSnapshots(settings){
   const remote=await fetchGlobalSnapshots(effectiveGlobalUrl(settings));
   if(!remote||typeof remote!=="object")return;
@@ -1509,7 +1461,7 @@ async function preloadRemoteSnapshots(settings){
     const manualActive=isManualActive(manualEvent);
     const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:(snap.lastChangeAt??null);
     const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
-    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
+    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"倹 蜈ｱ譛峨ョ繝ｼ繧ｿ",isShared:true};
   }).filter(Boolean);
   if(rows.length>0&&lastRows.length===0){lastRows=rows;renderTable(rows);renderSpark(rows);}
 }
@@ -1522,9 +1474,9 @@ async function switchToGlobal(){
   document.getElementById("namesBox").closest("section").querySelector(".personalView").style.display="none";
   document.getElementById("globalListView").style.display="";
   const settings=getUiSettings();
-  // バックエンドがあればリモートとマージ
+  // 繝舌ャ繧ｯ繧ｨ繝ｳ繝峨′縺ゅｌ縺ｰ繝ｪ繝｢繝ｼ繝医→繝槭・繧ｸ
   if(effectiveGlobalUrl(settings)){
-    document.getElementById("globalStatus").textContent="🌐 同期中...";
+    document.getElementById("globalStatus").textContent="倹 蜷梧悄荳ｭ...";
     await Promise.all([
       fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
       fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
@@ -1534,8 +1486,8 @@ async function switchToGlobal(){
   const total=getCommunityList().length;
   const filtered=getFilteredCommunity(globalFilter).length;
   document.getElementById("globalStatus").textContent=
-    total===0?"ℹ️ まだ登録がありません。下のフォームから追加してください"
-    :`🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
+    total===0?"邃ｹ・・縺ｾ縺逋ｻ骭ｲ縺後≠繧翫∪縺帙ｓ縲ゆｸ九・繝輔か繝ｼ繝縺九ｉ霑ｽ蜉縺励※縺上□縺輔＞"
+    :`倹 ${globalFilter==="all"?"蜈ｨ繧ｵ繝ｼ繝舌・":REGION_LABEL[globalFilter]}・・{filtered}莠ｺ / 蜷郁ｨ・{total}莠ｺ`;
   if(effectiveGlobalUrl(settings)) preloadRemoteSnapshots(settings);
   if(filtered>0)doStart();
 }
@@ -1551,18 +1503,17 @@ function switchToPersonal(){
 }
 function renderGlobalPlayerList(){
   const el=document.getElementById("globalPlayerList");if(!el)return;
-  // フィルタータブのアクティブ状態更新
+  // 繝輔ぅ繝ｫ繧ｿ繝ｼ繧ｿ繝悶・繧｢繧ｯ繝・ぅ繝也憾諷区峩譁ｰ
   document.querySelectorAll(".regionTab").forEach(btn=>{
     btn.classList.toggle("active",btn.dataset.region===globalFilter);
   });
   const entries=getFilteredCommunity(globalFilter);
   const personalSet=new Set(parseNames(document.getElementById("namesBox").value).map(n=>n.toLowerCase()));
   if(entries.length===0){
-    el.innerHTML="<div class='hint' style='padding:12px 0'>このフィルターには登録がありません</div>";
+    el.innerHTML="<div class='hint' style='padding:12px 0'>縺薙・繝輔ぅ繝ｫ繧ｿ繝ｼ縺ｫ縺ｯ逋ｻ骭ｲ縺後≠繧翫∪縺帙ｓ</div>";
     return;
   }
-  // 地域ごとにグループ表示（全て選択時）
-  const groups=globalFilter==="all"
+  // 蝨ｰ蝓溘＃縺ｨ縺ｫ繧ｰ繝ｫ繝ｼ繝苓｡ｨ遉ｺ・亥・縺ｦ驕ｸ謚樊凾・・  const groups=globalFilter==="all"
     ?REGION_ORDER.map(r=>({region:r,items:entries.filter(e=>(e.region||"")===r)})).filter(g=>g.items.length>0)
     :[{region:globalFilter,items:entries}];
   el.innerHTML=groups.map(g=>{
@@ -1575,9 +1526,9 @@ function renderGlobalPlayerList(){
         <span class="globalPlayerName">${e.name}</span>
         <span class="catBadge ${catClass}">${catLabel}</span>
         ${e.note?`<span class="communityNote">${e.note}</span>`:""}
-        ${inPersonal?'<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">監視中</span>'
-          :`<button class="globalAddBtn" data-name="${e.name}">＋監視</button>`}
-        <button class="communityDelBtn" data-name="${e.name}" title="削除">×</button>
+        ${inPersonal?'<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">逶｣隕紋ｸｭ</span>'
+          :`<button class="globalAddBtn" data-name="${e.name}">・狗屮隕・/button>`}
+        <button class="communityDelBtn" data-name="${e.name}" title="蜑企勁">ﾃ・/button>
       </div>`;
     }).join("");
   }).join("");
@@ -1588,26 +1539,25 @@ function renderGlobalPlayerList(){
       if(!existing.map(x=>x.toLowerCase()).includes(btn.dataset.name.toLowerCase())){
         ta.value=ta.value.trim()+(ta.value.trim()?"\n":"")+btn.dataset.name;
         saveNamesToLocal(parseNames(ta.value));
-        toast("＋ <b>"+btn.dataset.name+"</b> を自分のリストに追加");
+        toast("・・<b>"+btn.dataset.name+"</b> 繧定・蛻・・繝ｪ繧ｹ繝医↓霑ｽ蜉");
         renderGlobalPlayerList();
       }
     });
   });
   el.querySelectorAll(".communityDelBtn").forEach(btn=>{
     btn.addEventListener("click",async()=>{
-      if(!confirm(btn.dataset.name+" をリストから削除しますか？"))return;
+      if(!confirm(btn.dataset.name+" 繧偵Μ繧ｹ繝医°繧牙炎髯､縺励∪縺吶°・・))return;
       const _ds=getUiSettings();
       const _gUrl=effectiveGlobalUrl(_ds);
-      // サーバー削除を先に実行し、成功時のみローカルから除去
-      // （失敗時は UI を変えず、次回 fetchAndMergeCommunity でもサーバーが正として維持される）
-      if(_gUrl){
+      // 繧ｵ繝ｼ繝舌・蜑企勁繧貞・縺ｫ螳溯｡後＠縲∵・蜉滓凾縺ｮ縺ｿ繝ｭ繝ｼ繧ｫ繝ｫ縺九ｉ髯､蜴ｻ
+      // ・亥､ｱ謨玲凾縺ｯ UI 繧貞､峨∴縺壹∵ｬ｡蝗・fetchAndMergeCommunity 縺ｧ繧ゅし繝ｼ繝舌・縺梧ｭ｣縺ｨ縺励※邯ｭ謖√＆繧後ｋ・・      if(_gUrl){
         const ok=await deleteCommunityEntryFromGlobal(_gUrl,btn.dataset.name);
         if(!ok)return;
       }
       removeCommunityEntry(btn.dataset.name);
       renderGlobalPlayerList();
       const total=getCommunityList().length;
-      document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+      document.getElementById("globalStatus").textContent=`倹 蜷郁ｨ・{total}莠ｺ`;
     });
   });
 }
@@ -1619,7 +1569,7 @@ function removePlayer(name){
   lastRows=lastRows.filter(r=>r.name.toLowerCase()!==name.toLowerCase());
   expandedRows.delete(name.toLowerCase());
   renderTable(lastRows);renderSpark(lastRows);
-  toast("削除: <b>"+name+"</b>");
+  toast("蜑企勁: <b>"+name+"</b>");
   if(timer){clearTimeout(timer);timer=null;}
   if(remaining.length>0){doStart();}else{setRunning(false);}
 }
@@ -1630,8 +1580,7 @@ function addPlayerAndStart(name){
   if(isNew) ta.value=ta.value.trim()+(ta.value.trim()?"\n":"")+name;
   document.getElementById("playerSearch").value="";
   hideSearchDropdown();
-  // 即時テーブル表示（APIレスポンス前でもプレイヤーを表示）
-  if(isNew){
+  // 蜊ｳ譎ゅユ繝ｼ繝悶Ν陦ｨ遉ｺ・・PI繝ｬ繧ｹ繝昴Φ繧ｹ蜑阪〒繧ゅ・繝ｬ繧､繝､繝ｼ繧定｡ｨ遉ｺ・・  if(isNew){
     const s=currentSettings||getUiSettings();
     const now=nowMs();
     const snap=getSnapshots();
@@ -1644,12 +1593,12 @@ function addPlayerAndStart(name){
     const updated=[...lastRows.filter(r=>r.name.toLowerCase()!==name.toLowerCase()),newRow];
     lastRows=updated;
     renderTable(updated);renderSpark(updated);
-    toast("追加: <b>"+name+"</b>");
+    toast("霑ｽ蜉: <b>"+name+"</b>");
   }
   doStart();
 }
 async function init(){
-  // ── リロード後のシームレス復元 ──────────────────────────────
+  // 笏笏 繝ｪ繝ｭ繝ｼ繝牙ｾ後・繧ｷ繝ｼ繝繝ｬ繧ｹ蠕ｩ蜈・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
   let reloadScroll=null;
   try{
     const exp=sessionStorage.getItem("fr_expanded");
@@ -1661,29 +1610,25 @@ async function init(){
     if(ft)globalFilter=ft;
     if(sc)reloadScroll=parseInt(sc);
     ["fr_expanded","fr_viewMode","fr_filter","fr_scroll"].forEach(k=>sessionStorage.removeItem(k));
-    // viewMode=globalなら UI をグローバル表示に切り替え（アニメなし）
-    if(viewMode==="global"){
+    // viewMode=global縺ｪ繧・UI 繧偵げ繝ｭ繝ｼ繝舌Ν陦ｨ遉ｺ縺ｫ蛻・ｊ譖ｿ縺茨ｼ医い繝九Γ縺ｪ縺暦ｼ・    if(viewMode==="global"){
       document.getElementById("tabPersonal")?.classList.remove("active");
       document.getElementById("tabGlobal")?.classList.add("active");
       document.querySelector(".personalView")?.style.setProperty("display","none");
       document.getElementById("globalListView")?.style.setProperty("display","");
     }
-    // globalFilterのタブ表示を更新
+    // globalFilter縺ｮ繧ｿ繝冶｡ｨ遉ｺ繧呈峩譁ｰ
     document.querySelectorAll(".regionTab").forEach(btn=>{
       btn.classList.toggle("active",btn.dataset.region===globalFilter);
     });
   }catch{}
-  // ────────────────────────────────────────────────────────────
+  // 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
   try{
     const s=loadSettings();applySettingsToUi(s);
-    // URL → localStorage の優先順でプレイヤーリストを復元
-    const urlNames=loadNamesFromUrl();
+    // URL 竊・localStorage 縺ｮ蜆ｪ蜈磯・〒繝励Ξ繧､繝､繝ｼ繝ｪ繧ｹ繝医ｒ蠕ｩ蜈・    const urlNames=loadNamesFromUrl();
     const savedNames=urlNames&&urlNames.length?urlNames:loadNamesFromLocal();
     if(savedNames && savedNames.length){
       document.getElementById("namesBox").value=savedNames.join("\n");
-      if(reloadScroll!==null)pendingScrollY=reloadScroll; // pollOnce完了後に復元
-      // スナップショットから即時プレビュー描画（API応答前に状態予測を表示）
-      const snap=getSnapshots();
+      if(reloadScroll!==null)pendingScrollY=reloadScroll; // pollOnce螳御ｺ・ｾ後↓蠕ｩ蜈・      // 繧ｹ繝翫ャ繝励す繝ｧ繝・ヨ縺九ｉ蜊ｳ譎ゅ・繝ｬ繝薙Η繝ｼ謠冗判・・PI蠢懃ｭ泌燕縺ｫ迥ｶ諷倶ｺ域ｸｬ繧定｡ｨ遉ｺ・・      const snap=getSnapshots();
       const now=nowMs();
       const preRows=savedNames.map(name=>{
         const key=name.toLowerCase();
@@ -1696,11 +1641,9 @@ async function init(){
       });
       lastRows=preRows;
       renderTable(preRows);renderSpark(preRows);
-      doStart(); // 名前があれば自動スタート（リロード・再訪問後も継続）
-    }
+      doStart(); // 蜷榊燕縺後≠繧後・閾ｪ蜍輔せ繧ｿ繝ｼ繝茨ｼ医Μ繝ｭ繝ｼ繝峨・蜀崎ｨｪ蝠丞ｾ後ｂ邯咏ｶ夲ｼ・    }
   }catch(e){console.error("init:",e);}
-  // テキストエリア変更時にlocalStorageへ随時保存
-  const ta=document.getElementById("namesBox");
+  // 繝・く繧ｹ繝医お繝ｪ繧｢螟画峩譎ゅ↓localStorage縺ｸ髫乗凾菫晏ｭ・  const ta=document.getElementById("namesBox");
   if(ta) ta.addEventListener("input",()=>{
     const names=parseNames(ta.value);
     if(names.length) saveNamesToLocal(names);
@@ -1713,40 +1656,39 @@ async function init(){
     const si=document.getElementById("playerSearch");
     const name=si.value.trim();
     if(name){addPlayerAndStart(name);return;}
-    // 検索バーが空の場合 → namesBox の内容でモニタリング開始
-    const names=parseNames(document.getElementById("namesBox").value);
-    if(names.length>0){doStart();toast("監視開始：<b>"+names.length+"人</b>");}
-    else{toast("名前を入力してください");}
+    // 讀懃ｴ｢繝舌・縺檎ｩｺ縺ｮ蝣ｴ蜷・竊・namesBox 縺ｮ蜀・ｮｹ縺ｧ繝｢繝九ち繝ｪ繝ｳ繧ｰ髢句ｧ・    const names=parseNames(document.getElementById("namesBox").value);
+    if(names.length>0){doStart();toast("逶｣隕夜幕蟋具ｼ・b>"+names.length+"莠ｺ</b>");}
+    else{toast("蜷榊燕繧貞・蜉帙＠縺ｦ縺上□縺輔＞");}
   });
   document.getElementById("btnShare").addEventListener("click",async()=>{
     const names=parseNames(document.getElementById("namesBox").value);
-    if(names.length===0){toast("Share: 名前が空です");return;}
+    if(names.length===0){toast("Share: 蜷榊燕縺檎ｩｺ縺ｧ縺・);return;}
     saveNamesToUrl(names);
     const url=window.location.href;
-    try{await navigator.clipboard.writeText(url);toast("Share link をコピーしました：<b>"+url+"</b>");}
-    catch{toast("コピーできません。URLを手動コピーしてください：<b>"+url+"</b>");}
+    try{await navigator.clipboard.writeText(url);toast("Share link 繧偵さ繝斐・縺励∪縺励◆・・b>"+url+"</b>");}
+    catch{toast("繧ｳ繝斐・縺ｧ縺阪∪縺帙ｓ縲６RL繧呈焔蜍輔さ繝斐・縺励※縺上□縺輔＞・・b>"+url+"</b>");}
   });
   document.getElementById("btnExportCsv").addEventListener("click",exportCsv);
   document.getElementById("btnExportJsonl").addEventListener("click",exportJsonl);
   document.getElementById("btnClear").addEventListener("click",()=>{
-    if(!confirm("localStorage の settings/snapshots/events を削除します。よろしいですか？"))return;
+    if(!confirm("localStorage 縺ｮ settings/snapshots/events 繧貞炎髯､縺励∪縺吶ゅｈ繧阪＠縺・〒縺吶°・・))return;
     clearLocal();toast("local data cleared");
   });
   document.getElementById("btnTest").addEventListener("click",async()=>{
     const settings=getUiSettings();saveSettings(settings);
     const names=parseNames(document.getElementById("namesBox").value);
-    if(names.length===0){toast("Test: 名前が空です");return;}
+    if(names.length===0){toast("Test: 蜷榊燕縺檎ｩｺ縺ｧ縺・);return;}
     const first=names[0];
     try{
       const data=await fetchPlayer(effectiveProxyBase(settings),settings.leaderboardId,settings.platform,first);
       const entry=(data&&Array.isArray(data.data)&&data.data.length)?data.data[0]:null;
       const pts=entry?getPointsFromEntry(entry):null;
-      if(pts==null) toast("Test: <b>"+first+"</b> → points が取れません（season/platform/対象外の可能性）");
-      else toast("Test: <b>"+first+"</b> → points=<b>"+pts+"</b>");
+      if(pts==null) toast("Test: <b>"+first+"</b> 竊・points 縺悟叙繧後∪縺帙ｓ・・eason/platform/蟇ｾ雎｡螟悶・蜿ｯ閭ｽ諤ｧ・・);
+      else toast("Test: <b>"+first+"</b> 竊・points=<b>"+pts+"</b>");
     }catch(e){
       const msg=String(e&&e.message?e.message:e);
-      if(isCorsLikeError(msg)) toast("Test失敗（CORSの可能性）→ ローカル環境では Worker が必要です");
-      else toast("Test失敗：<b>"+msg+"</b>");
+      if(isCorsLikeError(msg)) toast("Test螟ｱ謨暦ｼ・ORS縺ｮ蜿ｯ閭ｽ諤ｧ・俄・ 繝ｭ繝ｼ繧ｫ繝ｫ迺ｰ蠅・〒縺ｯ Worker 縺悟ｿ・ｦ√〒縺・);
+      else toast("Test螟ｱ謨暦ｼ・b>"+msg+"</b>");
     }
   });
   const si=document.getElementById("playerSearch");
@@ -1765,27 +1707,26 @@ async function init(){
   }
   document.getElementById("tabPersonal").addEventListener("click",()=>{if(viewMode!=="personal")switchToPersonal();});
   document.getElementById("tabGlobal").addEventListener("click",()=>{if(viewMode!=="global")switchToGlobal();});
-  // 地域フィルタータブ
-  document.querySelectorAll(".regionTab").forEach(btn=>{
+  // 蝨ｰ蝓溘ヵ繧｣繝ｫ繧ｿ繝ｼ繧ｿ繝・  document.querySelectorAll(".regionTab").forEach(btn=>{
     btn.addEventListener("click",()=>{
       globalFilter=btn.dataset.region;
       renderGlobalPlayerList();
       const filtered=getFilteredCommunity(globalFilter).length;
       const total=getCommunityList().length;
       document.getElementById("globalStatus").textContent=
-        `🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
+        `倹 ${globalFilter==="all"?"蜈ｨ繧ｵ繝ｼ繝舌・":REGION_LABEL[globalFilter]}・・{filtered}莠ｺ / 蜷郁ｨ・{total}莠ｺ`;
       if(running&&currentSettings)pollOnce(getActiveNames(),currentSettings);
     });
   });
-  // コミュニティ追加フォーム
+  // 繧ｳ繝溘Η繝九ユ繧｣霑ｽ蜉繝輔か繝ｼ繝
   document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
-    // 認証チェック：許可ユーザーが設定済みで未ログインならモーダルを表示
+    // 隱崎ｨｼ繝√ぉ繝・け・夊ｨｱ蜿ｯ繝ｦ繝ｼ繧ｶ繝ｼ縺瑚ｨｭ螳壽ｸ医∩縺ｧ譛ｪ繝ｭ繧ｰ繧､繝ｳ縺ｪ繧峨Δ繝ｼ繝繝ｫ繧定｡ｨ遉ｺ
     if(getEffectiveAllowedUsers().length>0&&!isLoggedIn()){
       showLoginModal(()=>document.getElementById("btnCommunityAdd").click());
       return;
     }
     const name=(document.getElementById("communityName").value||"").trim();
-    if(!name){toast("名前を入力してください");return;}
+    if(!name){toast("蜷榊燕繧貞・蜉帙＠縺ｦ縺上□縺輔＞");return;}
     const entry={
       name,
       region:document.getElementById("communityRegion").value,
@@ -1795,34 +1736,31 @@ async function init(){
     addCommunityEntry(entry);
     document.getElementById("communityName").value="";
     document.getElementById("communityNote").value="";
-    toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
-    // バックエンドにも送信（設定済みなら）→ /community に full entry を送って他ユーザーに即反映
+    toast("倹 <b>"+name+"</b> 繧偵さ繝溘Η繝九ユ繧｣繝ｪ繧ｹ繝医↓霑ｽ蜉 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"荳肴・")+")");
+    // 繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓繧る∽ｿ｡・郁ｨｭ螳壽ｸ医∩縺ｪ繧会ｼ俄・ /community 縺ｫ full entry 繧帝√▲縺ｦ莉悶Θ繝ｼ繧ｶ繝ｼ縺ｫ蜊ｳ蜿肴丐
     const settings=getUiSettings();
     if(effectiveGlobalUrl(settings))await submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),entry);
     renderGlobalPlayerList();
     const total=getCommunityList().length;
-    document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+    document.getElementById("globalStatus").textContent=`倹 蜷郁ｨ・{total}莠ｺ`;
     if(viewMode==="global")doStart();
   });
-  // 設定の自動保存（リロード・タブ閉じ時にも反映）
-  window.addEventListener("beforeunload",()=>{try{saveSettings(getUiSettings());}catch{}});
-  // よく変更するマッチ設定入力を変更したら即保存
-  ["matchWait","matchAvg","matchJitter","reflectDelay","pollInterval","tournamentTotal","rsDropThreshold"].forEach(id=>{
+  // 險ｭ螳壹・閾ｪ蜍穂ｿ晏ｭ假ｼ医Μ繝ｭ繝ｼ繝峨・繧ｿ繝夜哩縺俶凾縺ｫ繧ょ渚譏・・  window.addEventListener("beforeunload",()=>{try{saveSettings(getUiSettings());}catch{}});
+  // 繧医￥螟画峩縺吶ｋ繝槭ャ繝∬ｨｭ螳壼・蜉帙ｒ螟画峩縺励◆繧牙叉菫晏ｭ・  ["matchWait","matchAvg","matchJitter","reflectDelay","pollInterval","tournamentTotal","rsDropThreshold"].forEach(id=>{
     const el=document.getElementById(id);
     if(el)el.addEventListener("change",()=>saveSettings(getUiSettings()));
   });
-  // personalRegionFilter タブ
-  document.querySelectorAll(".personalRegionTab").forEach(btn=>{
+  // personalRegionFilter 繧ｿ繝・  document.querySelectorAll(".personalRegionTab").forEach(btn=>{
     btn.addEventListener("click",()=>{
       personalRegionFilter=btn.dataset.pregion;
       document.querySelectorAll(".personalRegionTab").forEach(b=>b.classList.toggle("active",b.dataset.pregion===personalRegionFilter));
       renderTable(lastRows);
     });
   });
-  // 自分のリスト → グローバルにコピー
+  // 閾ｪ蛻・・繝ｪ繧ｹ繝・竊・繧ｰ繝ｭ繝ｼ繝舌Ν縺ｫ繧ｳ繝斐・
   document.getElementById("btnCopyToGlobal")?.addEventListener("click",async()=>{
     const names=parseNames(document.getElementById("namesBox").value);
-    if(!names.length){toast("リストが空です");return;}
+    if(!names.length){toast("繝ｪ繧ｹ繝医′遨ｺ縺ｧ縺・);return;}
     const settings=getUiSettings();
     let added=0;
     const newEntries=[];
@@ -1837,26 +1775,26 @@ async function init(){
     if(effectiveGlobalUrl(settings)){
       await Promise.all(newEntries.map(e=>submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),e)));
     }
-    toast(`🌐 <b>${added}人</b> をグローバルリストにコピーしました`);
+    toast(`倹 <b>${added}莠ｺ</b> 繧偵げ繝ｭ繝ｼ繝舌Ν繝ｪ繧ｹ繝医↓繧ｳ繝斐・縺励∪縺励◆`);
     if(viewMode==="global")renderGlobalPlayerList();
   });
-  // ログ
+  // 繝ｭ繧ｰ
   document.getElementById("btnLogTimeline")?.addEventListener("click",()=>{
     logViewMode=logViewMode==="list"?"timeline":"list";
     const btn=document.getElementById("btnLogTimeline");
-    if(btn)btn.textContent=logViewMode==="list"?"📊 タイムライン":"📋 リスト";
+    if(btn)btn.textContent=logViewMode==="list"?"投 繧ｿ繧､繝繝ｩ繧､繝ｳ":"搭 繝ｪ繧ｹ繝・;
     logViewMode==="timeline"?renderLogTimeline():renderLogList();
   });
   document.getElementById("btnExportLogs")?.addEventListener("click",exportStateLogs);
   document.getElementById("btnClearLogs")?.addEventListener("click",()=>{
-    if(!confirm("ログをクリアしますか？"))return;
-    clearStateLogs();renderLogList();toast("ログをクリアしました");
+    if(!confirm("繝ｭ繧ｰ繧偵け繝ｪ繧｢縺励∪縺吶°・・))return;
+    clearStateLogs();renderLogList();toast("繝ｭ繧ｰ繧偵け繝ｪ繧｢縺励∪縺励◆");
     logViewMode="list";
     const btn=document.getElementById("btnLogTimeline");
-    if(btn)btn.textContent="📊 タイムライン";
+    if(btn)btn.textContent="投 繧ｿ繧､繝繝ｩ繧､繝ｳ";
   });
-  // ── テーブルヘッダー ? アイコン: fixed グローバルツールチップ ──────────
-  // tableWrap の overflow:auto / position:sticky による clipping を回避
+  // 笏笏 繝・・繝悶Ν繝倥ャ繝繝ｼ ? 繧｢繧､繧ｳ繝ｳ: fixed 繧ｰ繝ｭ繝ｼ繝舌Ν繝・・繝ｫ繝√ャ繝・笏笏笏笏笏笏笏笏笏笏
+  // tableWrap 縺ｮ overflow:auto / position:sticky 縺ｫ繧医ｋ clipping 繧貞屓驕ｿ
   const gTip=document.getElementById("globalTooltip");
   if(gTip){
     let gTipTimer=null;
@@ -1867,13 +1805,12 @@ async function init(){
         clearTimeout(gTipTimer);
         gTip.innerHTML=tipEl.innerHTML;
         gTip.classList.add("show");
-        // 初期表示（幅計算前）
-        const rect=icon.getBoundingClientRect();
+        // 蛻晄悄陦ｨ遉ｺ・亥ｹ・ｨ育ｮ怜燕・・        const rect=icon.getBoundingClientRect();
         let left=rect.left;
         let top=rect.bottom+6;
         gTip.style.left=left+"px";
         gTip.style.top=top+"px";
-        // 1フレーム後にサイズが確定してから位置補正
+        // 1繝輔Ξ繝ｼ繝蠕後↓繧ｵ繧､繧ｺ縺檎｢ｺ螳壹＠縺ｦ縺九ｉ菴咲ｽｮ陬懈ｭ｣
         requestAnimationFrame(()=>{
           const tw=gTip.offsetWidth, th2=gTip.offsetHeight;
           if(left+tw>window.innerWidth-8) left=Math.max(8,window.innerWidth-tw-8);
@@ -1887,34 +1824,32 @@ async function init(){
       });
     });
   }
-  // ── ログインモーダル イベント ────────────────────────────────
+  // 笏笏 繝ｭ繧ｰ繧､繝ｳ繝｢繝ｼ繝繝ｫ 繧､繝吶Φ繝・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
   document.getElementById("btnLoginSubmit").addEventListener("click",async()=>{
     const id=document.getElementById("loginId").value.trim();
     const pw=document.getElementById("loginPassword").value;
-    if(!id||!pw){document.getElementById("loginError").textContent="IDとパスワードを入力してください";return;}
+    if(!id||!pw){document.getElementById("loginError").textContent="ID縺ｨ繝代せ繝ｯ繝ｼ繝峨ｒ蜈･蜉帙＠縺ｦ縺上□縺輔＞";return;}
     const hash=await sha256(pw);
     const ok=getEffectiveAllowedUsers().find(u=>u.id.toLowerCase()===id.toLowerCase()&&u.passwordHash===hash);
     if(ok){setCurrentUser(id);hideLoginModal();if(_loginCallback)_loginCallback();}
-    else{document.getElementById("loginError").textContent="IDまたはパスワードが正しくありません";}
+    else{document.getElementById("loginError").textContent="ID縺ｾ縺溘・繝代せ繝ｯ繝ｼ繝峨′豁｣縺励￥縺ゅｊ縺ｾ縺帙ｓ";}
   });
   document.getElementById("btnLoginCancel").addEventListener("click",hideLoginModal);
   document.getElementById("loginPassword").addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("btnLoginSubmit").click();});
   document.getElementById("btnLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
-  // モーダル背景クリックで閉じる
-  document.getElementById("loginModal").addEventListener("click",(e)=>{if(e.target===e.currentTarget)hideLoginModal();});
+  // 繝｢繝ｼ繝繝ｫ閭梧勹繧ｯ繝ｪ繝・け縺ｧ髢峨§繧・  document.getElementById("loginModal").addEventListener("click",(e)=>{if(e.target===e.currentTarget)hideLoginModal();});
 
-  // ── アドミンパネル イベント ──────────────────────────────────
+  // 笏笏 繧｢繝峨Α繝ｳ繝代ロ繝ｫ 繧､繝吶Φ繝・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
   document.getElementById("btnAdminUnlock").addEventListener("click",async()=>{
     const pw=document.getElementById("adminPasswordInput").value;
     if(!pw)return;
     const auth=getAuthData();
     if(!auth.adminPasswordHash){
-      // 初回：パスワードを新規設定
-      auth.adminPasswordHash=await sha256(pw);
+      // 蛻晏屓・壹ヱ繧ｹ繝ｯ繝ｼ繝峨ｒ譁ｰ隕剰ｨｭ螳・      auth.adminPasswordHash=await sha256(pw);
       saveAuthData(auth);
-      toast("🔑 アドミンパスワードを設定しました");
+      toast("泊 繧｢繝峨Α繝ｳ繝代せ繝ｯ繝ｼ繝峨ｒ險ｭ螳壹＠縺ｾ縺励◆");
     }else{
-      if(await sha256(pw)!==auth.adminPasswordHash){toast("❌ パスワードが正しくありません");return;}
+      if(await sha256(pw)!==auth.adminPasswordHash){toast("笶・繝代せ繝ｯ繝ｼ繝峨′豁｣縺励￥縺ゅｊ縺ｾ縺帙ｓ");return;}
     }
     document.getElementById("adminPanel").style.display="";
     renderAllowedUserList();
@@ -1922,49 +1857,46 @@ async function init(){
   document.getElementById("btnAddUser").addEventListener("click",async()=>{
     const id=document.getElementById("newUserId").value.trim();
     const pw=document.getElementById("newUserPassword").value;
-    if(!id||!pw){toast("IDとパスワードを入力してください");return;}
+    if(!id||!pw){toast("ID縺ｨ繝代せ繝ｯ繝ｼ繝峨ｒ蜈･蜉帙＠縺ｦ縺上□縺輔＞");return;}
     const auth=getAuthData();
-    if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast("そのIDは既に登録されています");return;}
+    if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast("縺昴・ID縺ｯ譌｢縺ｫ逋ｻ骭ｲ縺輔ｌ縺ｦ縺・∪縺・);return;}
     auth.allowedUsers.push({id,passwordHash:await sha256(pw)});
     saveAuthData(auth);
-    // バックエンドキャッシュを無効化してローカルリストにフォールバックさせる。
-    // fetchAuthConfig がページロード時に _backendAllowedUsers=[] をセットしているため、
-    // null に戻さないと作成直後のログイン照合でバックエンドの空リストが使われてしまう。
-    _backendAllowedUsers=null;
+    // 繝舌ャ繧ｯ繧ｨ繝ｳ繝峨く繝｣繝・す繝･繧堤┌蜉ｹ蛹悶＠縺ｦ繝ｭ繝ｼ繧ｫ繝ｫ繝ｪ繧ｹ繝医↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ縺輔○繧九・    // fetchAuthConfig 縺後・繝ｼ繧ｸ繝ｭ繝ｼ繝画凾縺ｫ _backendAllowedUsers=[] 繧偵そ繝・ヨ縺励※縺・ｋ縺溘ａ縲・    // null 縺ｫ謌ｻ縺輔↑縺・→菴懈・逶ｴ蠕後・繝ｭ繧ｰ繧､繝ｳ辣ｧ蜷医〒繝舌ャ繧ｯ繧ｨ繝ｳ繝峨・遨ｺ繝ｪ繧ｹ繝医′菴ｿ繧上ｌ縺ｦ縺励∪縺・・    _backendAllowedUsers=null;
     document.getElementById("newUserId").value="";
     document.getElementById("newUserPassword").value="";
     renderAllowedUserList();
     updateLoginStatus();
-    toast("✅ ユーザー <b>"+id+"</b> を追加しました");
+    toast("笨・繝ｦ繝ｼ繧ｶ繝ｼ <b>"+id+"</b> 繧定ｿｽ蜉縺励∪縺励◆");
   });
   document.getElementById("btnChangeAdminPassword").addEventListener("click",async()=>{
     const pw=document.getElementById("newAdminPassword").value;
-    if(!pw){toast("新しいパスワードを入力してください");return;}
+    if(!pw){toast("譁ｰ縺励＞繝代せ繝ｯ繝ｼ繝峨ｒ蜈･蜉帙＠縺ｦ縺上□縺輔＞");return;}
     const auth=getAuthData();
     auth.adminPasswordHash=await sha256(pw);
     saveAuthData(auth);
     document.getElementById("newAdminPassword").value="";
-    toast("🔑 アドミンパスワードを変更しました");
+    toast("泊 繧｢繝峨Α繝ｳ繝代せ繝ｯ繝ｼ繝峨ｒ螟画峩縺励∪縺励◆");
   });
 
-  // ── バックエンドに同期ボタン ─────────────────────────────────
+  // 笏笏 繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓蜷梧悄繝懊ち繝ｳ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
   document.getElementById("btnSyncAuth").addEventListener("click",async()=>{
     const settings=getUiSettings();
-    if(!effectiveGlobalUrl(settings)){toast("⚠️ バックエンドに接続できません（ローカル環境では Worker URL の設定が必要です）");return;}
+    if(!effectiveGlobalUrl(settings)){toast("笞・・繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓謗･邯壹〒縺阪∪縺帙ｓ・医Ο繝ｼ繧ｫ繝ｫ迺ｰ蠅・〒縺ｯ Worker URL 縺ｮ險ｭ螳壹′蠢・ｦ√〒縺呻ｼ・);return;}
     const auth=getAuthData();
-    if(!auth.adminPasswordHash){toast("⚠️ アドミンパスワードを先に設定してください");return;}
-    document.getElementById("btnSyncAuth").textContent="同期中...";
+    if(!auth.adminPasswordHash){toast("笞・・繧｢繝峨Α繝ｳ繝代せ繝ｯ繝ｼ繝峨ｒ蜈医↓險ｭ螳壹＠縺ｦ縺上□縺輔＞");return;}
+    document.getElementById("btnSyncAuth").textContent="蜷梧悄荳ｭ...";
     const ok=await syncAuthToBackend(effectiveGlobalUrl(settings),auth.adminPasswordHash,auth.allowedUsers);
-    document.getElementById("btnSyncAuth").textContent="☁️ バックエンドに同期";
+    document.getElementById("btnSyncAuth").textContent="笘・ｸ・繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓蜷梧悄";
     if(ok){
-      toast("✅ 認証設定をバックエンドに同期しました");
+      toast("笨・隱崎ｨｼ險ｭ螳壹ｒ繝舌ャ繧ｯ繧ｨ繝ｳ繝峨↓蜷梧悄縺励∪縺励◆");
       _backendAllowedUsers=auth.allowedUsers;
     }else{
-      toast("❌ 同期に失敗しました（URL・パスワードを確認してください）");
+      toast("笶・蜷梧悄縺ｫ螟ｱ謨励＠縺ｾ縺励◆・・RL繝ｻ繝代せ繝ｯ繝ｼ繝峨ｒ遒ｺ隱阪＠縺ｦ縺上□縺輔＞・・);
     }
   });
 
-  // ── Live tableソース切替タブ ──
+  // 笏笏 Live table繧ｽ繝ｼ繧ｹ蛻・崛繧ｿ繝・笏笏
   document.getElementById("liveTabPersonal").addEventListener("click",()=>{
     liveTabMode="personal";
     document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
@@ -1983,7 +1915,7 @@ async function init(){
     document.getElementById("liveTabPickup").classList.add("active");
     renderTable(lastRows);
   });
-  // ── Live tableリージョンフィルター ──
+  // 笏笏 Live table繝ｪ繝ｼ繧ｸ繝ｧ繝ｳ繝輔ぅ繝ｫ繧ｿ繝ｼ 笏笏
   document.querySelectorAll(".liveRegionTab").forEach(btn=>{
     btn.addEventListener("click",()=>{
       liveRegionFilter=btn.dataset.lregion;
@@ -1993,28 +1925,25 @@ async function init(){
     });
   });
 
-  // ── Live table 検索 ──
+  // 笏笏 Live table 讀懃ｴ｢ 笏笏
   document.getElementById("liveSearch").addEventListener("input",e=>{
     liveSearchQuery=e.target.value.trim().toLowerCase();
     renderTable(lastRows);
   });
 
-  // ── ヘッダー認証ボタン ──
+  // 笏笏 繝倥ャ繝繝ｼ隱崎ｨｼ繝懊ち繝ｳ 笏笏
   document.getElementById("btnHeaderLogin").addEventListener("click",()=>showLoginModal());
   document.getElementById("btnHeaderLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
   document.getElementById("btnHeaderAdmin").addEventListener("click",()=>{document.getElementById("adminModal").style.display="flex";});
   document.getElementById("btnAdminModalClose").addEventListener("click",()=>{document.getElementById("adminModal").style.display="none";});
 
-  // ── 初期ログイン状態を反映 + globalUrl があればバックエンドから取得 ──
-  restoreSession(); // ページリロード後もログイン状態を復元
-  updateLoginStatus();
-  // 通知ボタンの初期状態
-  setNotifyEnabled(notifyEnabled);
+  // 笏笏 蛻晄悄繝ｭ繧ｰ繧､繝ｳ迥ｶ諷九ｒ蜿肴丐 + globalUrl 縺後≠繧後・繝舌ャ繧ｯ繧ｨ繝ｳ繝峨°繧牙叙蠕・笏笏
+  restoreSession(); // 繝壹・繧ｸ繝ｪ繝ｭ繝ｼ繝牙ｾ後ｂ繝ｭ繧ｰ繧､繝ｳ迥ｶ諷九ｒ蠕ｩ蜈・  updateLoginStatus();
+  // 騾夂衍繝懊ち繝ｳ縺ｮ蛻晄悄迥ｶ諷・  setNotifyEnabled(notifyEnabled);
   const _initSettings=getUiSettings();
   if(effectiveGlobalUrl(_initSettings)){
     fetchAuthConfig(effectiveGlobalUrl(_initSettings));
-    // 起動時にコミュニティリストをバックエンドと同期（全ユーザーで共有リストを反映）
-    fetchAndMergeCommunity(effectiveGlobalUrl(_initSettings)).then(()=>{
+    // 襍ｷ蜍墓凾縺ｫ繧ｳ繝溘Η繝九ユ繧｣繝ｪ繧ｹ繝医ｒ繝舌ャ繧ｯ繧ｨ繝ｳ繝峨→蜷梧悄・亥・繝ｦ繝ｼ繧ｶ繝ｼ縺ｧ蜈ｱ譛峨Μ繧ｹ繝医ｒ蜿肴丐・・    fetchAndMergeCommunity(effectiveGlobalUrl(_initSettings)).then(()=>{
       if(viewMode==="global")renderGlobalPlayerList();
     });
   }
@@ -2129,7 +2058,7 @@ function autoUpdateReflect(){
   el.value = String(newMin);
   if(currentSettings) currentSettings.reflectDelayMin = newMin;
   const hint = document.getElementById("estReflectHint");
-  if(hint) hint.textContent = `→ Reflect X を ${newMin}m に自動更新`;
+  if(hint) hint.textContent = `竊・Reflect X 繧・${newMin}m 縺ｫ閾ｪ蜍墓峩譁ｰ`;
 }
 function updateEstimatorUi(){
   const last = document.getElementById("estLastBatch");
