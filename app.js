@@ -6,6 +6,8 @@ function effectiveProxyBase(s){return(s.proxyBase||"").replace(/\/$/,"")||autoOr
 function effectiveGlobalUrl(s){return(s.globalUrl||"").replace(/\/$/,"")||autoOrigin();}
 let timer=null,running=false,currentSettings=null;
 let lastCommunitySync=0; // グローバルリスト自動同期の最終実行時刻
+let lastSnapshotSync=0; // 共有状態の高速同期
+const lastSubmittedSnapshotSig=new Map(); // name -> signature
 let viewMode="personal",globalNames=[],globalFilter="all";
 const expandedRows=new Set();
 let pendingScrollY=null; // リロード後スクロール位置復元用
@@ -100,96 +102,46 @@ function buildExpandRow(r,key){
   }
   td.appendChild(panel);
   td.appendChild(buildPlayerSparkEl(r));
-
-// ── ポイント推移グラフ ──
-const evts=getEvents().filter(e=>e.name.toLowerCase()===r.name.toLowerCase()&&e.delta!=null).slice(-48);
-if(evts.length>=2){
-  const chartWrap=document.createElement("div");chartWrap.style.cssText="margin-top:12px;";
-  const chartTitle=document.createElement("div");
-  chartTitle.style.cssText="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;";
-  const pts=evts.map(e=>e.points).filter(p=>p!=null);
-  const latestPts=pts[pts.length-1];
-  const startPts=pts[0];
-  const diffPts=(latestPts!=null&&startPts!=null)?latestPts-startPts:null;
-  chartTitle.innerHTML=`<span>📈 ポイント推移（直近${evts.length}回）</span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
-  const canvas=document.createElement("canvas");
-  canvas.width=520;canvas.height=140;
-  canvas.style.cssText="width:100%;max-width:520px;height:140px;display:block;border-radius:8px;background:#091626;border:1px solid #16314f;";
-  chartWrap.appendChild(chartTitle);chartWrap.appendChild(canvas);td.appendChild(chartWrap);
-  requestAnimationFrame(()=>{
-    const ctx=canvas.getContext("2d");if(!ctx)return;
-    const W=canvas.width,H=canvas.height,padL=42,padR=12,padT=14,padB=24;
-    if(pts.length<2)return;
-    const mn=Math.min(...pts),mx=Math.max(...pts),range=(mx-mn)||1;
-    const sx=(i)=>padL+(i/(pts.length-1))*(W-padL-padR);
-    const sy=(v)=>H-padB-((v-mn)/range)*(H-padT-padB);
-    ctx.clearRect(0,0,W,H);
-
-    // grid
-    ctx.strokeStyle="rgba(120,150,190,0.18)";
-    ctx.lineWidth=1;
-    for(let i=0;i<4;i++){
-      const y=padT+i*((H-padT-padB)/3);
-      ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
-    }
-    for(let i=0;i<4;i++){
-      const x=padL+i*((W-padL-padR)/3);
-      ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,H-padB);ctx.stroke();
-    }
-
-    // y labels
-    ctx.fillStyle="#7f93ad";
-    ctx.font="10px monospace";
-    [mx, mn + range*0.5, mn].forEach((val,idx)=>{
-      const y=idx===0?padT+3:idx===1?padT+(H-padT-padB)/2+3:H-padB+3;
-      ctx.fillText(Math.round(val).toLocaleString(),4,y);
+  // ── ポイント推移グラフ ──
+  const evts=getEvents().filter(e=>e.name.toLowerCase()===r.name.toLowerCase()&&e.delta!=null).slice(-48);
+  if(evts.length>=2){
+    const chartWrap=document.createElement("div");chartWrap.style.cssText="margin-top:10px;";
+    const chartTitle=document.createElement("div");chartTitle.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;";chartTitle.textContent="📈 ポイント推移（直近"+evts.length+"回）";
+    const canvas=document.createElement("canvas");canvas.width=420;canvas.height=80;canvas.style.cssText="width:100%;max-width:420px;height:80px;display:block;border-radius:4px;background:#0a1a2e;";
+    chartWrap.appendChild(chartTitle);chartWrap.appendChild(canvas);td.appendChild(chartWrap);
+    requestAnimationFrame(()=>{
+      const ctx=canvas.getContext("2d");if(!ctx)return;
+      const W=canvas.width,H=canvas.height,pad=8;
+      const pts=evts.map(e=>e.points).filter(p=>p!=null);
+      if(pts.length<2)return;
+      const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
+      const sx=(i)=>pad+(i/(pts.length-1))*(W-2*pad);
+      const sy=(v)=>H-pad-((v-mn)/range)*(H-2*pad);
+      ctx.clearRect(0,0,W,H);
+      // gradient fill
+      const grad=ctx.createLinearGradient(0,0,0,H);
+      grad.addColorStop(0,"rgba(94,168,255,0.3)");grad.addColorStop(1,"rgba(94,168,255,0)");
+      ctx.beginPath();ctx.moveTo(sx(0),sy(pts[0]));
+      for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
+      ctx.lineTo(sx(pts.length-1),H);ctx.lineTo(sx(0),H);ctx.closePath();
+      ctx.fillStyle=grad;ctx.fill();
+      // line
+      ctx.beginPath();ctx.moveTo(sx(0),sy(pts[0]));
+      for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
+      ctx.strokeStyle="#5ea8ff";ctx.lineWidth=1.5;ctx.stroke();
+      // latest point dot
+      const lx=sx(pts.length-1),ly=sy(pts[pts.length-1]);
+      ctx.beginPath();ctx.arc(lx,ly,3,0,Math.PI*2);ctx.fillStyle="#7eb8ff";ctx.fill();
+      // min/max labels
+      ctx.font="9px monospace";ctx.fillStyle="#5a7aaa";
+      ctx.fillText(mn.toLocaleString(),2,H-2);
+      ctx.fillText(mx.toLocaleString(),2,12);
+      // current points label
+      ctx.font="bold 10px monospace";ctx.fillStyle="#7eb8ff";
+      ctx.fillText(pts[pts.length-1].toLocaleString(),Math.max(0,lx-20),Math.max(12,ly-4));
     });
-
-    // area
-    const grad=ctx.createLinearGradient(0,padT,0,H-padB);
-    grad.addColorStop(0,"rgba(94,168,255,0.38)");
-    grad.addColorStop(1,"rgba(94,168,255,0.05)");
-    ctx.beginPath();
-    ctx.moveTo(sx(0),sy(pts[0]));
-    for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
-    ctx.lineTo(sx(pts.length-1),H-padB);
-    ctx.lineTo(sx(0),H-padB);
-    ctx.closePath();
-    ctx.fillStyle=grad;
-    ctx.fill();
-
-    // line
-    ctx.beginPath();
-    ctx.moveTo(sx(0),sy(pts[0]));
-    for(let i=1;i<pts.length;i++)ctx.lineTo(sx(i),sy(pts[i]));
-    ctx.strokeStyle="#73b7ff";
-    ctx.lineWidth=2.2;
-    ctx.stroke();
-
-    // points
-    for(let i=0;i<pts.length;i++){
-      const x=sx(i), y=sy(pts[i]);
-      ctx.beginPath();ctx.arc(x,y,i===pts.length-1?4:2.5,0,Math.PI*2);
-      ctx.fillStyle=i===pts.length-1?"#9dd0ff":"#73b7ff";
-      ctx.fill();
-    }
-
-    // last label
-    const lx=sx(pts.length-1),ly=sy(pts[pts.length-1]);
-    ctx.font="bold 11px monospace";
-    ctx.fillStyle="#d9ecff";
-    const lastLabel=pts[pts.length-1].toLocaleString();
-    ctx.fillText(lastLabel,Math.max(padL,Math.min(lx-16,W-padR-ctx.measureText(lastLabel).width)),Math.max(padT+12,ly-8));
-
-    // x labels
-    ctx.font="10px monospace";
-    ctx.fillStyle="#7f93ad";
-    ctx.fillText("old",padL,H-8);
-    ctx.fillText("new",W-padR-18,H-8);
-  });
-}
-// ── サーバー選択 ──
-
+  }
+  // ── サーバー選択 ──
   const regionWrap=document.createElement("div");regionWrap.style.cssText="margin-top:10px;display:flex;align-items:center;gap:8px;";
   const rLabel=document.createElement("span");rLabel.textContent="Server";rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
   const rSel=document.createElement("select");rSel.style.cssText="height:28px;font-size:12px;padding:2px 6px;";
@@ -380,19 +332,8 @@ async function fetchAndMergeSnapshots(globalUrl){
     const local=getSnapshots();
     let changed=false;
     const now=Date.now();
-    const remoteTs=s=>Math.max(
-      s?.lastOkAt||0,
-      s?.lastRealChangeAt||0,
-      s?.lastChangeAt||0,
-      s?.updatedAt||0,
-      0
-    );
-    const localTs=s=>Math.max(
-      s?.lastOkAt||0,
-      s?.lastRealChangeAt||0,
-      s?.lastChangeAt||0,
-      0
-    );
+    const remoteTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,s?.updatedAt||0,0);
+    const localTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,0);
     for(const [key,remSnap] of Object.entries(remote)){
       if(!remSnap||typeof remSnap!=="object")continue;
       const locSnap=local[key]||{};
@@ -400,11 +341,24 @@ async function fetchAndMergeSnapshots(globalUrl){
       const lts=localTs(locSnap);
       if(rts<=0)continue;
       if(rts<lts)continue;
+
+      const remMe=remSnap.manualEvent||null;
+      const locMe=locSnap.manualEvent||null;
+      let chosenManualEvent=null;
+      if(remMe&&locMe){
+        chosenManualEvent=(remMe.recordedAt||0) >= (locMe.recordedAt||0) ? remMe : locMe;
+      }else{
+        chosenManualEvent=remMe||locMe||null;
+      }
+
       const merged={
         ...locSnap,
         ...remSnap,
-        ...(locSnap.manualEvent?{manualEvent:locSnap.manualEvent}:{}),
+        ...(chosenManualEvent?{manualEvent:chosenManualEvent}:{}),
       };
+      if(merged.manualEvent && !isManualActive(merged.manualEvent)){
+        delete merged.manualEvent;
+      }
       if(!merged.lastChangeAt&&remSnap.lastChangeAt)merged.lastChangeAt=remSnap.lastChangeAt;
       if(!merged.lastRealChangeAt&&remSnap.lastRealChangeAt)merged.lastRealChangeAt=remSnap.lastRealChangeAt;
       if(!merged.lastOkAt&&rts)merged.lastOkAt=rts||now;
@@ -442,26 +396,43 @@ function getWriteHeaders(){
     h["X-Write-Key"]=auth.adminPasswordHash;
     return h;
   }
-  if(currentUser){
-    const allowed=getEffectiveAllowedUsers();
-    if(Array.isArray(allowed)){
-      const u=allowed.find(u=>String(u.id||"").toLowerCase()===String(currentUser.id||"").toLowerCase());
-      if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
-    }
+  const allowed = (_backendAllowedUsers!==null ? _backendAllowedUsers : auth.allowedUsers) || [];
+  if(currentUser&&Array.isArray(allowed)){
+    const u=allowed.find(u=>u.id===currentUser.id);
+    if(u&&u.passwordHash)h["X-Write-Key"]=u.passwordHash;
   }
   return h;
 }
+function snapshotSignature(snap){
+  if(!snap||typeof snap!=="object")return "";
+  const src={
+    points:snap.points??null,
+    lastDelta:snap.lastDelta??null,
+    lastChangeAt:snap.lastChangeAt??null,
+    lastRealChangeAt:snap.lastRealChangeAt??null,
+    lastOkAt:snap.lastOkAt??null,
+    leaderboardRank:snap.leaderboardRank??null,
+    league:snap.league??null,
+    region:snap.region??"",
+    notFoundCount:snap.notFoundCount??0,
+    lastFoundAt:snap.lastFoundAt??null,
+    suspectedReason:snap.suspectedReason??null,
+    suspectedNewName:snap.suspectedNewName??null,
+    manualEvent:snap.manualEvent??null,
+  };
+  return JSON.stringify(src);
+}
 async function submitSnapshotToGlobal(globalUrl,name,snap){
   try{
-    const r=await fetch(globalUrl.replace(/\/$/,"")+"/submit",{
-      method:"POST",
-      headers:getWriteHeaders(),
-      body:JSON.stringify({name,snapshot:{...snap,updatedAt:Date.now()}})
-    });
+    const payload={...snap,updatedAt:Date.now()};
+    const sig=snapshotSignature(payload);
+    if(lastSubmittedSnapshotSig.get(name.toLowerCase())===sig)return true;
+    const r=await fetch(globalUrl.replace(/\/$/,"")+"/submit",{method:"POST",headers:getWriteHeaders(),body:JSON.stringify({name,snapshot:payload})});
     if(!r.ok){
       console.error("submitSnapshotToGlobal",name,"HTTP",r.status);
       return false;
     }
+    lastSubmittedSnapshotSig.set(name.toLowerCase(), sig);
     return true;
   }catch(e){
     console.error("submitSnapshotToGlobal",name,e);
@@ -614,17 +585,18 @@ async function fetchAuthConfig(globalUrl){
     const d=await r.json();
     if(Array.isArray(d.allowedUsers)){
       _backendAllowedUsers=d.allowedUsers;
-      const auth=getAuthData();
-      saveAuthData({...auth,allowedUsers:d.allowedUsers});
-      if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>String(u.id||"").toLowerCase()===String(currentUser.id||"").toLowerCase())){
+      try{
+        const auth=getAuthData();
+        auth.allowedUsers=d.allowedUsers;
+        saveAuthData(auth);
+      }catch{}
+      // 復元したセッションのユーザーが削除されていたら自動ログアウト
+      if(currentUser&&d.allowedUsers.length>0&&!d.allowedUsers.find(u=>u.id.toLowerCase()===currentUser.id.toLowerCase())){
         setCurrentUser(null);
       }
-      renderAllowedUserList();
-      updateLoginStatus();
+      updateLoginStatus(); // バックエンドリストで状態を更新
     }
-  }catch(e){
-    console.error("fetchAuthConfig:",e);
-  }
+  }catch{}
 }
 // バックエンドに認証設定を同期（アドミンパネルのボタンから呼ぶ）
 async function syncAuthToBackend(globalUrl,adminPasswordHash,allowedUsers){
@@ -712,16 +684,16 @@ function applyEncounterEvent(name,typeKey){
   }
 }
 function getActiveNames(){
-  // 個人リストとグローバルリスト両方を常にポーリング → 状態を共有
   const personal=parseNames(document.getElementById("namesBox").value);
   const community=getCommunityList().map(e=>e.name);
+  const src=viewMode==="global"?community:personal;
   const seen=new Set();
-  const all=[];
-  for(const n of [...personal,...community]){
+  const out=[];
+  for(const n of src){
     const k=n.toLowerCase();
-    if(!seen.has(k)){seen.add(k);all.push(n);}
+    if(!seen.has(k)){seen.add(k);out.push(n);}
   }
-  return all;
+  return out;
 }
 // ────────────────────────────────────────────────────────────
 function applySettingsToUi(s){
@@ -813,49 +785,6 @@ const STATE_I18N_KEY={
   NAME_CHANGED:       "state.NAME_CHANGED",
 };
 function stateLabel(s){return(typeof t==="function"?t(STATE_I18N_KEY[s]||"state.UNKNOWN"):s)||s;}
-
-function stateExplain(row,displayState){
-  const manual=row?.manualEvent;
-  if(manual&&isManualActive(manual)){
-    const et=findEncounterType(manual.type);
-    if(manual.type==="offline") return "手動でオフライン記録中";
-    if(manual.type==="won") return "手動で勝利後ロビー戻りを記録中";
-    if(manual.type==="final_end") return "手動でFINAL終了後の戻りを記録中";
-    return `手動記録「${et?et.label:manual.type}」を優先表示中`;
-  }
-  switch(displayState){
-    case "POST_MATCH_WAIT": return "更新直後。反映待ちの待機時間です";
-    case "LOBBY": return "ロビー待機・次の試合準備中の推定です";
-    case "IN_MATCH": return "試合中前半〜中盤の推定です";
-    case "IN_TOURNAMENT_DEEP": return "試合後半〜深いラウンド進行中の推定です";
-    case "RETURNING": return "試合終盤〜終了後、ロビーへ戻る途中の推定です";
-    case "OFFLINE": return "最近の更新がなく、現在は非アクティブ寄りです";
-    case "UNKNOWN": return "情報不足で状態を確定できません";
-    case "NOT_FOUND": return "リーダーボードで一時的に確認できません";
-    case "BANNED": return "BAN の可能性があります";
-    case "NAME_CHANGED": return "名前変更の可能性があります";
-    default: return "";
-  }
-}
-function stateSortPriority(row){
-  const isMissing=row.notFoundCount>=3&&row.lastFoundAt;
-  const displayState=(isMissing&&row.suspectedReason==="BAN")?"BANNED":
-    (isMissing&&row.suspectedReason==="NAME_CHANGE")?"NAME_CHANGED":
-    isMissing?"NOT_FOUND":row.state;
-  switch(displayState){
-    case "POST_MATCH_WAIT": return 0;
-    case "LOBBY": return 1;
-    case "IN_MATCH": return 2;
-    case "IN_TOURNAMENT_DEEP": return 3;
-    case "RETURNING": return 4;
-    case "UNKNOWN": return 5;
-    case "OFFLINE": return 6;
-    case "NOT_FOUND": return 7;
-    case "NAME_CHANGED": return 8;
-    case "BANNED": return 9;
-    default: return 10;
-  }
-}
 function renderBadge(rank,league){
   const tier=league||inferLeagueFromRank(rank);
   const rankStr=rank?"#"+rank.toLocaleString():"—";
@@ -995,7 +924,7 @@ function renderTable(rows){
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
       <td class="num">${r.lastDelta==null?"—":r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
       <td class="tsCell">${r.lastDelta==null?"—":fmtAgo(r.lastRealChangeAt)}</td>
-      <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}<div style="font-size:11px;color:#7f93ad;margin-top:2px;line-height:1.25;">${stateExplain(r,displayState)}</div></td>
+      <td><span class="state ${displayState}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
       <td class="errCell">${r.error||""}</td>
@@ -1181,17 +1110,13 @@ async function pollOnce(names,settings){
     rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
-  // コミュニティ登録済みプレイヤーのスナップショットをバックエンドに送信（タブに関係なく共有）
-  const _gs=getUiSettings();
-  const _gUrl=effectiveGlobalUrl(_gs);
+  // 共有対象（community 登録済み）の状態は、タブに関係なくバックエンドへ送信
+  const _gUrl=effectiveGlobalUrl(settings);
   if(_gUrl){
     const activeKeys=new Set(getCommunityList().map(e=>e.name.toLowerCase()));
-    if(activeKeys.size>0){
-      Object.entries(snapshots).forEach(([k,s])=>{
-        if(activeKeys.has(k))submitSnapshotToGlobal(_gUrl,k,s);
-      });
-    }
-  }
+    Object.entries(snapshots).forEach(([k,s])=>{
+      if(activeKeys.has(k))submitSnapshotToGlobal(_gUrl,k,s);
+    });
   }
   rows.sort((a,b)=>{
     const ta=a.lastChangeAt?(now-a.lastChangeAt):1e18;
@@ -1454,29 +1379,23 @@ function doStart(){
   const settings=getUiSettings();saveSettings(settings);
   const names=getActiveNames();
   if(names.length===0)return;
-  if(viewMode==="personal"){
-    // namesBox の内容だけを保存（community との union を保存すると community players が
-    // namesBox に混入してしまうため、ここでは personal 分のみを対象にする）
-    const personalOnly=parseNames(document.getElementById("namesBox").value);
-    try{saveNamesToUrl(personalOnly);}catch{}
-    saveNamesToLocal(personalOnly);
-  }
+  if(viewMode==="personal"){try{saveNamesToUrl(names);}catch{}saveNamesToLocal(names);}
   currentSettings=settings;
   setRunning(true);
   (function schedulePoll(){
-    // グローバルリストを 120 秒ごとにバックエンドと自動同期（他ユーザーの追加を反映）
+    // /community は 120 秒ごと、/snapshots は 3 秒ごとに同期
     const now=Date.now();
-    const communitySync=effectiveGlobalUrl(settings)&&(now-lastCommunitySync>120000)
-      // コミュニティリスト同期（追加・更新・削除） + スナップショット状態同期 を並列実行
-      ?Promise.all([
-          fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
-          fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
-        ]).then(()=>{
+    const _gUrl=effectiveGlobalUrl(settings);
+    const communitySync=_gUrl&&(now-lastCommunitySync>120000)
+      ?fetchAndMergeCommunity(_gUrl).then(()=>{
           lastCommunitySync=Date.now();
           renderGlobalPlayerList();
         })
       :Promise.resolve();
-    communitySync.finally(()=>pollOnce(getActiveNames(),settings).finally(()=>{
+    const snapshotSync=_gUrl&&(now-lastSnapshotSync>3000)
+      ?fetchAndMergeSnapshots(_gUrl).then(()=>{ lastSnapshotSync=Date.now(); })
+      :Promise.resolve();
+    Promise.all([communitySync,snapshotSync]).finally(()=>pollOnce(getActiveNames(),settings).finally(()=>{
       if(!running)return;
       const hasActive=lastRows.some(r=>["IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING"].includes(r.state));
       const secs=hasActive?Math.max(20,Math.floor(settings.pollIntervalSec/2)):settings.pollIntervalSec;
@@ -1488,29 +1407,26 @@ function doStart(){
 async function preloadRemoteSnapshots(settings){
   const remote=await fetchGlobalSnapshots(effectiveGlobalUrl(settings));
   if(!remote||typeof remote!=="object")return;
+  // リモートの lastChangeAt をローカルスナップショットにマージ（初回観測時のズレ防止）
   const localSnaps=getSnapshots();
   let snapshotsMerged=false;
-  const remoteTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,s?.updatedAt||0,0);
-  const localTs=s=>Math.max(s?.lastOkAt||0,s?.lastRealChangeAt||0,s?.lastChangeAt||0,0);
   for(const [key,remSnap] of Object.entries(remote)){
-    if(!remSnap||typeof remSnap!=="object")continue;
-    const loc=localSnaps[key]||{};
-    if(remoteTs(remSnap) >= localTs(loc)){
-      localSnaps[key]={...loc,...remSnap,...(loc.manualEvent?{manualEvent:loc.manualEvent}:{})};
-      snapshotsMerged=true;
+    if(remSnap&&remSnap.lastChangeAt){
+      if(!localSnaps[key])localSnaps[key]={points:null,lastChangeAt:null};
+      if(!localSnaps[key].lastChangeAt){
+        localSnaps[key]={...localSnaps[key],lastChangeAt:remSnap.lastChangeAt,lastRealChangeAt:remSnap.lastRealChangeAt??remSnap.lastChangeAt};
+        snapshotsMerged=true;
+      }
     }
   }
   if(snapshotsMerged)saveSnapshots(localSnaps);
   const names=getActiveNames();
   const now=Date.now();
   const rows=names.map(name=>{
-    const snap=(localSnaps[name.toLowerCase()]||remote[name.toLowerCase()]);
+    const snap=remote[name.toLowerCase()];
     if(!snap||snap.points==null)return null;
-    const manualEvent=snap.manualEvent??null;
-    const manualActive=isManualActive(manualEvent);
-    const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:(snap.lastChangeAt??null);
-    const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
-    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
+    const inf=inferState(now,snap.lastChangeAt,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,false);
+    return {name,points:snap.points,delta:null,lastChangeAt:snap.lastChangeAt,effectiveLCA:snap.lastChangeAt,manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt,leaderboardRank:snap.leaderboardRank,league:snap.league,region:snap.region,notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
   }).filter(Boolean);
   if(rows.length>0&&lastRows.length===0){lastRows=rows;renderTable(rows);renderSpark(rows);}
 }
@@ -1526,10 +1442,7 @@ async function switchToGlobal(){
   // バックエンドがあればリモートとマージ
   if(effectiveGlobalUrl(settings)){
     document.getElementById("globalStatus").textContent="🌐 同期中...";
-    await Promise.all([
-      fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
-      fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
-    ]);
+    await fetchAndMergeCommunity(effectiveGlobalUrl(settings));
   }
   renderGlobalPlayerList();
   const total=getCommunityList().length;
@@ -1928,10 +1841,6 @@ async function init(){
     if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast("そのIDは既に登録されています");return;}
     auth.allowedUsers.push({id,passwordHash:await sha256(pw)});
     saveAuthData(auth);
-    // バックエンドキャッシュを無効化してローカルリストにフォールバックさせる。
-    // fetchAuthConfig がページロード時に _backendAllowedUsers=[] をセットしているため、
-    // null に戻さないと作成直後のログイン照合でバックエンドの空リストが使われてしまう。
-    _backendAllowedUsers=null;
     document.getElementById("newUserId").value="";
     document.getElementById("newUserPassword").value="";
     renderAllowedUserList();

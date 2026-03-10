@@ -49,14 +49,6 @@ async function kvGet(env, key, fallback) {
 async function kvPut(env, key, val) {
   await env.DATA.put(key, JSON.stringify(val));
 }
-function stableStringify(obj) {
-  if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
-  if (Array.isArray(obj)) return "[" + obj.map(stableStringify).join(",") + "]";
-  return "{" + Object.keys(obj).sort().map(k => JSON.stringify(k)+":"+stableStringify(obj[k])).join(",") + "}";
-}
-function sameJson(a, b) {
-  return stableStringify(a) === stableStringify(b);
-}
 // 書き込みキー検証: adminPasswordHash または allowedUser の passwordHash と一致すれば OK
 // auth 未設定の場合は誰でも書き込み可（後方互換）
 async function verifyWriteKey(request, env) {
@@ -66,6 +58,52 @@ async function verifyWriteKey(request, env) {
   if (key === auth.adminPasswordHash) return true;
   if (auth.allowedUsers && auth.allowedUsers.some(u => u.passwordHash === key)) return true;
   return false;
+}
+
+
+// ── Durable Object: strongly-consistent shared snapshots ───────────────────
+export class SnapshotStateDO {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders("GET, POST, OPTIONS") });
+    }
+
+    if (path === "/snapshots" && request.method === "GET") {
+      const snaps = await this.state.storage.get("snapshots") || {};
+      return jsonRes(snaps);
+    }
+
+    if (path === "/submit" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return jsonRes({ error: "invalid json" }, 400); }
+      if (!body.name) return jsonRes({ error: "missing name" }, 400);
+      const snaps = await this.state.storage.get("snapshots") || {};
+      const key = body.name.toLowerCase();
+      const incoming = body.snapshot || {};
+      const existing = snaps[key] || null;
+      const same = existing && JSON.stringify(existing) === JSON.stringify(incoming);
+      if (!same) {
+        snaps[key] = incoming;
+        await this.state.storage.put("snapshots", snaps);
+      }
+      return jsonRes({ ok: true, skipped: !!same });
+    }
+
+    return jsonRes({ error: "not found" }, 404);
+  }
+}
+
+function snapshotStub(env) {
+  const id = env.SNAPSHOT_STATE.idFromName("global-snapshots");
+  return env.SNAPSHOT_STATE.get(id);
 }
 
 // ── Worker entry ─────────────────────────────────────────────────────────────
@@ -174,7 +212,10 @@ export default {
         } else {
           list.push(entry);
         }
-        await kvPut(env, "community", list);
+        const prev = await kvGet(env, "community", []);
+        if (JSON.stringify(prev) !== JSON.stringify(list)) {
+          await kvPut(env, "community", list);
+        }
         return jsonRes({ ok: true });
       }
       if (request.method === "DELETE") {
@@ -182,7 +223,10 @@ export default {
         const name = url.searchParams.get("name");
         if (!name) return jsonRes({ error: "missing name" }, 400);
         const list = await kvGet(env, "community", []);
-        await kvPut(env, "community", list.filter(e => e.name.toLowerCase() !== name.toLowerCase()));
+        const next = list.filter(e => e.name.toLowerCase() !== name.toLowerCase());
+        if (next.length !== list.length) {
+          await kvPut(env, "community", next);
+        }
         return jsonRes({ ok: true });
       }
     }
@@ -200,8 +244,10 @@ export default {
 
         const names = await kvGet(env, "names", []);
         const lc    = body.name.toLowerCase();
-        if (!names.find(n => n.toLowerCase() === lc)) names.push(body.name);
-        await kvPut(env, "names", names);
+        if (!names.find(n => n.toLowerCase() === lc)) {
+          names.push(body.name);
+          await kvPut(env, "names", names);
+        }
         return jsonRes({ ok: true });
       }
     }
@@ -209,22 +255,19 @@ export default {
     // ── /snapshots ─────────────────────────────────────────────────────────
     if (path === "/snapshots") {
       if (request.method === "GET") {
-        const snaps = await kvGet(env, "snapshots", {});
-        return jsonRes(snaps);
+        return snapshotStub(env).fetch(new Request("https://snapshot.local/snapshots", { method: "GET" }));
       }
     }
 
     // ── /submit ────────────────────────────────────────────────────────────
     if (path === "/submit" && request.method === "POST") {
       if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
-      let body;
-      try { body = await request.json(); } catch { return jsonRes({ error: "invalid json" }, 400); }
-      if (!body.name) return jsonRes({ error: "missing name" }, 400);
-
-      const snaps = await kvGet(env, "snapshots", {});
-      snaps[body.name.toLowerCase()] = body.snapshot;
-      await kvPut(env, "snapshots", snaps);
-      return jsonRes({ ok: true });
+      const bodyText = await request.text();
+      return snapshotStub(env).fetch(new Request("https://snapshot.local/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: bodyText,
+      }));
     }
 
     // ── /auth ──────────────────────────────────────────────────────────────

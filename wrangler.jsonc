@@ -23,6 +23,22 @@
     "enabled": true
   },
 
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SNAPSHOT_STATE",
+        "class_name": "SnapshotStateDO"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1-snapshot-do",
+      "new_sqlite_classes": ["SnapshotStateDO"]
+    }
+  ],
+
   // KV Namespace バインディング
   // binding 名は worker.js 内で env.DATA として参照されているため変更不可
   // ▼ id の確認手順:
