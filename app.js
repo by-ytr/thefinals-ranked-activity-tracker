@@ -963,9 +963,8 @@ function renderTable(rows){
     filtered=filtered.filter(r=>gset.has(r.name.toLowerCase()));
   }
   if(liveTabMode==="pickup") filtered=filtered.filter(r=>pickedUp.has(r.name.toLowerCase()));
-  if(liveRegionFilter!=="all") filtered=filtered.filter(r=>(r.region||"")===liveRegionFilter);
+  if(liveRegionFilter!=="all" && viewMode!=="personal") filtered=filtered.filter(r=>(r.region||"")===liveRegionFilter);
   if(liveSearchQuery) filtered=filtered.filter(r=>r.name.toLowerCase().includes(liveSearchQuery));
-  personalRegionFilter=liveRegionFilter;
 
   const statePriority=(r)=>{
     const isMissing=r.notFoundCount>=3&&r.lastFoundAt;

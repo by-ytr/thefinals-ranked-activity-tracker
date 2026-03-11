@@ -184,7 +184,8 @@ export default {
         return jsonRes(list);
       }
       if (request.method === "POST") {
-        if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
+        // TODO: 認証システム構築後に verifyWriteKey を有効化
+        // if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
         let body;
         try { body = await request.json(); } catch { return jsonRes({ error: "invalid json" }, 400); }
         if (!body.name) return jsonRes({ error: "missing name" }, 400);
@@ -219,7 +220,8 @@ export default {
         return jsonRes({ ok: true });
       }
       if (request.method === "DELETE") {
-        if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
+        // TODO: 認証システム構築後に verifyWriteKey を有効化
+        // if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
         const name = url.searchParams.get("name");
         if (!name) return jsonRes({ error: "missing name" }, 400);
         const list = await kvGet(env, "community", []);
@@ -261,7 +263,8 @@ export default {
 
     // ── /submit ────────────────────────────────────────────────────────────
     if (path === "/submit" && request.method === "POST") {
-      if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
+      // TODO: 認証システム構築後に verifyWriteKey を有効化
+      // if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
       const bodyText = await request.text();
       return snapshotStub(env).fetch(new Request("https://snapshot.local/submit", {
         method: "POST",
