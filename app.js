@@ -1,13 +1,111 @@
 const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
-const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
+const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,r1Min:10,r2Min:10,frMin:8,roundJitterMin:3,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
 
 const UI_TEXT={
-  ja:{"now":"今","enc.label":"📝 遭遇記録","enc.active":"記録中","enc.priority":"優先予測","enc.recorded":"を記録","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"勝","enc.quick.off":"オフ","enc.won":"🏆 勝利","enc.final_end":"💀 FINAL終了","enc.offline":"⚫ オフライン","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"序盤","phase.mid":"中盤","phase.late":"終盤","memo":"📝 Memo","server":"Server","log.none":"ログなし","log.legend":"色=状態 / 横軸=今日の時刻","log.switch.timeline":"📊 タイムライン表示","log.switch.list":"📋 リスト表示","log.switch.hint":"表示形式を切り替え","log.summary":"最新20人 / 今日の推移","log.now":"NOW","log.latest":"現在","action.delete":"削除","action.pickup":"ピックアップ（大型グラフに追加）","state.manual.offline":"手動でオフライン状態として記録中","state.manual.won":"手動で勝利後の戻り時間帯を記録中","state.manual.final":"手動でFinal Round終了後の戻り時間帯を記録中","state.manual.r1":"手動でR1試合中として記録中","state.manual.r2":"手動でR2以降の試合中として記録中","state.manual.generic":"手動記録「{label}」を優先表示中","log.lastConfirmed":"最終確認","log.notFound":"連続未検出"},
-  en:{"now":"Now","enc.label":"📝 Encounter","enc.active":"Active","enc.priority":"Priority override","enc.recorded":"recorded","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"WIN","enc.quick.off":"OFF","enc.won":"🏆 Win","enc.final_end":"💀 Final End","enc.offline":"⚫ Offline","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"Early","phase.mid":"Mid","phase.late":"Late","memo":"📝 Memo","server":"Server","log.none":"No logs","log.legend":"Color = state / X-axis = today","log.switch.timeline":"📊 Timeline View","log.switch.list":"📋 List View","log.switch.hint":"Switch log view","log.summary":"Latest 20 players / today","log.now":"NOW","log.latest":"Current","action.delete":"Remove","action.pickup":"Pickup (add to large graph)","state.manual.offline":"Manually marked as offline","state.manual.won":"Manually marked as post-win return window","state.manual.final":"Manually marked as post-final return window","state.manual.r1":"Manually marked as in R1","state.manual.r2":"Manually marked as in R2 or later","state.manual.generic":"Manual record '{label}' is overriding prediction","log.lastConfirmed":"Last seen","log.notFound":"Misses"},
-  ko:{"now":"지금","enc.label":"📝 조우 기록","enc.active":"기록 중","enc.priority":"우선 예측","enc.recorded":"기록","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"승","enc.quick.off":"오프","enc.won":"🏆 승리","enc.final_end":"💀 파이널 종료","enc.offline":"⚫ 오프라인","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"초반","phase.mid":"중반","phase.late":"후반","memo":"📝 메모","server":"Server","log.none":"로그 없음","log.legend":"색상=상태 / 가로축=오늘 시간대","log.switch.timeline":"📊 타임라인 보기","log.switch.list":"📋 목록 보기","log.switch.hint":"로그 보기 전환","log.summary":"최근 20명 / 오늘 흐름","log.now":"NOW","log.latest":"현재","action.delete":"삭제","action.pickup":"픽업(대형 그래프에 추가)","state.manual.offline":"수동으로 오프라인으로 기록됨","state.manual.won":"수동으로 승리 후 복귀 구간으로 기록됨","state.manual.final":"수동으로 파이널 종료 후 복귀 구간으로 기록됨","state.manual.r1":"수동으로 R1 경기 중으로 기록됨","state.manual.r2":"수동으로 R2 이후 경기 중으로 기록됨","state.manual.generic":"수동 기록 '{label}' 이 예측보다 우선합니다","log.lastConfirmed":"마지막 확인","log.notFound":"연속 미검출"}
+  ja:{"now":"今","enc.label":"📝 遭遇記録","enc.active":"記録中","enc.priority":"優先予測","enc.recorded":"を記録","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"勝","enc.quick.off":"オフ","enc.won":"🏆 勝利","enc.final_end":"💀 FINAL終了","enc.offline":"⚫ オフライン","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"序盤","phase.mid":"中盤","phase.late":"終盤","memo":"📝 メモ","server":"サーバー","log.none":"ログなし","log.legend":"色=状態 / 横軸=今日の時刻","log.switch.timeline":"📊 タイムライン表示","log.switch.list":"📋 リスト表示","log.switch.hint":"表示形式を切り替え","log.summary":"最新20人 / 今日の推移","log.now":"NOW","log.latest":"現在","action.delete":"削除","action.pickup":"ピックアップ（大型グラフに追加）","state.LOBBY":"ロビー","state.IN_MATCH_R1":"R1試合中","state.IN_MATCH_R2":"R2試合中","state.FINAL":"ファイナル後","state.OFFLINE":"オフライン","state.UNKNOWN":"不明","state.NOT_FOUND":"未検出","state.BANNED":"BAN","state.NAME_CHANGED":"名前変更","state.manual.offline":"手動でオフライン状態として記録中","state.manual.won":"手動で勝利後の戻り時間帯を記録中","state.manual.final":"手動でFinal Round終了後の戻り時間帯を記録中","state.manual.r1":"手動でR1試合中として記録中","state.manual.r2":"手動でR2以降の試合中として記録中","state.manual.generic":"手動記録「{label}」を優先表示中","log.lastConfirmed":"最終確認","log.notFound":"連続未検出","error.short":"Error","legend.offline":"オフライン","legend.lobby":"ロビー","legend.inmatch":"試合中","legend.deep":"R2/FR","legend.missing":"未検出","legend.banned":"BAN","th.name":"名前","th.rank":"ランク","th.points":"RS","th.delta":"変動","th.changed":"更新","th.state":"状態","th.next":"次戦率","th.last_ok":"最終確認","th.error":"Error","th.action":"操作"},
+  en:{"now":"Now","enc.label":"📝 Encounter","enc.active":"Active","enc.priority":"Priority override","enc.recorded":"recorded","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"WIN","enc.quick.off":"OFF","enc.won":"🏆 Win","enc.final_end":"💀 Final End","enc.offline":"⚫ Offline","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"Early","phase.mid":"Mid","phase.late":"Late","memo":"📝 Memo","server":"Server","log.none":"No logs","log.legend":"Color = state / X-axis = today","log.switch.timeline":"📊 Timeline View","log.switch.list":"📋 List View","log.switch.hint":"Switch log view","log.summary":"Latest 20 players / today","log.now":"NOW","log.latest":"Current","action.delete":"Remove","action.pickup":"Pickup (add to large graph)","state.LOBBY":"Lobby","state.IN_MATCH_R1":"R1 Match","state.IN_MATCH_R2":"R2 Match","state.FINAL":"Post Final","state.OFFLINE":"Offline","state.UNKNOWN":"Unknown","state.NOT_FOUND":"Missing","state.BANNED":"Banned","state.NAME_CHANGED":"Name Changed","state.manual.offline":"Manually marked as offline","state.manual.won":"Manually marked as post-win return window","state.manual.final":"Manually marked as post-final return window","state.manual.r1":"Manually marked as in R1","state.manual.r2":"Manually marked as in R2 or later","state.manual.generic":"Manual record '{label}' is overriding prediction","log.lastConfirmed":"Last seen","log.notFound":"Misses","error.short":"Error","legend.offline":"Offline","legend.lobby":"Lobby","legend.inmatch":"In Match","legend.deep":"R2/FR","legend.missing":"Missing","legend.banned":"Banned","th.name":"Name","th.rank":"Rank","th.points":"RS","th.delta":"Delta","th.changed":"Changed","th.state":"Status","th.next":"Next %","th.last_ok":"Last Seen","th.error":"Error","th.action":"Action"},
+  ko:{"now":"지금","enc.label":"📝 조우 기록","enc.active":"기록 중","enc.priority":"우선 예측","enc.recorded":"기록","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"승","enc.quick.off":"오프","enc.won":"🏆 승리","enc.final_end":"💀 파이널 종료","enc.offline":"⚫ 오프라인","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"초반","phase.mid":"중반","phase.late":"후반","memo":"📝 메모","server":"서버","log.none":"로그 없음","log.legend":"색상=상태 / 가로축=오늘 시간대","log.switch.timeline":"📊 타임라인 보기","log.switch.list":"📋 목록 보기","log.switch.hint":"로그 보기 전환","log.summary":"최근 20명 / 오늘 흐름","log.now":"NOW","log.latest":"현재","action.delete":"삭제","action.pickup":"픽업(대형 그래프에 추가)","state.LOBBY":"로비","state.IN_MATCH_R1":"R1 경기 중","state.IN_MATCH_R2":"R2 경기 중","state.FINAL":"파이널 후","state.OFFLINE":"오프라인","state.UNKNOWN":"알 수 없음","state.NOT_FOUND":"미검출","state.BANNED":"BAN","state.NAME_CHANGED":"이름 변경","state.manual.offline":"수동으로 오프라인으로 기록됨","state.manual.won":"수동으로 승리 후 복귀 구간으로 기록됨","state.manual.final":"수동으로 파이널 종료 후 복귀 구간으로 기록됨","state.manual.r1":"수동으로 R1 경기 중으로 기록됨","state.manual.r2":"수동으로 R2 이후 경기 중으로 기록됨","state.manual.generic":"수동 기록 '{label}' 이 예측보다 우선합니다","log.lastConfirmed":"마지막 확인","log.notFound":"연속 미검출","error.short":"오류","legend.offline":"오프라인","legend.lobby":"로비","legend.inmatch":"경기 중","legend.deep":"R2/FR","legend.missing":"미검출","legend.banned":"BAN","th.name":"이름","th.rank":"랭크","th.points":"RS","th.delta":"변동","th.changed":"갱신","th.state":"상태","th.next":"다음 경기 %","th.last_ok":"마지막 확인","th.error":"오류","th.action":"동작"}
 };
-function uiLang(){const raw=((document&&document.documentElement&&document.documentElement.lang)||navigator.language||"en").toLowerCase();if(raw.startsWith("ja"))return"ja";if(raw.startsWith("ko"))return"ko";return"en";}
+const UI_LANG_LS_KEY="finals_tracker_ui_lang_v1";
+let forcedUiLanguage=null;
+function normalizeUiLang(raw){
+  const s=String(raw||"").toLowerCase();
+  if(s.startsWith("ja"))return"ja";
+  if(s.startsWith("ko"))return"ko";
+  return"en";
+}
+function uiLang(){
+  if(forcedUiLanguage)return forcedUiLanguage;
+  try{
+    const saved=localStorage.getItem(UI_LANG_LS_KEY);
+    if(saved){forcedUiLanguage=normalizeUiLang(saved);return forcedUiLanguage;}
+  }catch{}
+  forcedUiLanguage=normalizeUiLang((document&&document.documentElement&&document.documentElement.lang)||navigator.language||"en");
+  return forcedUiLanguage;
+}
+function uiLocale(){return uiLang()==="ja"?"ja-JP":uiLang()==="ko"?"ko-KR":"en-US";}
 function t(key,vars){const dict=UI_TEXT[uiLang()]||UI_TEXT.en;let out=(dict[key]??UI_TEXT.en[key]??key);if(vars&&typeof out==="string"){for(const[k,v]of Object.entries(vars))out=out.replaceAll("{"+k+"}",String(v));}return out;}
+function inferLangFromElement(el){
+  if(!el)return null;
+  const raw=el.dataset?.lang||el.dataset?.uiLang||el.getAttribute?.("lang")||el.id||el.textContent||"";
+  const s=String(raw).toLowerCase();
+  if(s.includes("ja")||s.includes("日本"))return"ja";
+  if(s.includes("ko")||s.includes("한국"))return"ko";
+  if(s.includes("en")||s.includes("english"))return"en";
+  return null;
+}
+function resolveUiToken(raw){
+  const txt=String(raw||"").trim();
+  if(!txt) return null;
+  const dict=UI_TEXT[uiLang()]||UI_TEXT.en||{};
+  const en=UI_TEXT.en||{};
+  if(Object.prototype.hasOwnProperty.call(dict,txt)||Object.prototype.hasOwnProperty.call(en,txt)) return txt;
+  const lower=txt.toLowerCase();
+  if(Object.prototype.hasOwnProperty.call(dict,lower)||Object.prototype.hasOwnProperty.call(en,lower)) return lower;
+  const thMap={"th.name":"th.name","th.rank":"th.rank","th.points":"th.points","th.delta":"th.delta","th.changed":"th.changed","th.state":"th.state","th.next":"th.next","th.last_ok":"th.last_ok","th.error":"th.error","th.action":"th.action"};
+  if(thMap[lower]) return thMap[lower];
+  if(/^state\.[a-z0-9_]+$/i.test(txt)){
+    const normalized='state.'+txt.split('.').slice(1).join('_').toUpperCase();
+    if(Object.prototype.hasOwnProperty.call(dict,normalized)||Object.prototype.hasOwnProperty.call(en,normalized)) return normalized;
+  }
+  return null;
+}
+function patchVisibleI18nTokens(root=document){
+  const host=root?.body||root?.documentElement||root;
+  if(!host) return;
+  const walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);
+  const textNodes=[];
+  while(walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach(node=>{
+    const original=node.nodeValue;
+    const txt=String(original||"").trim();
+    if(!txt) return;
+    const tokenKey=resolveUiToken(txt);
+    if(tokenKey){ node.nodeValue=String(original).replace(txt,t(tokenKey)); return; }
+    if(/^(TH|th|state|log|legend|action|phase|enc|error|btn)\./.test(txt)){
+      const mapped=resolveUiToken(txt.replace(/^TH\./,'th.'));
+      if(mapped) node.nodeValue=String(original).replace(txt,t(mapped));
+    }
+  });
+  if(host.querySelectorAll){
+    host.querySelectorAll('[title],[aria-label],[placeholder],[data-i18n]').forEach(el=>{
+      ['title','aria-label','placeholder','data-i18n'].forEach(attr=>{
+        const raw=el.getAttribute&&el.getAttribute(attr);
+        if(!raw) return;
+        const tokenKey=resolveUiToken(raw);
+        if(tokenKey && attr!=='data-i18n') el.setAttribute(attr,t(tokenKey));
+        if(tokenKey && attr==='data-i18n'){
+          if(el.childElementCount===0) el.textContent=t(tokenKey);
+        }
+      });
+    });
+  }
+}
+function refreshLanguageUI(){
+  if(document?.documentElement)document.documentElement.lang=uiLang();
+  patchVisibleI18nTokens(document);
+  applyPersistentUiTweaks();
+  updateLogToggleButton();
+  if(lastRows?.length){
+    renderTable(lastRows);
+    renderSpark(lastRows);
+    if(logViewMode==="timeline")renderLogTimeline();
+    else renderLogList();
+  }
+}
+function bindLanguageTabs(){
+  const selectors='[data-lang],[data-ui-lang],#langJa,#langEn,#langKo,#btnLangJa,#btnLangEn,#btnLangKo,#tabLangJa,#tabLangEn,#tabLangKo,.langTab,.languageTab';
+  document.querySelectorAll(selectors).forEach(el=>{
+    const lang=inferLangFromElement(el);
+    if(!lang || el.dataset.langBound==="1")return;
+    el.dataset.langBound="1";
+    el.addEventListener("click",()=>{
+      forcedUiLanguage=lang;
+      try{localStorage.setItem(UI_LANG_LS_KEY,lang);}catch{}
+      refreshLanguageUI();
+    });
+  });
+}
 function encounterQuickLabel(typeKey){const key=String(typeKey||"");if(key.startsWith("r1"))return t("enc.quick.r1");if(key.startsWith("r2"))return t("enc.quick.r2");if(key.startsWith("fr"))return t("enc.quick.fr");if(key==="won")return t("enc.quick.win");if(key==="offline")return t("enc.quick.off");if(key==="final_end")return t("enc.quick.fr");return key;}
 function encounterDisplayLabel(item,settings){
   if(!item) return "";
@@ -21,11 +119,161 @@ function encounterDisplayLabel(item,settings){
   if(typeof item.label==="function") return item.label(settings);
   return item.label||key;
 }
-function compactErrorText(err){
-  const s=String(err||"");
-  return s.length>18 ? s.slice(0,18)+"…" : s;
+function quickEncounterGroupHtml(groupKey){
+  const group=findEncounterType(groupKey);
+  const s=currentSettings||getUiSettings();
+  if(!group||!group.sub)return"";
+  return `<div class="encQuickGroup" style="position:relative;display:inline-block;">
+    <button class="encQuickGroupBtn" data-group="${groupKey}" title="${encounterDisplayLabel(group,s)}" style="min-width:36px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #23415f;background:#0c1b2b;color:#cfe6ff;font-size:11px;">${encounterQuickLabel(groupKey)} ▾</button>
+    <div class="encQuickMenu" style="display:none;position:absolute;top:27px;left:0;z-index:60;min-width:82px;padding:4px;border-radius:8px;border:1px solid #23415f;background:#0b1624;box-shadow:0 10px 24px rgba(0,0,0,.35);">
+      ${group.sub.map(sub=>`<button class="encQuickSubBtn" data-ev="${sub.key}" title="${encounterDisplayLabel(sub,s)}" style="display:block;width:100%;margin:2px 0;height:24px;padding:0 8px;text-align:left;border-radius:6px;border:1px solid #1c3550;background:#102131;color:#d7ecff;font-size:11px;">${t("phase."+sub.key.split("_")[1])}</button>`).join("")}
+    </div>
+  </div>`;
 }
+function compactErrorText(err){return err?t("error.short"):"";}
 function updateLogToggleButton(){const btn=document.getElementById("btnLogTimeline");if(!btn)return;btn.textContent=logViewMode==="timeline"?t("log.switch.list"):t("log.switch.timeline");btn.title=t("log.switch.hint");}
+
+const FIXED_ROUND_MODEL={r1Min:10,r2Min:10,frMin:8,jitter:3};
+function roundModel(settings){
+  const s=settings||currentSettings||loadSettings()||{};
+  return {
+    r1Min:Number.isFinite(Number(s.r1Min))?Number(s.r1Min):FIXED_ROUND_MODEL.r1Min,
+    r2Min:Number.isFinite(Number(s.r2Min))?Number(s.r2Min):FIXED_ROUND_MODEL.r2Min,
+    frMin:Number.isFinite(Number(s.frMin))?Number(s.frMin):FIXED_ROUND_MODEL.frMin,
+    jitter:Number.isFinite(Number(s.roundJitterMin))?Number(s.roundJitterMin):FIXED_ROUND_MODEL.jitter
+  };
+}
+function roundMax(roundKey,settings){
+  const m=roundModel(settings);
+  if(roundKey==="r1") return m.r1Min+m.jitter;
+  if(roundKey==="r2") return m.r2Min+m.jitter;
+  return m.frMin+m.jitter;
+}
+function encounterPhaseMinute(roundKey,phase,settings){
+  const max=roundMax(roundKey,settings);
+  if(roundKey==="fr"){
+    if(phase==="early") return Math.min(max,2);
+    if(phase==="mid") return Math.min(max,6);
+    return Math.min(max,10);
+  }
+  if(phase==="early") return Math.min(max,3);
+  if(phase==="mid") return Math.min(max,7);
+  return Math.min(max,11);
+}
+function totalMatchWindow(settings){
+  return roundMax("r1",settings)+roundMax("r2",settings)+roundMax("fr",settings);
+}
+function settingContainerFor(el){
+  if(!el) return null;
+  const targetIds=["matchWait","matchAvg","matchJitter","reflectDelay","pollInterval","tournamentTotal","rsDropThreshold","enableEstimator","estWindowStart","estWindowSize","estCacheSec","maxEvents"];
+  let node=el;
+  while(node&&node!==document.body){
+    const hits=targetIds.filter(id=>node.querySelector&&node.querySelector("#"+id)).length;
+    if(hits===1 && node!==document.body) return node;
+    node=node.parentElement;
+  }
+  return el.parentElement;
+}
+function replaceTextInNode(root,re,txt){
+  if(!root) return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  const nodes=[];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(n=>{
+    if(re.test(n.nodeValue||"")) n.nodeValue=(n.nodeValue||"").replace(re,txt);
+  });
+}
+function translateWaitBlock(){
+  const wrap=settingContainerFor(document.getElementById("matchWait"));
+  if(!wrap) return;
+  const label=uiLang()==="ja"?"マッチ待機時間":uiLang()==="ko"?"매치 대기 시간":"Match wait";
+  replaceTextInNode(wrap,/(^|\b)(Wait|Match wait|match wait|マッチ待機時間|매치 대기 시간)(\b|$)/g,label);
+  wrap.querySelectorAll("label,span,div").forEach(el=>{
+    const txt=(el.textContent||"").trim();
+    if(!txt) return;
+    if(/^(Wait|Match wait|match wait|マッチ待機時間|매치 대기 시간)$/i.test(txt)) el.textContent=label;
+  });
+}
+function translateMinuteUnits(){
+  const unit=uiLang()==="ja"?"分":uiLang()==="ko"?"분":"min";
+  ["matchWait"].forEach(id=>{
+    const wrap=settingContainerFor(document.getElementById(id));
+    if(!wrap) return;
+    wrap.querySelectorAll("small,span,div,label").forEach(el=>{
+      const txt=(el.textContent||"").trim();
+      if(/^(min|mins|minutes|分|분)$/i.test(txt)) el.textContent=unit;
+    });
+  });
+}
+function hideAdvancedSettingsExceptWait(){
+  const ids=["matchAvg","matchJitter","reflectDelay","pollInterval","tournamentTotal","rsDropThreshold","enableEstimator","estWindowStart","estWindowSize","estCacheSec","maxEvents"];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    const box=settingContainerFor(el);
+    if(box) box.style.display="none";
+  });
+}
+function hideStateColumn(){
+  const tbody=document.getElementById("tbody");
+  const table=tbody?.closest?.("table");
+  if(!table) return;
+  table.querySelectorAll("tr").forEach(tr=>{
+    const cell=tr.children&&tr.children[5];
+    if(cell) cell.style.display="none";
+  });
+}
+function applyPersistentUiTweaks(){
+  hideAdvancedSettingsExceptWait();
+  translateWaitBlock();
+  translateMinuteUnits();
+  hideStateColumn();
+}
+function rewriteTrackedName(oldName,newName){
+  const oldKey=String(oldName||"").trim().toLowerCase();
+  const newClean=String(newName||"").trim();
+  const newKey=newClean.toLowerCase();
+  if(!oldKey||!newKey||oldKey===newKey) return false;
+
+  const ta=document.getElementById("namesBox");
+  if(ta){
+    const updated=parseNames(ta.value).map(n=>n.toLowerCase()===oldKey?newClean:n);
+    ta.value=parseNames(updated.join("\n")).join("\n");
+    saveNamesToLocal(parseNames(ta.value));
+  }
+
+  const snaps=getSnapshots();
+  if(snaps[oldKey]){
+    snaps[newKey]={...(snaps[newKey]||{}),...snaps[oldKey]};
+    delete snaps[oldKey];
+    saveSnapshots(snaps);
+  }
+
+  try{
+    const events=getEvents().map(ev=>ev&&ev.name&&ev.name.toLowerCase()===oldKey?{...ev,name:newClean}:ev);
+    localStorage.setItem(LS.events,JSON.stringify(events));
+  }catch{}
+
+  const list=getCommunityList();
+  const oldEntry=list.find(e=>(e.name||"").toLowerCase()===oldKey);
+  const newEntry=list.find(e=>(e.name||"").toLowerCase()===newKey);
+  if(oldEntry){
+    if(newEntry){
+      Object.assign(newEntry,{...oldEntry,...newEntry,name:newClean,updatedAt:Date.now()});
+      const filtered=list.filter(e=>(e.name||"").toLowerCase()!==oldKey);
+      saveCommunityList(filtered);
+    }else{
+      oldEntry.name=newClean;
+      oldEntry.updatedAt=Date.now();
+      saveCommunityList(list);
+    }
+  }
+
+  globalNames=globalNames.map(n=>String(n).toLowerCase()===oldKey?newClean:n);
+  if(expandedRows.has(oldKey)){expandedRows.delete(oldKey);expandedRows.add(newKey);}
+  if(pickedUp.has(oldKey)){pickedUp.delete(oldKey);pickedUp.add(newKey);}
+  lastRows=lastRows.map(r=>r&&String(r.name||"").toLowerCase()===oldKey?{...r,name:newClean}:r);
+  return true;
+}
 // バックエンド URL 自動解決：明示設定がなければ同オリジン（Worker 配信時）を使用
 function autoOrigin(){const o=location.origin;return(o==="null"||o.startsWith("file:")||o.includes("localhost")||o.includes("127.0.0.1"))?"":o;}
 function effectiveProxyBase(s){return(s.proxyBase||"").replace(/\/$/,"")||autoOrigin();}
@@ -547,22 +795,21 @@ const ENCOUNTER_TYPES=[
   {key:"won",       label:"🏆 勝利",     desc:"試合に勝利した（即ロビーへ）",     getOffset:s=>0},
   {key:"final_end", label:"💀 FINAL終了", desc:"FINALラウンド終了（負け）",        getOffset:s=>0},
   {key:"r1", label:"R1", desc:"ラウンド1で遭遇", group:true, sub:[
-    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterPhaseMinute("r1","early",s)},
+    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterPhaseMinute("r1","mid",s)},
+    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterPhaseMinute("r1","late",s)},
   ]},
   {key:"r2", label:"R2", desc:"ラウンド2で遭遇", group:true, sub:[
-    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+roundMax("r1",s)+encounterPhaseMinute("r2","early",s)},
+    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+roundMax("r1",s)+encounterPhaseMinute("r2","mid",s)},
+    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+roundMax("r1",s)+encounterPhaseMinute("r2","late",s)},
   ]},
   {key:"fr", label:"FR", desc:"ファイナルラウンドで遭遇", group:true, sub:[
-    {key:"fr_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"fr_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"fr_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+    {key:"fr_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+roundMax("r1",s)+roundMax("r2",s)+encounterPhaseMinute("fr","early",s)},
+    {key:"fr_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+roundMax("r1",s)+roundMax("r2",s)+encounterPhaseMinute("fr","mid",s)},
+    {key:"fr_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+roundMax("r1",s)+roundMax("r2",s)+encounterPhaseMinute("fr","late",s)},
   ]},
-  // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
-  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
+  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.matchWaitMin+totalMatchWindow(s)+30},
 ];
 // サブタイプを含むフラット検索
 function findEncounterType(key){
@@ -783,6 +1030,10 @@ function getUiSettings(){
     matchAvgMin:parseInt(document.getElementById("matchAvg").value,10),
     matchJitterMin:parseInt(document.getElementById("matchJitter").value,10),
     tournamentTotalMin:parseInt(document.getElementById("tournamentTotal").value,10),
+    r1Min:DEFAULTS.r1Min,
+    r2Min:DEFAULTS.r2Min,
+    frMin:DEFAULTS.frMin,
+    roundJitterMin:DEFAULTS.roundJitterMin,
     estimatorEnabled:document.getElementById("enableEstimator")?document.getElementById("enableEstimator").checked:false,
     estWindowStart:document.getElementById("estWindowStart")?parseInt(document.getElementById("estWindowStart").value,10):2000,
     estWindowSize:document.getElementById("estWindowSize")?parseInt(document.getElementById("estWindowSize").value,10):500,
@@ -914,53 +1165,47 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
   if(!lastChangeAtMs) return { state:"UNKNOWN", nextMatchProb:0 };
 
   const tMin = (now - lastChangeAtMs) / 60000;
-  const X = reflectDelayMin;
+  const X = Math.max(0, Number(reflectDelayMin)||0);
+  const W = Math.max(0, Math.min(30, Number(matchWaitMin)||5));
+  const R1 = roundMax("r1");
+  const R2 = roundMax("r2");
+  const FR = roundMax("fr");
+  const total = R1 + R2 + FR;
 
   if(!skipOffline20){
-    // ① バッチ検出済み：lastBatchAt が lastChangeAt より 5分以上新しい
-    //    → 最新バッチでこのプレイヤーのポイント変動なし = OFFLINE確定
     const lastBatch = estimator.lastBatchAt;
-    const BATCH_BUF_MS = 5 * 60 * 1000; // ポーリングズレ吸収バッファ
+    const BATCH_BUF_MS = 5 * 60 * 1000;
     if(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS){
       return { state:"OFFLINE", nextMatchProb:0 };
     }
-    // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック（20分固定）
-    if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
+    if(!lastBatch && tMin >= X + W + total + 25) return { state:"OFFLINE", nextMatchProb:0 };
   }
-  const W = Math.max(0, Math.min(30, matchWaitMin ?? 5));   // lobby/queue wait before next match
-  const M = Math.max(20, Math.min(60, matchAvgMin || 31));  // minimum match duration (31min fastest)
-  const J = Math.max(0, Math.min(10, matchJitterMin ?? 3)); // +jitter tolerance (one-sided)
-  const T = Math.max(M + W + 5, Math.min(180, tournamentTotalMin || 70));
 
-  // State transitions
   let state = "LOBBY";
-  if(tMin < X)                 state = "POST_MATCH_WAIT";
-  else if(tMin < X + W)        state = "LOBBY";              // queuing for next match
-  else if(tMin < X + W + M)    state = "IN_MATCH";           // minimum 31min not elapsed → in match
-  else if(tMin < X + W + M + J) state = "IN_MATCH";          // +3min gray zone
-  else if(tMin < X + T)        state = "IN_TOURNAMENT_DEEP";
-  else if(tMin < X + T + 25)   state = "RETURNING";
-  else                         state = "OFFLINE";
+  if(tMin < X) state = "POST_MATCH_WAIT";
+  else if(tMin < X + W) state = "LOBBY";
+  else if(tMin < X + W + R1) state = "IN_MATCH";
+  else if(tMin < X + W + R1 + R2 + FR) state = "IN_TOURNAMENT_DEEP";
+  else if(tMin < X + W + total + 25) state = "RETURNING";
+  else state = "OFFLINE";
 
-  // next_match%: peaks at (X+W) = when next match is expected to start
-  const peak = X + W;
-  const matchEnd = X + W + M + J;
+  const queuePeak = X + W;
+  const matchEnd = X + W + total;
   let p = 0;
-  if(tMin < X) {
-    p = 0.05 * (tMin / Math.max(1, X));
-  } else if(tMin <= peak) {
-    p = 0.10 + 0.90 * ((tMin - X) / Math.max(1, W));
-  } else if(tMin <= peak + M * 0.25) {
-    p = 1.00 - 0.55 * ((tMin - peak) / Math.max(1, M * 0.25));
-  } else if(tMin <= matchEnd) {
-    p = 0.45 - 0.25 * ((tMin - (peak + M * 0.25)) / Math.max(1, matchEnd - peak - M * 0.25));
-  } else if(tMin <= X + T) {
-    p = 0.20 - 0.10 * ((tMin - matchEnd) / Math.max(1, X + T - matchEnd));
-  } else {
-    p = 0.05;
+  if(tMin < X){
+    p = 0.04 * (tMin / Math.max(1, X));
+  }else if(tMin <= queuePeak){
+    p = 0.12 + 0.88 * ((tMin - X) / Math.max(1, W));
+  }else if(tMin <= queuePeak + R1 * 0.3){
+    p = 1.0 - 0.50 * ((tMin - queuePeak) / Math.max(1, R1 * 0.3));
+  }else if(tMin <= matchEnd){
+    p = 0.50 - 0.35 * ((tMin - (queuePeak + R1 * 0.3)) / Math.max(1, matchEnd - (queuePeak + R1 * 0.3)));
+  }else if(tMin <= X + W + total + 25){
+    p = 0.12 - 0.07 * ((tMin - matchEnd) / Math.max(1, 25));
+  }else{
+    p = 0.03;
   }
-
-  p = Math.min(0.80, clamp01(p)); // 最高80%（100%前提の見え方を避ける）
+  p = Math.min(0.80, clamp01(p));
   return { state, nextMatchProb: Math.round(p * 100) };
 }
 
@@ -1055,11 +1300,11 @@ function renderTable(rows){
       <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
-      <td class="errCell" title="${r.error||""}">${compactErrorText(r.error||"")}</td>
+      <td class="errCell" style="max-width:52px;width:52px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.error||""}">${compactErrorText(r.error||"")}</td>
       <td class="actCell"><div class="encQuickBar" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
-        <button class="encQuickBtn" data-ev="r1_mid" title="${encounterDisplayLabel("r1_mid",currentSettings||getUiSettings())}" style="min-width:34px;height:24px;padding:0 6px;border-radius:6px;border:1px solid #23415f;background:#0c1b2b;color:#cfe6ff;font-size:11px;">${encounterQuickLabel("r1_mid")}</button>
-        <button class="encQuickBtn" data-ev="r2_mid" title="${encounterDisplayLabel("r2_mid",currentSettings||getUiSettings())}" style="min-width:34px;height:24px;padding:0 6px;border-radius:6px;border:1px solid #23415f;background:#0c1b2b;color:#cfe6ff;font-size:11px;">${encounterQuickLabel("r2_mid")}</button>
-        <button class="encQuickBtn" data-ev="fr_mid" title="${encounterDisplayLabel("fr_mid",currentSettings||getUiSettings())}" style="min-width:34px;height:24px;padding:0 6px;border-radius:6px;border:1px solid #23415f;background:#0c1b2b;color:#cfe6ff;font-size:11px;">${encounterQuickLabel("fr_mid")}</button>
+        ${quickEncounterGroupHtml("r1")}
+        ${quickEncounterGroupHtml("r2")}
+        ${quickEncounterGroupHtml("fr")}
         <button class="encQuickBtn" data-ev="won" title="${encounterDisplayLabel("won",currentSettings||getUiSettings())}" style="min-width:34px;height:24px;padding:0 6px;border-radius:6px;border:1px solid #2f5a2f;background:#102312;color:#d7ffd7;font-size:11px;">${encounterQuickLabel("won")}</button>
         <button class="encQuickBtn" data-ev="offline" title="${encounterDisplayLabel("offline",currentSettings||getUiSettings())}" style="min-width:40px;height:24px;padding:0 6px;border-radius:6px;border:1px solid #4b5563;background:#161b22;color:#d1d5db;font-size:11px;">${encounterQuickLabel("offline")}</button>
         ${liveTabMode==="global"?"":`<button class="deleteBtn" title="${t("action.delete")}" style="min-width:24px;height:24px;">✕</button>`}
@@ -1067,12 +1312,25 @@ function renderTable(rows){
     `;
     tr.querySelector(".pickupBtn").addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
     tr.querySelector(".nameCell").addEventListener("click",()=>toggleExpand(r,tr,key));
+    tr.querySelectorAll(".encQuickGroupBtn").forEach(btn=>btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const menu=btn.nextElementSibling;
+      const willOpen=menu&&menu.style.display!=="block";
+      tr.querySelectorAll(".encQuickMenu").forEach(m=>m.style.display="none");
+      if(menu)menu.style.display=willOpen?"block":"none";
+    }));
+    tr.querySelectorAll(".encQuickSubBtn").forEach(btn=>btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      applyEncounterEvent(r.name,btn.dataset.ev);
+      tr.querySelectorAll(".encQuickMenu").forEach(m=>m.style.display="none");
+    }));
     tr.querySelectorAll(".encQuickBtn").forEach(btn=>btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,btn.dataset.ev);}));
     const delBtn=tr.querySelector(".deleteBtn");
     if(delBtn) delBtn.addEventListener("click",(e)=>{e.stopPropagation();removePlayer(r.name);});
     tbody.appendChild(tr);
     if(isExpanded) tbody.appendChild(buildExpandRow(r,key));
   }
+  applyPersistentUiTweaks();
 }
 function renderSpark(rows){
   const wrap=document.getElementById("sparkWrap");if(!wrap)return;wrap.innerHTML="";
@@ -1145,6 +1403,7 @@ async function pollOnce(names,settings){
   const snapshots=getSnapshots();
   const now=nowMs();
   const rows=[];
+  const pendingNameRewrites=[];
   let anyCors=false;
   // コミュニティリストの region をマップ化（Live table region filter 用）
   const communityRegionMap=new Map(getCommunityList().map(e=>[e.name.toLowerCase(),e.region||""]));
@@ -1217,6 +1476,7 @@ async function pollOnce(names,settings){
         if(matchEntry){
           suspectedReason="NAME_CHANGE";
           suspectedNewName=pickName(matchEntry)||null;
+          if(suspectedNewName && suspectedNewName.toLowerCase()!==key) pendingNameRewrites.push({oldName:name,newName:suspectedNewName});
           toast("🔄 <b>"+name+"</b> が名前を変更しました → <b>"+(suspectedNewName||"不明")+"</b>");
         }else{
           suspectedReason="BAN";
@@ -1247,6 +1507,21 @@ async function pollOnce(names,settings){
     }
     rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
   }));
+  if(pendingNameRewrites.length){
+    pendingNameRewrites.forEach(({oldName,newName})=>{
+      const oldKey=String(oldName||"").toLowerCase();
+      const newKey=String(newName||"").toLowerCase();
+      if(!oldKey||!newKey||oldKey===newKey) return;
+      if(snapshots[oldKey]){
+        snapshots[newKey]={...(snapshots[newKey]||{}),...snapshots[oldKey]};
+        delete snapshots[oldKey];
+      }
+      rows.forEach((row,idx)=>{
+        if(String(row.name||"").toLowerCase()===oldKey) rows[idx]={...row,name:newName};
+      });
+      rewriteTrackedName(oldName,newName);
+    });
+  }
   saveSnapshots(snapshots);
   // コミュニティ登録済みプレイヤーのスナップショットをバックエンドに送信（タブに関係なく共有）
   const _gs=getUiSettings();
@@ -1354,7 +1629,7 @@ function renderLogList(){
   for(const e of logs){
     const d=new Date(e.ts);
     const dateStr=d.toLocaleDateString(undefined,{month:"short",day:"numeric",weekday:"short"});
-    const timeStr=d.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+    const timeStr=d.toLocaleTimeString(uiLocale(),{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
     if(dateStr!==lastDate){html+=`<div class="logDateSep">${dateStr}</div>`;lastDate=dateStr;}
     const fromC=LOG_STATE_COLOR[e.from]||"#8ea0b7";
     const toC=LOG_STATE_COLOR[e.to]||"#e7edf5";
@@ -1423,8 +1698,8 @@ function renderLogTimeline(){
       const x=labelW+((seg.start-timeStart)/totalDur)*trackW;
       const w=Math.max(((seg.end-seg.start)/totalDur)*trackW,1);
       const color=LOG_STATE_COLOR[seg.state]||"#8ea0b7";
-      const startStr=new Date(seg.start).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
-      const endStr=new Date(seg.end).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",hour12:false});
+      const startStr=new Date(seg.start).toLocaleTimeString(uiLocale(),{hour:"2-digit",minute:"2-digit",hour12:false});
+      const endStr=new Date(seg.end).toLocaleTimeString(uiLocale(),{hour:"2-digit",minute:"2-digit",hour12:false});
       svgRows+=`<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${rowH}" fill="${color}" opacity="0.82" rx="2"><title>${stateLabel(seg.state)}\n${startStr} → ${endStr}</title></rect>`;
     }
     // 区切り線
@@ -1450,7 +1725,7 @@ function renderLogTimeline(){
   axis+=`<text x="${nowX.toFixed(1)}" y="${padTop-5}" text-anchor="middle" fill="#ff9944" font-size="9" font-weight="bold" font-family="system-ui,sans-serif">${t("log.now")}</text>`;
 
   // 凡例
-  const legendStates=[["OFFLINE","#8ea0b7","Offline"],["LOBBY","#5b9cf6","Lobby"],["IN_MATCH","#39d98a","In Match"],["IN_TOURNAMENT_DEEP","#c77dff","Final/Tournament"],["NOT_FOUND","#ff9944","Missing"],["BANNED","#ff5555","Banned"]];
+  const legendStates=[["OFFLINE","#8ea0b7",t("legend.offline")],["LOBBY","#5b9cf6",t("legend.lobby")],["IN_MATCH","#39d98a",t("legend.inmatch")],["IN_TOURNAMENT_DEEP","#c77dff",t("legend.deep")],["NOT_FOUND","#ff9944",t("legend.missing")],["BANNED","#ff5555",t("legend.banned")]];
   let legend=`<div style="margin:4px 0 8px;color:#8fb0d1;font-size:11px;">${t("log.summary")} · ${t("log.legend")}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
   for(const [,color,label] of legendStates){
     legend+=`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#b8c4d6;"><span style="width:14px;height:14px;border-radius:3px;background:${color};opacity:0.85;display:inline-block;"></span>${label}</span>`;
@@ -1743,7 +2018,11 @@ async function init(){
   }catch{}
   // ────────────────────────────────────────────────────────────
   try{
-    const s=loadSettings();applySettingsToUi(s);
+    forcedUiLanguage=normalizeUiLang((()=>{try{return localStorage.getItem(UI_LANG_LS_KEY)||((document&&document.documentElement&&document.documentElement.lang)||navigator.language||"en");}catch{return (document&&document.documentElement&&document.documentElement.lang)||navigator.language||"en";}})());
+    if(document?.documentElement)document.documentElement.lang=forcedUiLanguage;
+    bindLanguageTabs();
+    patchVisibleI18nTokens(document);
+    const s=loadSettings();applySettingsToUi(s);applyPersistentUiTweaks();
     // URL → localStorage の優先順でプレイヤーリストを復元
     const urlNames=loadNamesFromUrl();
     const savedNames=urlNames&&urlNames.length?urlNames:loadNamesFromLocal();
@@ -2099,6 +2378,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   }
 
   setRunning(false);
+  refreshLanguageUI();
   toast(t("toast.ready"));
 }
 init();
