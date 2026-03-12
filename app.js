@@ -34,17 +34,52 @@ function inferLangFromElement(el){
   if(s.includes("en")||s.includes("english"))return"en";
   return null;
 }
+function resolveUiToken(raw){
+  const txt=String(raw||"").trim();
+  if(!txt) return null;
+  const dict=UI_TEXT[uiLang()]||UI_TEXT.en||{};
+  const en=UI_TEXT.en||{};
+  if(Object.prototype.hasOwnProperty.call(dict,txt)||Object.prototype.hasOwnProperty.call(en,txt)) return txt;
+  const lower=txt.toLowerCase();
+  if(Object.prototype.hasOwnProperty.call(dict,lower)||Object.prototype.hasOwnProperty.call(en,lower)) return lower;
+  const thMap={"th.name":"th.name","th.rank":"th.rank","th.points":"th.points","th.delta":"th.delta","th.changed":"th.changed","th.state":"th.state","th.next":"th.next","th.last_ok":"th.last_ok","th.error":"th.error","th.action":"th.action"};
+  if(thMap[lower]) return thMap[lower];
+  if(/^state\.[a-z0-9_]+$/i.test(txt)){
+    const normalized='state.'+txt.split('.').slice(1).join('_').toUpperCase();
+    if(Object.prototype.hasOwnProperty.call(dict,normalized)||Object.prototype.hasOwnProperty.call(en,normalized)) return normalized;
+  }
+  return null;
+}
 function patchVisibleI18nTokens(root=document){
-  const tokenMap={
-    "TH.NAME":"th.name","TH.RANK":"th.rank","TH.POINTS":"th.points","TH.DELTA":"th.delta","TH.CHANGED":"th.changed","TH.STATE":"th.state","TH.NEXT":"th.next","TH.LAST_OK":"th.last_ok","TH.ERROR":"th.error","TH.ACTION":"th.action",
-    "state.LOBBY":"state.LOBBY","state.IN_MATCH_R1":"state.IN_MATCH_R1","state.IN_MATCH_R2":"state.IN_MATCH_R2","state.FINAL":"state.FINAL","state.OFFLINE":"state.OFFLINE","state.UNKNOWN":"state.UNKNOWN","state.NOT_FOUND":"state.NOT_FOUND","state.BANNED":"state.BANNED","state.NAME_CHANGED":"state.NAME_CHANGED"
-  };
-  (root.querySelectorAll?root.querySelectorAll("*"):[]).forEach(el=>{
-    if(!el || el.children.length) return;
-    const txt=(el.textContent||"").trim();
+  const host=root?.body||root?.documentElement||root;
+  if(!host) return;
+  const walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);
+  const textNodes=[];
+  while(walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach(node=>{
+    const original=node.nodeValue;
+    const txt=String(original||"").trim();
     if(!txt) return;
-    if(tokenMap[txt]) el.textContent=t(tokenMap[txt]);
+    const tokenKey=resolveUiToken(txt);
+    if(tokenKey){ node.nodeValue=String(original).replace(txt,t(tokenKey)); return; }
+    if(/^(TH|th|state|log|legend|action|phase|enc|error|btn)\./.test(txt)){
+      const mapped=resolveUiToken(txt.replace(/^TH\./,'th.'));
+      if(mapped) node.nodeValue=String(original).replace(txt,t(mapped));
+    }
   });
+  if(host.querySelectorAll){
+    host.querySelectorAll('[title],[aria-label],[placeholder],[data-i18n]').forEach(el=>{
+      ['title','aria-label','placeholder','data-i18n'].forEach(attr=>{
+        const raw=el.getAttribute&&el.getAttribute(attr);
+        if(!raw) return;
+        const tokenKey=resolveUiToken(raw);
+        if(tokenKey && attr!=='data-i18n') el.setAttribute(attr,t(tokenKey));
+        if(tokenKey && attr==='data-i18n'){
+          if(el.childElementCount===0) el.textContent=t(tokenKey);
+        }
+      });
+    });
+  }
 }
 function refreshLanguageUI(){
   if(document?.documentElement)document.documentElement.lang=uiLang();
