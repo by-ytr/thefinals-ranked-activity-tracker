@@ -7,6 +7,16 @@ const UI_TEXT={
   ko:{"now":"지금","enc.label":"📝 조우 기록","enc.active":"기록 중","enc.priority":"우선 예측","enc.recorded":"기록","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"승","enc.quick.off":"오프","enc.won":"🏆 승리","enc.final_end":"💀 파이널 종료","enc.offline":"⚫ 오프라인","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"초반","phase.mid":"중반","phase.late":"후반","memo":"📝 메모","server":"서버","log.none":"로그 없음","log.legend":"색상=상태 / 가로축=오늘 시간대","log.switch.timeline":"📊 타임라인 보기","log.switch.list":"📋 목록 보기","log.switch.hint":"로그 보기 전환","log.summary":"최근 20명 / 오늘 흐름","log.now":"NOW","log.latest":"현재","action.delete":"삭제","action.pickup":"픽업(대형 그래프에 추가)","state.LOBBY":"로비","state.IN_MATCH_R1":"R1 경기 중","state.IN_MATCH_R2":"R2 경기 중","state.FINAL":"파이널 후","state.OFFLINE":"오프라인","state.UNKNOWN":"알 수 없음","state.NOT_FOUND":"미검출","state.BANNED":"BAN","state.NAME_CHANGED":"이름 변경","state.manual.offline":"수동으로 오프라인으로 기록됨","state.manual.won":"수동으로 승리 후 복귀 구간으로 기록됨","state.manual.final":"수동으로 파이널 종료 후 복귀 구간으로 기록됨","state.manual.r1":"수동으로 R1 경기 중으로 기록됨","state.manual.r2":"수동으로 R2 이후 경기 중으로 기록됨","state.manual.generic":"수동 기록 '{label}' 이 예측보다 우선합니다","log.lastConfirmed":"마지막 확인","log.notFound":"연속 미검출","error.short":"오류","legend.offline":"오프라인","legend.lobby":"로비","legend.inmatch":"경기 중","legend.deep":"R2/FR","legend.missing":"미검출","legend.banned":"BAN","th.name":"이름","th.rank":"랭크","th.points":"RS","th.delta":"변동","th.changed":"갱신","th.state":"상태","th.next":"다음 경기 %","th.last_ok":"마지막 확인","th.error":"오류","th.action":"동작"}
 };
 const UI_LANG_LS_KEY="finals_tracker_ui_lang_v1";
+Object.assign(UI_TEXT.ja,{"tab.personal":"自分のリスト","tab.global":"グローバルリスト","tab.pickup":"⭐ 注目","live.title":"Liveテーブル","btn.add":"追加","btn.clear_local":"ローカルデータ削除","btn.stop_share":"共有停止","adv.title":"高度な設定","run.stopped":"停止中","run.running":"実行中","th.last_poll":"最終取得","th.next_match":"次戦率","region.all":"全て","region.as":"AS","region.eu":"EU","region.na":"NA","btn.timeline":"タイムライン","btn.list":"リスト","btn.export":"エクスポート","btn.clear":"クリア","btn.copy_global":"グローバルにコピー","btn.login":"ログイン","btn.logout":"ログアウト","btn.create_account":"アカウント作成","btn.test_first":"先頭プレイヤーをテスト","label.changed":"変動","label.inferred":"推定","label.error":"Error"});
+Object.assign(UI_TEXT.en,{"tab.personal":"My List","tab.global":"Global List","tab.pickup":"⭐ Featured","live.title":"Live Table","btn.add":"Add","btn.clear_local":"Clear Local Data","btn.stop_share":"Stop Share","adv.title":"Advanced Settings","run.stopped":"Stopped","run.running":"Running","th.last_poll":"Last Poll","th.next_match":"Next Match %","region.all":"All","region.as":"AS","region.eu":"EU","region.na":"NA","btn.timeline":"Timeline","btn.list":"List","btn.export":"Export","btn.clear":"Clear","btn.copy_global":"Copy to Global","btn.login":"Log In","btn.logout":"Log Out","btn.create_account":"Create Account","btn.test_first":"Test First Player","label.changed":"Changed","label.inferred":"Inferred","label.error":"Error"});
+Object.assign(UI_TEXT.ko,{"tab.personal":"내 목록","tab.global":"글로벌 목록","tab.pickup":"⭐ 주목","live.title":"라이브 테이블","btn.add":"추가","btn.clear_local":"로컬 데이터 삭제","btn.stop_share":"공유 중지","adv.title":"고급 설정","run.stopped":"중지됨","run.running":"실행 중","th.last_poll":"마지막 조회","th.next_match":"다음 경기 %","region.all":"전체","region.as":"AS","region.eu":"EU","region.na":"NA","btn.timeline":"타임라인","btn.list":"목록","btn.export":"내보내기","btn.clear":"지우기","btn.copy_global":"글로벌로 복사","btn.login":"로그인","btn.logout":"로그아웃","btn.create_account":"계정 생성","btn.test_first":"첫 플레이어 테스트","label.changed":"변동","label.inferred":"추정","label.error":"오류"});
+const UI_PHRASES={
+  ja:{
+    'Add':'追加','Live table':'Liveテーブル','Clear local data':'ローカルデータ削除','Advanced 設定':'高度な設定','Advanced':'高度な設定','Stop Share':'共有停止','stopped':'停止中','running':'実行中','last poll':'最終取得','next_match%':'次戦率','last_poll':'最終取得','name':'名前','rank':'ランク','points':'RS','delta':'差分','inferred':'推定','state':'状態','error':'Error','?キューに入ってから次の試合が開始するまでの待ち時間（分）。':'?キューに入ってから次の試合が開始するまでの待機時間（分）。','Match wait':'マッチ待機時間','Wait':'マッチ待機時間','Match':'試合時間','+jitter':'誤差','Tournament':'大会全体時間','Reflect X':'反映遅延','Interval':'取得間隔','Season':'シーズン','Platform':'プラットフォーム','Enable':'有効化','Window start':'開始順位','Window size':'監視件数','Cache':'キャッシュ','Last batch':'最終バッチ','Changed':'変化件数','Max events':'最大イベント数','Test first player':'先頭プレイヤーをテスト','Export':'エクスポート','Timeline':'タイムライン','CSV Export':'CSVエクスポート','CSV':'CSV','JSONL':'JSONL','My List':'自分のリスト','Global List':'グローバルリスト','Pickup':'注目','tab.personal':'自分のリスト','tab.global':'グローバルリスト','tab.pickup':'⭐ 注目','live.title':'Liveテーブル','btn.add':'追加','btn.clear':'クリア','btn.export':'エクスポート','btn.login':'ログイン','btn.logout':'ログアウト','btn.create_account':'アカウント作成','region.all':'全て','region.as':'AS','region.eu':'EU','region.na':'NA','adv.title':'高度な設定'},
+  ko:{
+    'Add':'추가','Live table':'라이브 테이블','Clear local data':'로컬 데이터 삭제','Advanced 設定':'고급 설정','Advanced':'고급 설정','Stop Share':'공유 중지','stopped':'중지됨','running':'실행 중','last poll':'마지막 조회','next_match%':'다음 경기 %','last_poll':'마지막 조회','name':'이름','rank':'랭크','points':'RS','delta':'변동','inferred':'추정','state':'상태','error':'오류','Match wait':'매치 대기 시간','Wait':'매치 대기 시간','Match':'경기 시간','+jitter':'오차','Tournament':'대회 전체 시간','Reflect X':'반영 지연','Interval':'조회 간격','Season':'시즌','Platform':'플랫폼','Enable':'활성화','Window start':'시작 순위','Window size':'감시 개수','Cache':'캐시','Last batch':'마지막 배치','Changed':'변화 수','Max events':'최대 이벤트 수','Test first player':'첫 플레이어 테스트','Export':'내보내기','Timeline':'타임라인','CSV Export':'CSV 내보내기','CSV':'CSV','JSONL':'JSONL','My List':'내 목록','Global List':'글로벌 목록','Pickup':'주목','tab.personal':'내 목록','tab.global':'글로벌 목록','tab.pickup':'⭐ 주목','live.title':'라이브 테이블','btn.add':'추가','btn.clear':'지우기','btn.export':'내보내기','btn.login':'로그인','btn.logout':'로그아웃','btn.create_account':'계정 생성','region.all':'전체','region.as':'AS','region.eu':'EU','region.na':'NA','adv.title':'고급 설정'}
+};
+
 let forcedUiLanguage=null;
 function normalizeUiLang(raw){
   const s=String(raw||"").toLowerCase();
@@ -25,6 +35,23 @@ function uiLang(){
 }
 function uiLocale(){return uiLang()==="ja"?"ja-JP":uiLang()==="ko"?"ko-KR":"en-US";}
 function t(key,vars){const dict=UI_TEXT[uiLang()]||UI_TEXT.en;let out=(dict[key]??UI_TEXT.en[key]??key);if(vars&&typeof out==="string"){for(const[k,v]of Object.entries(vars))out=out.replaceAll("{"+k+"}",String(v));}return out;}
+function replaceKnownPhrasesInText(raw){
+  let out=String(raw||"");
+  const map=UI_PHRASES[uiLang()]||{};
+  const entries=Object.entries(map).sort((a,b)=>b[0].length-a[0].length);
+  for(const [from,to] of entries){
+    if(!from || from===to) continue;
+    out=out.split(from).join(to);
+  }
+  return out;
+}
+function replaceKnownPhrasesInElement(el){
+  if(!el) return;
+  ['title','aria-label','placeholder'].forEach(attr=>{
+    const v=el.getAttribute&&el.getAttribute(attr);
+    if(v) el.setAttribute(attr,replaceKnownPhrasesInText(v));
+  });
+}
 function inferLangFromElement(el){
   if(!el)return null;
   const raw=el.dataset?.lang||el.dataset?.uiLang||el.getAttribute?.("lang")||el.id||el.textContent||"";
@@ -42,8 +69,16 @@ function resolveUiToken(raw){
   if(Object.prototype.hasOwnProperty.call(dict,txt)||Object.prototype.hasOwnProperty.call(en,txt)) return txt;
   const lower=txt.toLowerCase();
   if(Object.prototype.hasOwnProperty.call(dict,lower)||Object.prototype.hasOwnProperty.call(en,lower)) return lower;
-  const thMap={"th.name":"th.name","th.rank":"th.rank","th.points":"th.points","th.delta":"th.delta","th.changed":"th.changed","th.state":"th.state","th.next":"th.next","th.last_ok":"th.last_ok","th.error":"th.error","th.action":"th.action"};
-  if(thMap[lower]) return thMap[lower];
+  const aliasMap={
+    'th.name':'th.name','th.rank':'th.rank','th.points':'th.points','th.delta':'th.delta','th.changed':'th.changed','th.state':'th.state','th.next':'th.next','th.last_ok':'th.last_ok','th.error':'th.error','th.action':'th.action',
+    'th.last_poll':'th.last_poll','th.next_match':'th.next_match',
+    'tab.personal':'tab.personal','tab.global':'tab.global','tab.pickup':'tab.pickup',
+    'live.title':'live.title','adv.title':'adv.title',
+    'region.all':'region.all','region.as':'region.as','region.eu':'region.eu','region.na':'region.na',
+    'btn.add':'btn.add','btn.clear_local':'btn.clear_local','btn.stop_share':'btn.stop_share','btn.timeline':'btn.timeline','btn.list':'btn.list','btn.export':'btn.export','btn.clear':'btn.clear','btn.copy_global':'btn.copy_global','btn.login':'btn.login','btn.logout':'btn.logout','btn.create_account':'btn.create_account','btn.test_first':'btn.test_first',
+    'run.stopped':'run.stopped','run.running':'run.running','label.changed':'label.changed','label.inferred':'label.inferred','label.error':'label.error'
+  };
+  if(aliasMap[lower]) return aliasMap[lower];
   if(/^state\.[a-z0-9_]+$/i.test(txt)){
     const normalized='state.'+txt.split('.').slice(1).join('_').toUpperCase();
     if(Object.prototype.hasOwnProperty.call(dict,normalized)||Object.prototype.hasOwnProperty.call(en,normalized)) return normalized;
@@ -57,27 +92,40 @@ function patchVisibleI18nTokens(root=document){
   const textNodes=[];
   while(walker.nextNode()) textNodes.push(walker.currentNode);
   textNodes.forEach(node=>{
-    const original=node.nodeValue;
-    const txt=String(original||"").trim();
-    if(!txt) return;
-    const tokenKey=resolveUiToken(txt);
-    if(tokenKey){ node.nodeValue=String(original).replace(txt,t(tokenKey)); return; }
-    if(/^(TH|th|state|log|legend|action|phase|enc|error|btn)\./.test(txt)){
-      const mapped=resolveUiToken(txt.replace(/^TH\./,'th.'));
-      if(mapped) node.nodeValue=String(original).replace(txt,t(mapped));
-    }
+    const original=String(node.nodeValue||"");
+    const trimmed=original.trim();
+    if(!trimmed) return;
+    let updated=original;
+    const tokenKey=resolveUiToken(trimmed);
+    if(tokenKey) updated=updated.replace(trimmed,t(tokenKey));
+    const inlineTokenRegex=/(?:TH|th|state|log|legend|action|phase|enc|error|btn|tab|live|region|adv|run|label)\.[A-Za-z0-9_]+/g;
+    updated=updated.replace(inlineTokenRegex,(m)=>{
+      const mapped=resolveUiToken(m.replace(/^TH\./,'th.'));
+      return mapped?t(mapped):m;
+    });
+    updated=replaceKnownPhrasesInText(updated);
+    if(updated!==original) node.nodeValue=updated;
   });
   if(host.querySelectorAll){
-    host.querySelectorAll('[title],[aria-label],[placeholder],[data-i18n]').forEach(el=>{
+    host.querySelectorAll('*').forEach(el=>{
+      if(el.childElementCount===0 && el.textContent){
+        const original=el.textContent;
+        const trimmed=original.trim();
+        const tokenKey=resolveUiToken(trimmed);
+        let updated=original;
+        if(tokenKey) updated=updated.replace(trimmed,t(tokenKey));
+        updated=replaceKnownPhrasesInText(updated);
+        if(updated!==original) el.textContent=updated;
+      }
       ['title','aria-label','placeholder','data-i18n'].forEach(attr=>{
         const raw=el.getAttribute&&el.getAttribute(attr);
         if(!raw) return;
         const tokenKey=resolveUiToken(raw);
         if(tokenKey && attr!=='data-i18n') el.setAttribute(attr,t(tokenKey));
-        if(tokenKey && attr==='data-i18n'){
-          if(el.childElementCount===0) el.textContent=t(tokenKey);
-        }
+        else if(attr!=='data-i18n') el.setAttribute(attr,replaceKnownPhrasesInText(raw));
+        if(tokenKey && attr==='data-i18n' && el.childElementCount===0) el.textContent=t(tokenKey);
       });
+      replaceKnownPhrasesInElement(el);
     });
   }
 }
@@ -2379,6 +2427,10 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
 
   setRunning(false);
   refreshLanguageUI();
+  try{
+    const mo=new MutationObserver(()=>patchVisibleI18nTokens(document));
+    mo.observe(document.body,{childList:true,subtree:true,characterData:true});
+  }catch{}
   toast(t("toast.ready"));
 }
 init();
