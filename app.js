@@ -1,11 +1,7 @@
 const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
 
-const UI_TEXT={
-  ja:{"now":"今","enc.label":"📝 遭遇記録","enc.active":"記録中","enc.priority":"優先予測","enc.recorded":"を記録","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"勝","enc.quick.off":"オフ","enc.won":"🏆 勝利","enc.final_end":"💀 FINAL終了","enc.offline":"⚫ オフライン","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"序盤","phase.mid":"中盤","phase.late":"終盤","memo":"📝 メモ","server":"サーバー","log.none":"ログなし","log.legend":"色=状態 / 横軸=今日の時刻","log.switch.timeline":"📊 タイムライン表示","log.switch.list":"📋 リスト表示","log.switch.hint":"表示形式を切り替え","log.summary":"最新20人 / 今日の推移","log.now":"NOW","log.latest":"現在","action.delete":"削除","action.pickup":"ピックアップ（大型グラフに追加）","state.LOBBY":"ロビー","state.IN_MATCH_R1":"R1試合中","state.IN_MATCH_R2":"R2試合中","state.FINAL":"ファイナル後","state.OFFLINE":"オフライン","state.UNKNOWN":"不明","state.NOT_FOUND":"未検出","state.BANNED":"BAN","state.NAME_CHANGED":"名前変更","state.manual.offline":"手動でオフライン状態として記録中","state.manual.won":"手動で勝利後の戻り時間帯を記録中","state.manual.final":"手動でFinal Round終了後の戻り時間帯を記録中","state.manual.r1":"手動でR1試合中として記録中","state.manual.r2":"手動でR2以降の試合中として記録中","state.manual.generic":"手動記録「{label}」を優先表示中","log.lastConfirmed":"最終確認","log.notFound":"連続未検出","error.short":"Error","legend.offline":"オフライン","legend.lobby":"ロビー","legend.inmatch":"試合中","legend.deep":"R2/FR","legend.missing":"未検出","legend.banned":"BAN","th.name":"名前","th.rank":"ランク","th.points":"RS","th.delta":"変動","th.changed":"更新","th.state":"状態","th.next":"次戦率","th.last_ok":"最終確認","th.error":"Error","th.action":"操作"},
-  en:{"now":"Now","enc.label":"📝 Encounter","enc.active":"Active","enc.priority":"Priority override","enc.recorded":"recorded","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"WIN","enc.quick.off":"OFF","enc.won":"🏆 Win","enc.final_end":"💀 Final End","enc.offline":"⚫ Offline","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"Early","phase.mid":"Mid","phase.late":"Late","memo":"📝 Memo","server":"Server","log.none":"No logs","log.legend":"Color = state / X-axis = today","log.switch.timeline":"📊 Timeline View","log.switch.list":"📋 List View","log.switch.hint":"Switch log view","log.summary":"Latest 20 players / today","log.now":"NOW","log.latest":"Current","action.delete":"Remove","action.pickup":"Pickup (add to large graph)","state.LOBBY":"Lobby","state.IN_MATCH_R1":"R1 Match","state.IN_MATCH_R2":"R2 Match","state.FINAL":"Post Final","state.OFFLINE":"Offline","state.UNKNOWN":"Unknown","state.NOT_FOUND":"Missing","state.BANNED":"Banned","state.NAME_CHANGED":"Name Changed","state.manual.offline":"Manually marked as offline","state.manual.won":"Manually marked as post-win return window","state.manual.final":"Manually marked as post-final return window","state.manual.r1":"Manually marked as in R1","state.manual.r2":"Manually marked as in R2 or later","state.manual.generic":"Manual record '{label}' is overriding prediction","log.lastConfirmed":"Last seen","log.notFound":"Misses","error.short":"Error","legend.offline":"Offline","legend.lobby":"Lobby","legend.inmatch":"In Match","legend.deep":"R2/FR","legend.missing":"Missing","legend.banned":"Banned","th.name":"Name","th.rank":"Rank","th.points":"RS","th.delta":"Delta","th.changed":"Changed","th.state":"Status","th.next":"Next %","th.last_ok":"Last Seen","th.error":"Error","th.action":"Action"},
-  ko:{"now":"지금","enc.label":"📝 조우 기록","enc.active":"기록 중","enc.priority":"우선 예측","enc.recorded":"기록","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"승","enc.quick.off":"오프","enc.won":"🏆 승리","enc.final_end":"💀 파이널 종료","enc.offline":"⚫ 오프라인","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"초반","phase.mid":"중반","phase.late":"후반","memo":"📝 메모","server":"서버","log.none":"로그 없음","log.legend":"색상=상태 / 가로축=오늘 시간대","log.switch.timeline":"📊 타임라인 보기","log.switch.list":"📋 목록 보기","log.switch.hint":"로그 보기 전환","log.summary":"최근 20명 / 오늘 흐름","log.now":"NOW","log.latest":"현재","action.delete":"삭제","action.pickup":"픽업(대형 그래프에 추가)","state.LOBBY":"로비","state.IN_MATCH_R1":"R1 경기 중","state.IN_MATCH_R2":"R2 경기 중","state.FINAL":"파이널 후","state.OFFLINE":"오프라인","state.UNKNOWN":"알 수 없음","state.NOT_FOUND":"미검출","state.BANNED":"BAN","state.NAME_CHANGED":"이름 변경","state.manual.offline":"수동으로 오프라인으로 기록됨","state.manual.won":"수동으로 승리 후 복귀 구간으로 기록됨","state.manual.final":"수동으로 파이널 종료 후 복귀 구간으로 기록됨","state.manual.r1":"수동으로 R1 경기 중으로 기록됨","state.manual.r2":"수동으로 R2 이후 경기 중으로 기록됨","state.manual.generic":"수동 기록 '{label}' 이 예측보다 우선합니다","log.lastConfirmed":"마지막 확인","log.notFound":"연속 미검출","error.short":"오류","legend.offline":"오프라인","legend.lobby":"로비","legend.inmatch":"경기 중","legend.deep":"R2/FR","legend.missing":"미검출","legend.banned":"BAN","th.name":"이름","th.rank":"랭크","th.points":"RS","th.delta":"변동","th.changed":"갱신","th.state":"상태","th.next":"다음 경기 %","th.last_ok":"마지막 확인","th.error":"오류","th.action":"동작"}
-};
+const UI_TEXT={"ja":{"now":"今","site.sub":"外部リーダーボードの更新から活動状態を推定します。","search.placeholder":"プレイヤー名を検索・追加","search.hint":"Embark ID・Steam・PSN・Xbox に対応。追加すると自動で監視開始します。","btn.add":"追加","btn.clear":"ローカルデータ削除","btn.stop":"停止","btn.share":"共有","btn.copyToGlobal":"グローバルにコピー","btn.login":"ログイン","btn.logout":"ログアウト","btn.admin":"管理","btn.cancel":"キャンセル","live.title":"LIVEテーブル","live.hint":"現在の監視状況","live.search":"LIVE検索","tab.personal":"自分のリスト","tab.global":"グローバルリスト","tab.pickup":"注目","region.all":"全て","adv.matchsetting":"高度な設定","adv.summary":"設定の概要","log.title":"状態変化ログ","personal.hint":"Embark ID（name#1234）を改行またはカンマ区切りで入力。","status.stopped":"停止中","status.running":"監視中","status.last_poll":"最終ポーリング","status.unknown":"不明","enc.label":"📝 遭遇記録","enc.active":"記録中","enc.priority":"優先予測","enc.recorded":"を記録","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"勝","enc.quick.off":"オフ","enc.won":"🏆 勝利","enc.final_end":"💀 FINAL終了","enc.offline":"⚫ オフライン","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"序盤","phase.mid":"中盤","phase.late":"終盤","memo":"📝 メモ","server":"サーバー","log.none":"ログなし","log.legend":"色=状態 / 横軸=今日の時刻","log.switch.timeline":"📊 タイムライン表示","log.switch.list":"📋 リスト表示","log.switch.hint":"表示形式を切り替え","log.summary":"最新20人 / 今日の推移","log.now":"NOW","log.latest":"現在","action.delete":"削除","action.pickup":"ピックアップ（大型グラフに追加）","state.LOBBY":"ロビー","state.IN_MATCH_R1":"R1試合中","state.IN_MATCH_R2":"R2試合中","state.FINAL":"ファイナル後","state.OFFLINE":"オフライン","state.UNKNOWN":"不明","state.NOT_FOUND":"未検出","state.BANNED":"BAN","state.NAME_CHANGED":"名前変更","state.manual.offline":"手動でオフライン状態として記録中","state.manual.won":"手動で勝利後の戻り時間帯を記録中","state.manual.final":"手動でFinal Round終了後の戻り時間帯を記録中","state.manual.r1":"手動でR1試合中として記録中","state.manual.r2":"手動でR2以降の試合中として記録中","state.manual.generic":"手動記録「{label}」を優先表示中","log.lastConfirmed":"最終確認","log.notFound":"連続未検出","error.short":"Error","legend.offline":"オフライン","legend.lobby":"ロビー","legend.inmatch":"試合中","legend.deep":"R2/FR","legend.missing":"未検出","legend.banned":"BAN","th.name":"名前","th.rank":"ランク","th.points":"RS","th.delta":"変動","th.changed":"更新","th.state":"状態","th.next":"次戦率","th.nextmatch":"次戦率","th.last_ok":"最終確認","th.lastpoll":"最終確認","th.error":"Error","th.action":"操作","toast.ready":"準備完了","toast.logout":"ログアウトしました"},"en":{"now":"Now","site.sub":"Estimate player activity from leaderboard updates.","search.placeholder":"Search and add a player","search.hint":"Supports Embark ID, Steam, PSN, and Xbox. Added players start monitoring automatically.","btn.add":"Add","btn.clear":"Clear local data","btn.stop":"Stop","btn.share":"Share","btn.copyToGlobal":"Copy to Global","btn.login":"Login","btn.logout":"Logout","btn.admin":"Admin","btn.cancel":"Cancel","live.title":"Live Table","live.hint":"Current watch status","live.search":"Live search","tab.personal":"Personal List","tab.global":"Global List","tab.pickup":"Pickup","region.all":"All","adv.matchsetting":"Advanced Settings","adv.summary":"Settings Summary","log.title":"State Change Log","personal.hint":"Enter Embark IDs (name#1234) separated by new lines or commas.","status.stopped":"stopped","status.running":"running","status.last_poll":"last poll","status.unknown":"unknown","enc.label":"📝 Encounter","enc.active":"Active","enc.priority":"Priority override","enc.recorded":"recorded","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"WIN","enc.quick.off":"OFF","enc.won":"🏆 Win","enc.final_end":"💀 Final End","enc.offline":"⚫ Offline","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"Early","phase.mid":"Mid","phase.late":"Late","memo":"📝 Memo","server":"Server","log.none":"No logs","log.legend":"Color = state / X-axis = today","log.switch.timeline":"📊 Timeline View","log.switch.list":"📋 List View","log.switch.hint":"Switch log view","log.summary":"Latest 20 players / today","log.now":"NOW","log.latest":"Current","action.delete":"Remove","action.pickup":"Pickup (add to large graph)","state.LOBBY":"Lobby","state.IN_MATCH_R1":"R1 Match","state.IN_MATCH_R2":"R2 Match","state.FINAL":"Post Final","state.OFFLINE":"Offline","state.UNKNOWN":"Unknown","state.NOT_FOUND":"Missing","state.BANNED":"Banned","state.NAME_CHANGED":"Name Changed","state.manual.offline":"Manually marked as offline","state.manual.won":"Manually marked as post-win return window","state.manual.final":"Manually marked as post-final return window","state.manual.r1":"Manually marked as in R1","state.manual.r2":"Manually marked as in R2 or later","state.manual.generic":"Manual record '{label}' is overriding prediction","log.lastConfirmed":"Last seen","log.notFound":"Misses","error.short":"Error","legend.offline":"Offline","legend.lobby":"Lobby","legend.inmatch":"In Match","legend.deep":"R2/FR","legend.missing":"Missing","legend.banned":"Banned","th.name":"Name","th.rank":"Rank","th.points":"RS","th.delta":"Delta","th.changed":"Changed","th.state":"Status","th.next":"Next %","th.nextmatch":"Next %","th.last_ok":"Last Seen","th.lastpoll":"Last Seen","th.error":"Error","th.action":"Action","toast.ready":"Ready","toast.logout":"Logged out"},"ko":{"now":"지금","site.sub":"리더보드 갱신을 기준으로 활동 상태를 추정합니다.","search.placeholder":"플레이어 검색 및 추가","search.hint":"Embark ID, Steam, PSN, Xbox를 지원합니다. 추가하면 자동으로 감시를 시작합니다.","btn.add":"추가","btn.clear":"로컬 데이터 삭제","btn.stop":"중지","btn.share":"공유","btn.copyToGlobal":"글로벌로 복사","btn.login":"로그인","btn.logout":"로그아웃","btn.admin":"관리","btn.cancel":"취소","live.title":"LIVE 테이블","live.hint":"현재 감시 상태","live.search":"LIVE 검색","tab.personal":"내 목록","tab.global":"글로벌 목록","tab.pickup":"주목","region.all":"전체","adv.matchsetting":"고급 설정","adv.summary":"설정 요약","log.title":"상태 변화 로그","personal.hint":"Embark ID(name#1234)를 줄바꿈 또는 쉼표로 구분해 입력하세요.","status.stopped":"중지됨","status.running":"감시 중","status.last_poll":"마지막 폴링","status.unknown":"알 수 없음","enc.label":"📝 조우 기록","enc.active":"기록 중","enc.priority":"우선 예측","enc.recorded":"기록","enc.quick.r1":"R1","enc.quick.r2":"R2","enc.quick.fr":"FR","enc.quick.win":"승","enc.quick.off":"오프","enc.won":"🏆 승리","enc.final_end":"💀 파이널 종료","enc.offline":"⚫ 오프라인","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","phase.early":"초반","phase.mid":"중반","phase.late":"후반","memo":"📝 메모","server":"서버","log.none":"로그 없음","log.legend":"색상=상태 / 가로축=오늘 시간대","log.switch.timeline":"📊 타임라인 보기","log.switch.list":"📋 목록 보기","log.switch.hint":"로그 보기 전환","log.summary":"최근 20명 / 오늘 흐름","log.now":"NOW","log.latest":"현재","action.delete":"삭제","action.pickup":"픽업(대형 그래프에 추가)","state.LOBBY":"로비","state.IN_MATCH_R1":"R1 경기 중","state.IN_MATCH_R2":"R2 경기 중","state.FINAL":"파이널 후","state.OFFLINE":"오프라인","state.UNKNOWN":"알 수 없음","state.NOT_FOUND":"미검출","state.BANNED":"BAN","state.NAME_CHANGED":"이름 변경","state.manual.offline":"수동으로 오프라인으로 기록됨","state.manual.won":"수동으로 승리 후 복귀 구간으로 기록됨","state.manual.final":"수동으로 파이널 종료 후 복귀 구간으로 기록됨","state.manual.r1":"수동으로 R1 경기 중으로 기록됨","state.manual.r2":"수동으로 R2 이후 경기 중으로 기록됨","state.manual.generic":"수동 기록 '{label}' 이 예측보다 우선합니다","log.lastConfirmed":"마지막 확인","log.notFound":"연속 미검출","error.short":"오류","legend.offline":"오프라인","legend.lobby":"로비","legend.inmatch":"경기 중","legend.deep":"R2/FR","legend.missing":"미검출","legend.banned":"BAN","th.name":"이름","th.rank":"랭크","th.points":"RS","th.delta":"변동","th.changed":"갱신","th.state":"상태","th.next":"다음 경기 %","th.nextmatch":"다음 경기 %","th.last_ok":"마지막 확인","th.lastpoll":"마지막 확인","th.error":"오류","th.action":"동작","toast.ready":"준비 완료","toast.logout":"로그아웃되었습니다"}};
 const UI_LANG_LS_KEY="finals_tracker_ui_lang_v1";
 let forcedUiLanguage=null;
 function normalizeUiLang(raw){
@@ -39,10 +35,30 @@ function resolveUiToken(raw){
   if(!txt) return null;
   const dict=UI_TEXT[uiLang()]||UI_TEXT.en||{};
   const en=UI_TEXT.en||{};
-  if(Object.prototype.hasOwnProperty.call(dict,txt)||Object.prototype.hasOwnProperty.call(en,txt)) return txt;
+  const aliases={
+    "th.nextmatch":"th.next","th.lastpoll":"th.last_ok","th.last_ok":"th.last_ok",
+    "btn.copytoglobal":"btn.copyToGlobal","btn.copyToGlobal":"btn.copyToGlobal",
+    "btn.login":"btn.login","btn.logout":"btn.logout","btn.admin":"btn.admin","btn.cancel":"btn.cancel",
+    "btn.add":"btn.add","btn.clear":"btn.clear","btn.stop":"btn.stop","btn.share":"btn.share",
+    "site.sub":"site.sub","search.placeholder":"search.placeholder","search.hint":"search.hint",
+    "live.title":"live.title","live.hint":"live.hint","live.search":"live.search",
+    "tab.personal":"tab.personal","tab.global":"tab.global","tab.pickup":"tab.pickup",
+    "region.all":"region.all","adv.matchsetting":"adv.matchsetting","adv.summary":"adv.summary",
+    "log.title":"log.title","personal.hint":"personal.hint",
+    "status.stopped":"status.stopped","status.running":"status.running","status.last_poll":"status.last_poll",
+    "status.lastpoll":"status.last_poll","status.unknown":"status.unknown"
+  };
+  const direct=[txt,txt.toLowerCase(),txt.replace(/^TH\./,'th.').toLowerCase()];
+  for(const cand of direct){
+    const key=aliases[cand]||cand;
+    if(Object.prototype.hasOwnProperty.call(dict,key)||Object.prototype.hasOwnProperty.call(en,key)) return key;
+  }
   const lower=txt.toLowerCase();
-  if(Object.prototype.hasOwnProperty.call(dict,lower)||Object.prototype.hasOwnProperty.call(en,lower)) return lower;
-  const thMap={"th.name":"th.name","th.rank":"th.rank","th.points":"th.points","th.delta":"th.delta","th.changed":"th.changed","th.state":"th.state","th.next":"th.next","th.last_ok":"th.last_ok","th.error":"th.error","th.action":"th.action"};
+  const thMap={
+    "th.name":"th.name","th.rank":"th.rank","th.points":"th.points","th.delta":"th.delta",
+    "th.changed":"th.changed","th.state":"th.state","th.next":"th.next","th.nextmatch":"th.next",
+    "th.last_ok":"th.last_ok","th.lastpoll":"th.last_ok","th.error":"th.error","th.action":"th.action"
+  };
   if(thMap[lower]) return thMap[lower];
   if(/^state\.[a-z0-9_]+$/i.test(txt)){
     const normalized='state.'+txt.split('.').slice(1).join('_').toUpperCase();
@@ -53,20 +69,35 @@ function resolveUiToken(raw){
 function patchVisibleI18nTokens(root=document){
   const host=root?.body||root?.documentElement||root;
   if(!host) return;
+  const replaceTokenInText=(text)=>{
+    const original=String(text||"");
+    const trimmed=original.trim();
+    if(!trimmed) return original;
+    const direct=resolveUiToken(trimmed);
+    if(direct) return original.replace(trimmed,t(direct));
+
+    const prefixMatch=trimmed.match(/^([A-Za-z][A-Za-z0-9_.-]+)(\s*(?:\([^)]*\)|[:：].*))$/);
+    if(prefixMatch){
+      const tokenKey=resolveUiToken(prefixMatch[1]);
+      if(tokenKey) return original.replace(trimmed, t(tokenKey)+prefixMatch[2]);
+    }
+
+    const tokenLike=trimmed.match(/^(TH|th|state|log|legend|action|phase|enc|error|btn|tab|live|search|site|adv|region|personal|status)\.[A-Za-z0-9_.-]+$/);
+    if(tokenLike){
+      const mapped=resolveUiToken(trimmed.replace(/^TH\./,'th.'));
+      if(mapped) return original.replace(trimmed,t(mapped));
+    }
+    return original;
+  };
+
   const walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);
   const textNodes=[];
   while(walker.nextNode()) textNodes.push(walker.currentNode);
   textNodes.forEach(node=>{
-    const original=node.nodeValue;
-    const txt=String(original||"").trim();
-    if(!txt) return;
-    const tokenKey=resolveUiToken(txt);
-    if(tokenKey){ node.nodeValue=String(original).replace(txt,t(tokenKey)); return; }
-    if(/^(TH|th|state|log|legend|action|phase|enc|error|btn)\./.test(txt)){
-      const mapped=resolveUiToken(txt.replace(/^TH\./,'th.'));
-      if(mapped) node.nodeValue=String(original).replace(txt,t(mapped));
-    }
+    const replaced=replaceTokenInText(node.nodeValue);
+    if(replaced!==node.nodeValue) node.nodeValue=replaced;
   });
+
   if(host.querySelectorAll){
     host.querySelectorAll('[title],[aria-label],[placeholder],[data-i18n]').forEach(el=>{
       ['title','aria-label','placeholder','data-i18n'].forEach(attr=>{
@@ -74,9 +105,7 @@ function patchVisibleI18nTokens(root=document){
         if(!raw) return;
         const tokenKey=resolveUiToken(raw);
         if(tokenKey && attr!=='data-i18n') el.setAttribute(attr,t(tokenKey));
-        if(tokenKey && attr==='data-i18n'){
-          if(el.childElementCount===0) el.textContent=t(tokenKey);
-        }
+        if(tokenKey && attr==='data-i18n' && el.childElementCount===0) el.textContent=t(tokenKey);
       });
     });
   }
