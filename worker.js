@@ -23,6 +23,18 @@
 
 const UPSTREAM_BASE = "https://api.the-finals-leaderboard.com/v1";
 
+const OFFICIAL_LB_BASE = "https://id.embark.games/the-finals/leaderboards";
+function textRes(text, status=200, contentType="text/plain; charset=utf-8"){
+  return new Response(text, {status, headers: {"Content-Type": contentType, ...corsHeaders("GET, OPTIONS")}});
+}
+async function fetchOfficialLastUpdated(season){
+  const target = `${OFFICIAL_LB_BASE}/${encodeURIComponent(season||"s9")}`;
+  const resp = await fetch(target, { headers: { "User-Agent": "finals-proxy" }});
+  const html = await resp.text();
+  const m = html.match(/Last updated:\s*([^<\n]+)/i);
+  return { token: m ? m[1].trim() : "", source: target };
+}
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 function corsHeaders(method = "GET, POST, DELETE, OPTIONS") {
   return {
@@ -115,6 +127,38 @@ export default {
     // Preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders() });
+    }
+
+
+    // ── static assets (Workers Assets) ────────────────────────────────────
+    const isStatic = request.method === "GET" && (
+      path === "/" ||
+      path === "/index.html" ||
+      path === "/app.js" ||
+      path === "/i18n.js" ||
+      path === "/style.css" ||
+      path === "/sw.js" ||
+      path === "/manifest.json" ||
+      path === "/robots.txt" ||
+      path === "/icon.svg" ||
+      /\.(js|css|html|svg|png|jpg|jpeg|webp|ico|txt|json|map)$/i.test(path)
+    );
+    if (isStatic && env.ASSETS) {
+      const assetRequest = path === "/"
+        ? new Request(new URL("/index.html", url), request)
+        : request;
+      return env.ASSETS.fetch(assetRequest);
+    }
+
+    // ── /api/official-last-updated — official HTML token proxy ────────────
+    if (path === "/api/official-last-updated") {
+      const season = url.searchParams.get("season") || "s9";
+      try {
+        const data = await fetchOfficialLastUpdated(season);
+        return jsonRes({ ok: true, ...data });
+      } catch (e) {
+        return jsonRes({ ok: false, error: String(e && e.message ? e.message : e) }, 500);
+      }
     }
 
     // ── /api/* — leaderboard proxy ─────────────────────────────────────────
