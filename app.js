@@ -951,23 +951,8 @@ async function fetchPlayer(proxyBase,leaderboardId,platform,name){
     return await r.json();
   }
 }
-
-function ensureLiveTableHeaders(){
-  const tbody=document.getElementById("tbody");
-  if(!tbody)return;
-  const table=tbody.closest("table");
-  if(!table)return;
-  const theadRow=table.querySelector("thead tr");
-  if(!theadRow)return;
-  const desired=[t("th.name"),t("th.rank"),t("th.points"),t("th.delta"),t("th.changed"),t("th.state"),t("th.next"),t("th.last_ok"),t("th.error"),t("th.action")];
-  const ths=Array.from(theadRow.children).filter(el=>el.tagName==="TH");
-  if(ths.length!==desired.length || ths.some((th,i)=>!String(th.textContent||"").trim() || String(th.textContent||"").trim().startsWith("TH.") || String(th.textContent||"").trim()!==desired[i])){
-    theadRow.innerHTML=desired.map(label=>`<th>${label}</th>`).join("");
-  }
-}
 function renderTable(rows){
   const tbody=document.getElementById("tbody");tbody.innerHTML="";
-  ensureLiveTableHeaders();
   let filtered=rows;
   // viewMode に応じて表示プレイヤーを絞り込む（ポーリングは両リスト共通）
   if(viewMode==="personal"){
@@ -1748,11 +1733,11 @@ async function init(){
     const names=parseNames(ta.value);
     if(names.length) saveNamesToLocal(names);
   });
-  document.getElementById("btnStop").addEventListener("click",()=>{
+  document.getElementById("btnStop")?.addEventListener("click",()=>{
     if(timer){clearTimeout(timer);timer=null;}
     setRunning(false);toast("stopped");
   });
-  document.getElementById("btnAdd").addEventListener("click",()=>{
+  document.getElementById("btnAdd")?.addEventListener("click",()=>{
     const si=document.getElementById("playerSearch");
     const name=si.value.trim();
     if(name){addPlayerAndStart(name);return;}
@@ -1761,7 +1746,7 @@ async function init(){
     if(names.length>0){doStart();toast("監視開始：<b>"+names.length+"人</b>");}
     else{toast("名前を入力してください");}
   });
-  document.getElementById("btnShare").addEventListener("click",async()=>{
+  document.getElementById("btnShare")?.addEventListener("click",async()=>{
     const names=parseNames(document.getElementById("namesBox").value);
     if(names.length===0){toast("Share: 名前が空です");return;}
     saveNamesToUrl(names);
@@ -1769,13 +1754,13 @@ async function init(){
     try{await navigator.clipboard.writeText(url);toast("Share link をコピーしました：<b>"+url+"</b>");}
     catch{toast("コピーできません。URLを手動コピーしてください：<b>"+url+"</b>");}
   });
-  document.getElementById("btnExportCsv").addEventListener("click",exportCsv);
-  document.getElementById("btnExportJsonl").addEventListener("click",exportJsonl);
-  document.getElementById("btnClear").addEventListener("click",()=>{
+  document.getElementById("btnExportCsv")?.addEventListener("click",exportCsv);
+  document.getElementById("btnExportJsonl")?.addEventListener("click",exportJsonl);
+  document.getElementById("btnClear")?.addEventListener("click",()=>{
     if(!confirm("localStorage の settings/snapshots/events を削除します。よろしいですか？"))return;
     clearLocal();toast("local data cleared");
   });
-  document.getElementById("btnTest").addEventListener("click",async()=>{
+  document.getElementById("btnTest")?.addEventListener("click",async()=>{
     const settings=getUiSettings();saveSettings(settings);
     const names=parseNames(document.getElementById("namesBox").value);
     if(names.length===0){toast("Test: 名前が空です");return;}
@@ -1806,8 +1791,8 @@ async function init(){
       if(ev.key==="Enter"){const name=si.value.trim();if(name)addPlayerAndStart(name);}
     });
   }
-  document.getElementById("tabPersonal").addEventListener("click",()=>{if(viewMode!=="personal")switchToPersonal();});
-  document.getElementById("tabGlobal").addEventListener("click",()=>{if(viewMode!=="global")switchToGlobal();});
+  document.getElementById("tabPersonal")?.addEventListener("click",()=>{if(viewMode!=="personal")switchToPersonal();});
+  document.getElementById("tabGlobal")?.addEventListener("click",()=>{if(viewMode!=="global")switchToGlobal();});
   // 地域フィルタータブ（グローバルリスト用）
   document.querySelectorAll(".globalRegionTab").forEach(btn=>{
     btn.addEventListener("click",()=>{
@@ -1821,7 +1806,7 @@ async function init(){
     });
   });
 // コミュニティ追加フォーム
-document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
+document.getElementById("btnCommunityAdd")?.addEventListener("click",async()=>{
   if(getEffectiveAllowedUsers().length>0&&!isLoggedIn()){
     showLoginModal(()=>document.getElementById("btnCommunityAdd").click());
     return;
@@ -1943,7 +1928,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     });
   }
   // ── ログインモーダル イベント ────────────────────────────────
-  document.getElementById("btnLoginSubmit").addEventListener("click",async()=>{
+  document.getElementById("btnLoginSubmit")?.addEventListener("click",async()=>{
     const id=document.getElementById("loginId").value.trim();
     const pw=document.getElementById("loginPassword").value;
     if(!id||!pw){document.getElementById("loginError").textContent="IDとパスワードを入力してください";return;}
@@ -1952,14 +1937,14 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     if(ok){setCurrentUser(id);hideLoginModal();if(_loginCallback)_loginCallback();}
     else{document.getElementById("loginError").textContent="IDまたはパスワードが正しくありません";}
   });
-  document.getElementById("btnLoginCancel").addEventListener("click",hideLoginModal);
-  document.getElementById("loginPassword").addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("btnLoginSubmit").click();});
-  document.getElementById("btnLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
+  document.getElementById("btnLoginCancel")?.addEventListener("click",hideLoginModal);
+  document.getElementById("loginPassword")?.addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("btnLoginSubmit").click();});
+  document.getElementById("btnLogout")?.addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
   // モーダル背景クリックで閉じる
-  document.getElementById("loginModal").addEventListener("click",(e)=>{if(e.target===e.currentTarget)hideLoginModal();});
+  document.getElementById("loginModal")?.addEventListener("click",(e)=>{if(e.target===e.currentTarget)hideLoginModal();});
 
   // ── アドミンパネル イベント ──────────────────────────────────
-  document.getElementById("btnAdminUnlock").addEventListener("click",async()=>{
+  document.getElementById("btnAdminUnlock")?.addEventListener("click",async()=>{
     const pw=document.getElementById("adminPasswordInput").value;
     if(!pw)return;
     const auth=getAuthData();
@@ -1974,7 +1959,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     document.getElementById("adminPanel").style.display="";
     renderAllowedUserList();
   });
-  document.getElementById("btnAddUser").addEventListener("click",async()=>{
+  document.getElementById("btnAddUser")?.addEventListener("click",async()=>{
     const id=document.getElementById("newUserId").value.trim();
     const pw=document.getElementById("newUserPassword").value;
     if(!id||!pw){toast("IDとパスワードを入力してください");return;}
@@ -1992,7 +1977,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     updateLoginStatus();
     toast("✅ ユーザー <b>"+id+"</b> を追加しました");
   });
-  document.getElementById("btnChangeAdminPassword").addEventListener("click",async()=>{
+  document.getElementById("btnChangeAdminPassword")?.addEventListener("click",async()=>{
     const pw=document.getElementById("newAdminPassword").value;
     if(!pw){toast("新しいパスワードを入力してください");return;}
     const auth=getAuthData();
@@ -2003,7 +1988,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   });
 
   // ── バックエンドに同期ボタン ─────────────────────────────────
-  document.getElementById("btnSyncAuth").addEventListener("click",async()=>{
+  document.getElementById("btnSyncAuth")?.addEventListener("click",async()=>{
     const settings=getUiSettings();
     if(!effectiveGlobalUrl(settings)){toast("⚠️ バックエンドに接続できません（ローカル環境では Worker URL の設定が必要です）");return;}
     const auth=getAuthData();
@@ -2020,19 +2005,19 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   });
 
   // ── Live tableソース切替タブ ──
-  document.getElementById("liveTabPersonal").addEventListener("click",()=>{
+  document.getElementById("liveTabPersonal")?.addEventListener("click",()=>{
     liveTabMode="personal";
     document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
     document.getElementById("liveTabPersonal").classList.add("active");
     if(viewMode!=="personal")switchToPersonal(); else renderTable(lastRows);
   });
-  document.getElementById("liveTabGlobal").addEventListener("click",()=>{
+  document.getElementById("liveTabGlobal")?.addEventListener("click",()=>{
     liveTabMode="global";
     document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
     document.getElementById("liveTabGlobal").classList.add("active");
     if(viewMode!=="global")switchToGlobal(); else renderTable(lastRows);
   });
-  document.getElementById("liveTabPickup").addEventListener("click",()=>{
+  document.getElementById("liveTabPickup")?.addEventListener("click",()=>{
     liveTabMode="pickup";
     document.querySelectorAll("#liveTabPersonal,#liveTabGlobal,#liveTabPickup").forEach(b=>b.classList.remove("active"));
     document.getElementById("liveTabPickup").classList.add("active");
@@ -2049,16 +2034,16 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   });
 
   // ── Live table 検索 ──
-  document.getElementById("liveSearch").addEventListener("input",e=>{
+  document.getElementById("liveSearch")?.addEventListener("input",e=>{
     liveSearchQuery=e.target.value.trim().toLowerCase();
     renderTable(lastRows);
   });
 
   // ── ヘッダー認証ボタン ──
-  document.getElementById("btnHeaderLogin").addEventListener("click",()=>showLoginModal());
-  document.getElementById("btnHeaderLogout").addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
-  document.getElementById("btnHeaderAdmin").addEventListener("click",()=>{document.getElementById("adminModal").style.display="flex";});
-  document.getElementById("btnAdminModalClose").addEventListener("click",()=>{document.getElementById("adminModal").style.display="none";});
+  document.getElementById("btnHeaderLogin")?.addEventListener("click",()=>showLoginModal());
+  document.getElementById("btnHeaderLogout")?.addEventListener("click",()=>{setCurrentUser(null);toast(t("toast.logout"));});
+  document.getElementById("btnHeaderAdmin")?.addEventListener("click",()=>{document.getElementById("adminModal").style.display="flex";});
+  document.getElementById("btnAdminModalClose")?.addEventListener("click",()=>{document.getElementById("adminModal").style.display="none";});
 
   // ── 初期ログイン状態を反映 + globalUrl があればバックエンドから取得 ──
   restoreSession(); // ページリロード後もログイン状態を復元
