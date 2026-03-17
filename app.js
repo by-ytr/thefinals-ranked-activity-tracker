@@ -1,6 +1,6 @@
 const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
-const ROUND_TIMING={r1Min:10,r1Max:12,r2Min:10,r2Max:12,frMin:8,frMax:11,returningMin:25};
+const ROUND_TIMING={r1Min:10,r1Max:13,r2Min:10,r2Max:13,frMin:8,frMax:11,returningMin:25};
 function getRoundTiming(){return ROUND_TIMING;}
 function getTournamentTiming(matchWaitMin){
   const rt=getRoundTiming();
