@@ -22,6 +22,76 @@ function encounterElapsedMin(roundKey,phaseKey){
   if(roundKey==="fr") return r1Mid+r2Mid+Math.min(phase,rt.frMax);
   return phase;
 }
+
+function uiLang(){
+  try{ if(typeof currentLang === "string" && currentLang) return currentLang; }catch(_){ }
+  const q=new URLSearchParams(location.search).get("lang");
+  if(q && /^(ja|ko|en)$/.test(q)) return q;
+  const docLang=(document.documentElement.lang||"").toLowerCase();
+  if(docLang.startsWith("ko")) return "ko";
+  if(docLang.startsWith("ja")) return "ja";
+  const nav=(navigator.language||"en").toLowerCase();
+  if(nav.startsWith("ko")) return "ko";
+  if(nav.startsWith("ja")) return "ja";
+  return "en";
+}
+function uiText(key){
+  const lang=uiLang();
+  const dict={
+    ja:{
+      "enc.label":"📝 遭遇記録","enc.active":"記録中",
+      "enc.won":"勝","enc.final_end":"FINAL終了","enc.offline":"オフ",
+      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
+      "enc.early":"序盤","enc.mid":"中盤","enc.late":"終盤",
+      "action.delete":"削除","th.action":"操作","th.error.short":"Error",
+      "pickup.title":"ピックアップ（大型グラフに追加）"
+    },
+    ko:{
+      "enc.label":"📝 조우 기록","enc.active":"기록 중",
+      "enc.won":"승","enc.final_end":"FINAL 종료","enc.offline":"오프",
+      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
+      "enc.early":"초반","enc.mid":"중반","enc.late":"후반",
+      "action.delete":"삭제","th.action":"동작","th.error.short":"오류",
+      "pickup.title":"픽업(대형 그래프에 추가)"
+    },
+    en:{
+      "enc.label":"📝 Encounter record","enc.active":"Active",
+      "enc.won":"WIN","enc.final_end":"FINAL END","enc.offline":"OFF",
+      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
+      "enc.early":"Early","enc.mid":"Mid","enc.late":"Late",
+      "action.delete":"Delete","th.action":"Action","th.error.short":"Error",
+      "pickup.title":"Pick up (add to large graph)"
+    }
+  };
+  return (dict[lang]&&dict[lang][key]) || (dict.en[key]) || key;
+}
+function encounterDisplayLabel(typeKey){
+  const map={
+    won:uiText("enc.won"), final_end:uiText("enc.final_end"), offline:uiText("enc.offline"),
+    r1:uiText("enc.r1"), r2:uiText("enc.r2"), fr:uiText("enc.fr"),
+    r1_early:`${uiText("enc.r1")}${uiText("enc.early")}`,
+    r1_mid:`${uiText("enc.r1")}${uiText("enc.mid")}`,
+    r1_late:`${uiText("enc.r1")}${uiText("enc.late")}`,
+    r2_early:`${uiText("enc.r2")}${uiText("enc.early")}`,
+    r2_mid:`${uiText("enc.r2")}${uiText("enc.mid")}`,
+    r2_late:`${uiText("enc.r2")}${uiText("enc.late")}`,
+    fr_early:`${uiText("enc.fr")}${uiText("enc.early")}`,
+    fr_mid:`${uiText("enc.fr")}${uiText("enc.mid")}`,
+    fr_late:`${uiText("enc.fr")}${uiText("enc.late")}`
+  };
+  return map[typeKey] || typeKey;
+}
+function compactErrorText(err){ return err ? uiText("th.error.short") : ""; }
+function quickEncounterGroupHtml(group){
+  const subMap={
+    r1:["r1_early","r1_mid","r1_late"],
+    r2:["r2_early","r2_mid","r2_late"],
+    fr:["fr_early","fr_mid","fr_late"]
+  };
+  const items=(subMap[group]||[]).map(ev=>`<button class="encQuickSubBtn" data-ev="${ev}" style="display:block;width:100%;padding:5px 8px;border:0;background:transparent;color:#d9e7ff;text-align:left;font-size:11px;cursor:pointer;">${encounterDisplayLabel(ev)}</button>`).join("");
+  return `<div class="encQuickGroup" style="position:relative;display:inline-block;"><button class="encQuickGroupBtn" data-group="${group}" title="${encounterDisplayLabel(group)}" style="min-width:40px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #244a6b;background:#0c1d2d;color:#d9e7ff;font-size:11px;">${encounterDisplayLabel(group)} ▾</button><div class="encQuickMenu" style="display:none;position:absolute;top:26px;left:0;z-index:30;min-width:92px;background:#091626;border:1px solid #183450;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:4px;"><div>${items}</div></div></div>`;
+}
+
 // バックエンド URL 自動解決：明示設定がなければ同オリジン（Worker 配信時）を使用
 function autoOrigin(){const o=location.origin;return(o==="null"||o.startsWith("file:")||o.includes("localhost")||o.includes("127.0.0.1"))?"":o;}
 function effectiveProxyBase(s){return(s.proxyBase||"").replace(/\/$/,"")||autoOrigin();}
@@ -67,57 +137,50 @@ function buildPlayerSparkEl(row){
 function buildExpandRow(r,key){
   const tr=document.createElement("tr");tr.className="expandRow";tr.dataset.for=key;
   const td=document.createElement("td");td.colSpan=10;td.className="expandCell";
-  // ── 遭遇記録パネル ──
   const panel=document.createElement("div");panel.className="encounterPanel";
-  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent="📝 遭遇記録";panel.appendChild(elabel);
+  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent=uiText("enc.label");panel.appendChild(elabel);
   const btns=document.createElement("div");btns.className="encounterBtns";
-  const s=currentSettings||getUiSettings();
   for(const et of ENCOUNTER_TYPES){
     if(et.group){
-      // ── グループボタン（R1/R2）：クリックでサブパネル展開 ──
       const wrap=document.createElement("div");wrap.className="encounterGroup";
       const gBtn=document.createElement("button");gBtn.className="encounterBtn encounterGroupBtn";
-      gBtn.title=et.desc;
-      gBtn.innerHTML=et.label+' <span class="groupCaret">▾</span>';
+      gBtn.title=encounterDisplayLabel(et.key);
+      gBtn.innerHTML=encounterDisplayLabel(et.key)+' <span class="groupCaret">▾</span>';
       const subPanel=document.createElement("div");subPanel.className="encounterSubPanel";
       for(const sub of et.sub){
         const sBtn=document.createElement("button");sBtn.className="encounterSubBtn";
-        sBtn.textContent=sub.label;sBtn.title="offset: -"+sub.getOffset(s)+"分";
+        sBtn.textContent=encounterDisplayLabel(sub.key);sBtn.title=encounterDisplayLabel(sub.key);
         sBtn.addEventListener("click",(e)=>{
           e.stopPropagation();
           applyEncounterEvent(r.name,sub.key);
           subPanel.classList.remove("open");
-          gBtn.querySelector(".groupCaret").textContent="▾";
+          const caret=gBtn.querySelector(".groupCaret"); if(caret) caret.textContent="▾";
+          renderTable(lastRows);
         });
         subPanel.appendChild(sBtn);
       }
       gBtn.addEventListener("click",(e)=>{
         e.stopPropagation();
         const isOpen=subPanel.classList.contains("open");
-        // 他のサブパネルを全部閉じる
         btns.querySelectorAll(".encounterSubPanel.open").forEach(p=>{
           p.classList.remove("open");
           const gc=p.previousElementSibling&&p.previousElementSibling.querySelector(".groupCaret");if(gc)gc.textContent="▾";
         });
-        if(!isOpen){subPanel.classList.add("open");gBtn.querySelector(".groupCaret").textContent="▴";}
+        if(!isOpen){subPanel.classList.add("open"); const caret=gBtn.querySelector(".groupCaret"); if(caret) caret.textContent="▴";}
       });
       wrap.appendChild(gBtn);wrap.appendChild(subPanel);btns.appendChild(wrap);
     }else{
       const btn=document.createElement("button");
       btn.className="encounterBtn"+(et.key==="offline"?" encounterBtn--offline":"");
-      btn.title=et.desc;btn.textContent=et.label+(et.overrideDurationMs?" ("+Math.round(et.overrideDurationMs/60000)+"分)":"");
-      btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);});
+      btn.title=encounterDisplayLabel(et.key);btn.textContent=encounterDisplayLabel(et.key);
+      btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);renderTable(lastRows);});
       btns.appendChild(btn);
     }
   }
   panel.appendChild(btns);
-  // アクティブな手動記録があれば残り時間を表示
   if(r.manualEvent){
-    const now2=nowMs();
-    const rem=manualRem(r.manualEvent);
     const activeEl=document.createElement("div");activeEl.className="encounterActive";
-    const et=findEncounterType(r.manualEvent.type);
-    activeEl.innerHTML="📌 <b>"+(et?et.label:r.manualEvent.type)+"</b> 記録中・残 <b>"+rem+"分</b> 優先予測";
+    activeEl.innerHTML="📌 <b>"+encounterDisplayLabel(r.manualEvent.type)+"</b> "+uiText("enc.active");
     panel.appendChild(activeEl);
   }
   td.appendChild(panel);
@@ -552,6 +615,11 @@ const ENCOUNTER_TYPES=[
     {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","mid")},
     {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","late")},
   ]},
+  {key:"fr", label:"FR", desc:"FINALラウンドで遭遇", group:true, sub:[
+    {key:"fr_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","early")},
+    {key:"fr_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","mid")},
+    {key:"fr_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","late")},
+  ]},
   // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
   {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+getTournamentTiming(s.matchWaitMin).totalMax+30},
 ];
@@ -844,7 +912,8 @@ function stateExplain(row,displayState){
     if(manual.type==="won") return "手動で勝利後の戻り時間帯を記録中";
     if(manual.type==="final_end") return "手動でFinal Round終了後の戻り時間帯を記録中";
     if(String(manual.type||"").startsWith("r1_")) return "手動でR1試合中として記録中";
-    if(String(manual.type||"").startsWith("r2_")) return "手動でR2以降の試合中として記録中";
+    if(String(manual.type||"").startsWith("r2_")) return "手動でR2試合中として記録中";
+    if(String(manual.type||"").startsWith("fr_")) return "手動でFR試合中として記録中";
     return `手動記録「${et?et.label:manual.type}」を優先表示中`;
   }
   switch(displayState){
