@@ -1041,6 +1041,8 @@ async function fetchPlayer(proxyBase,leaderboardId,platform,name){
 }
 function renderTable(rows){
   const tbody=document.getElementById("tbody");tbody.innerHTML="";
+  const theadLast=document.querySelector("#tbl thead th:last-child");
+  if(theadLast) theadLast.textContent=uiText("th.action");
   let filtered=rows;
   // viewMode に応じて表示プレイヤーを絞り込む（ポーリングは両リスト共通）
   if(viewMode==="personal"){
@@ -1078,6 +1080,7 @@ function renderTable(rows){
     return a.name.localeCompare(b.name);
   });
 
+  const isGlobalView=viewMode==="global";
   for(const r of filtered){
     const isMissing=r.notFoundCount>=3&&r.lastFoundAt;
     const isBan=isMissing&&r.suspectedReason==="BAN";
@@ -1098,8 +1101,16 @@ function renderTable(rows){
     const manualActive=isManualActive(r.manualEvent);
     const manualType=r.manualEvent?.type;
     const isWonOrFinal=manualType==="won"||manualType==="final_end";
-    const manualRemMin=manualActive?manualRem(r.manualEvent):0;
-    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualRemMin}m</span>`:"";
+    const manualBadge=manualActive?`<span class="manualBadge">📌 ${uiText("enc.active")}</span>`:"";
+    const errShort=compactErrorText(r.error);
+    const actionHtml=[
+      renderQuickEncounterGroup("r1"),
+      renderQuickEncounterGroup("r2"),
+      renderQuickEncounterGroup("fr"),
+      `<button class="encQuickBtn encQuickSingle" data-ev="won" title="${encounterDisplayLabel("won")}" style="min-width:36px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #2d5f15;background:#122b09;color:#d8ffd0;font-size:11px;cursor:pointer;">${encounterDisplayLabel("won")}</button>`,
+      `<button class="encQuickBtn encQuickSingle" data-ev="offline" title="${encounterDisplayLabel("offline")}" style="min-width:36px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #39475c;background:#151d29;color:#d4dceb;font-size:11px;cursor:pointer;">${encounterDisplayLabel("offline")}</button>`
+    ].join("");
+    const deleteHtml=isGlobalView?"":`<button class="deleteBtn" title="${uiText("action.delete")}" style="margin-left:4px;">✕</button>`;
     const tr=document.createElement("tr");
     if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
     else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
@@ -1112,13 +1123,22 @@ function renderTable(rows){
       <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
-      <td class="errCell">${r.error||""}</td>
-      <td class="actCell"><button class="resetBtn" title="遭遇記録（クリックで展開）">⚔</button><button class="deleteBtn" title="削除">✕</button></td>
+      <td class="errCell" title="${(r.error||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")}" style="max-width:68px;width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${errShort}</td>
+      <td class="actCell" style="white-space:nowrap;display:flex;align-items:center;gap:4px;">${actionHtml}${deleteHtml}</td>
     `;
-    tr.querySelector(".pickupBtn").addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
-    tr.querySelector(".nameCell").addEventListener("click",()=>toggleExpand(r,tr,key));
-    tr.querySelector(".resetBtn").addEventListener("click",(e)=>{e.stopPropagation();toggleExpand(r,tr,key);});
-    tr.querySelector(".deleteBtn").addEventListener("click",(e)=>{e.stopPropagation();removePlayer(r.name);});
+    tr.querySelector(".pickupBtn")?.addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
+    tr.querySelector(".nameCell")?.addEventListener("click",()=>toggleExpand(r,tr,key));
+    tr.querySelectorAll(".encQuickSingle").forEach(btn=>btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,btn.dataset.ev);renderTable(lastRows);}));
+    tr.querySelectorAll(".encQuickGroupBtn").forEach(btn=>btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const wrap=btn.closest(".encQuickGroup");
+      const menu=wrap?.querySelector(".encQuickMenu");
+      const isOpen=menu&&menu.style.display!=="none";
+      tr.querySelectorAll(".encQuickMenu").forEach(m=>m.style.display="none");
+      if(menu) menu.style.display=isOpen?"none":"block";
+    }));
+    tr.querySelectorAll(".encQuickSubBtn").forEach(btn=>btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,btn.dataset.ev);renderTable(lastRows);}));
+    tr.querySelector(".deleteBtn")?.addEventListener("click",(e)=>{e.stopPropagation();removePlayer(r.name);});
     tbody.appendChild(tr);
     if(isExpanded) tbody.appendChild(buildExpandRow(r,key));
   }
