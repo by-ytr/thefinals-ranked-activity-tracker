@@ -44,7 +44,7 @@
 <body>
   <header class="bar">
     <div class="left">
-      <div class="title" data-i18n="site.titlebar">THE FINALS – Ranked Activity Tracker</div>
+      <div class="title">THE FINALS – Ranked Activity Tracker</div>
       <div class="sub" data-i18n="site.sub">外部リーダーボードの更新から活動状態を推定します。</div>
     </div>
     <div class="right">
@@ -52,12 +52,12 @@
         <span id="statusDot" class="dot off"></span>
         <span id="runState">stopped</span>
         <span class="sep">·</span>
-        <span data-i18n="header.lastpoll">last poll:</span>
+        <span data-i18n="label.lastpoll">last poll:</span>
         <span id="lastPoll">—</span>
       </div>
       <div class="meta2"><span id="netHint" class="hintTop"></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-        <button id="btnNotify" title="通知OFF（クリックでON）" data-i18n-title="notify.off.title" style="background:none;border:1px solid #1e2e40;border-radius:999px;padding:3px 10px;font-size:13px;cursor:pointer;color:#5a7aaa;opacity:0.45;transition:opacity .15s;" aria-label="通知" data-i18n-aria="notify.aria">🔔</button>
+        <button id="btnNotify" title="通知OFF（クリックでON）" style="background:none;border:1px solid #1e2e40;border-radius:999px;padding:3px 10px;font-size:13px;cursor:pointer;color:#5a7aaa;opacity:0.45;transition:opacity .15s;" aria-label="通知">🔔</button>
         <div class="langSwitcher" style="margin-top:0;">
           <button class="langBtn" data-lang="ja">日本語</button>
           <button class="langBtn" data-lang="ko">한국어</button>
@@ -107,9 +107,9 @@
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <div class="regionTabs" id="liveRegionTabs" style="margin:0">
           <button class="liveRegionTab regionTab active" data-lregion="all" data-i18n="region.all">🌐 全て</button>
-          <button class="liveRegionTab regionTab" data-lregion="AS" data-i18n="region.as">🌏 AS</button>
-          <button class="liveRegionTab regionTab" data-lregion="EU" data-i18n="region.eu">🌍 EU</button>
-          <button class="liveRegionTab regionTab" data-lregion="NA" data-i18n="region.na">🌎 NA</button>
+          <button class="liveRegionTab regionTab" data-lregion="AS">🌏 AS</button>
+          <button class="liveRegionTab regionTab" data-lregion="EU">🌍 EU</button>
+          <button class="liveRegionTab regionTab" data-lregion="NA">🌎 NA</button>
         </div>
         <input id="liveSearch" type="text" placeholder="🔍 名前で絞り込み…" data-i18n-ph="live.search" autocomplete="off" spellcheck="false"
           style="flex:1;min-width:140px;max-width:240px;height:28px;font-size:12px;padding:0 10px;border-radius:999px;border:1px solid #1e2e40;background:#0d1520;color:#cfe0ff" />
@@ -154,19 +154,19 @@
       <div class="ctrlRow">
         <span class="ctrlLabel" data-i18n="adv.matchSetting">マッチ設定</span>
         <div class="pill sm">
-          <span><span data-i18n="label.wait">Wait</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.wait">キューに入ってから次の試合が開始するまでの待ち時間（分）。<br>ポイント変動後この時間は <b>Lobby</b> ステートと推定します。<br>目安：約5分</span></span></span>
+          <span data-i18n="label.matchwait">Wait</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.wait">キューに入ってから次の試合が開始するまでの待ち時間（分）。<br>ポイント変動後この時間は <b>Lobby</b> ステートと推定します。<br>目安：約5分</span></span></span>
           <input id="matchWait" type="number" min="0" max="30" step="1" value="5" />
-          <span data-i18n="unit.min.short">m</span>
+          <span>m</span>
         </div>
         <div class="pill sm">
-          <span><span data-i18n="label.match">Match</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">1ラウンド（R1）の平均所要時間（分）。<br>Lobby 終了からこの時間内は <b>In Match (R1)</b> と推定します。<br>※1試合 = R1+R2+Final の全体。このMatch値はR1基準。<br>目安：約31分</span></span></span>
+          <span data-i18n="label.match">Match</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">1ラウンド（R1）の平均所要時間（分）。<br>Lobby 終了からこの時間内は <b>In Match (R1)</b> と推定します。<br>※1試合 = R1+R2+Final の全体。このMatch値はR1基準。<br>目安：約31分</span></span></span>
           <input id="matchAvg" type="number" min="20" max="60" step="1" value="31" />
-          <span data-i18n="unit.min.short">m</span>
+          <span>m</span>
         </div>
         <div class="pill sm">
-          <span><span data-i18n="label.jitter">+jitter</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">試合時間の誤差マージン（分）。<br>Match+jitter を超えると <b>In Match (R2)</b> 推定に移行します。<br>試合が長引いた際のバッファとして機能します。</span></span></span>
+          <span data-i18n="label.jitter">+jitter</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">試合時間の誤差マージン（分）。<br>Match+jitter を超えると <b>In Match (R2)</b> 推定に移行します。<br>試合が長引いた際のバッファとして機能します。</span></span></span>
           <input id="matchJitter" type="number" min="0" max="10" step="1" value="3" />
-          <span data-i18n="unit.min.short">m</span>
+          <span>m</span>
         </div>
         <div class="ctrlSep"></div>
         <button id="btnStop" data-i18n="btn.stop">Stop</button>
@@ -180,7 +180,7 @@
           <div class="advLabel"><span data-i18n="adv.leaderboard">リーダーボード</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.leaderboard">Embark 公式リーダーボードAPIの取得設定です。</span></span></div>
           <div class="row tight">
             <div class="pill sm">
-              <span><span data-i18n="label.season">Season</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.season">取得するリーダーボードのシーズン。<br>S9 = 現行シーズン。シーズンが変わったら更新してください。</span></span></span>
+              <span data-i18n="label.season">Season</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.season">取得するリーダーボードのシーズン。<br>S9 = 現行シーズン。シーズンが変わったら更新してください。</span></span></span>
               <select id="leaderboardId">
                 <option value="s9" selected>S9</option>
                 <option value="s8">S8</option>
@@ -188,7 +188,7 @@
               </select>
             </div>
             <div class="pill sm">
-              <span><span data-i18n="label.platform">Platform</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.platform">プラットフォーム別のリーダーボードを選択。<br><b>crossplay</b>：全プラットフォーム統合（推奨）<br>steam / psn / xbox：各プラットフォーム専用</span></span></span>
+              <span data-i18n="label.platform">Platform</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.platform">プラットフォーム別のリーダーボードを選択。<br><b>crossplay</b>：全プラットフォーム統合（推奨）<br>steam / psn / xbox：各プラットフォーム専用</span></span></span>
               <select id="platform">
                 <option value="crossplay" selected>crossplay</option>
                 <option value="steam">steam</option>
@@ -197,7 +197,7 @@
               </select>
             </div>
             <div class="pill sm">
-              <span><span data-i18n="label.interval">Interval</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.interval">APIポーリング間隔（秒）。<br>短いほどリアルタイムですが API 負荷が増えます。<br>推奨：60秒</span></span></span>
+              <span data-i18n="label.interval">Interval</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.interval">APIポーリング間隔（秒）。<br>短いほどリアルタイムですが API 負荷が増えます。<br>推奨：60秒</span></span></span>
               <select id="pollInterval">
                 <option value="30">30s</option>
                 <option value="60" selected>60s</option>
@@ -205,14 +205,14 @@
               </select>
             </div>
             <div class="pill sm">
-              <span><span data-i18n="label.reflectx">Reflect X</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.reflectx">ゲーム内でポイント変動してからAPIに反映されるまでの遅延時間（分）。<br>ポイント変動後この時間は <b>POST_MATCH_WAIT</b> 状態と推定。<br>Update Estimator が自動検出して更新します。目安：8分</span></span></span>
+              <span data-i18n="label.reflectx">Reflect X</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.reflectx">ゲーム内でポイント変動してからAPIに反映されるまでの遅延時間（分）。<br>ポイント変動後この時間は <b>POST_MATCH_WAIT</b> 状態と推定。<br>Update Estimator が自動検出して更新します。目安：8分</span></span></span>
               <input id="reflectDelay" type="number" min="1" max="30" step="1" value="8" />
               <span>m</span>
             </div>
             <div class="pill sm">
-              <span><span data-i18n="label.tournament">Tournament</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.tournament">1大会全体の想定時間（分）。<br>全ラウンドの合計時間。この時間を超えると <b>Final Round → Offline</b> に移行します。<br>目安：45分（Wait+Match×1〜2R）</span></span></span>
+              <span data-i18n="label.tournament">Tournament</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.tournament">1大会全体の想定時間（分）。<br>全ラウンドの合計時間。この時間を超えると <b>Final Round → Offline</b> に移行します。<br>目安：45分（Wait+Match×1〜2R）</span></span></span>
               <input id="tournamentTotal" type="number" min="10" max="120" step="1" value="45" />
-              <span data-i18n="unit.min.short">m</span>
+              <span>m</span>
             </div>
           </div>
         </div>
@@ -235,9 +235,9 @@
             <span class="muted" data-i18n="estimator.hint">バッチ更新間隔を自動検出・Reflect X を自動更新</span>
           </div>
           <div class="row tight">
-            <div class="pill sm"><span><span data-i18n="label.windowstart">Window start</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowstart">バッチ検出に使うリーダーボードの開始順位。<br>例：2000 → 2001位以降を監視。<br>上位すぎると試合中のポイント変動と区別しにくくなります。</span></span></span><input id="estWindowStart" type="number" min="0" max="200000" step="1" value="2000" /></div>
-            <div class="pill sm"><span><span data-i18n="label.windowsize">Window size</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowsize">バッチ検出に使う件数。<br>例：500 → 500件を監視。多いほどバッチ検出が安定します。</span></span></span><input id="estWindowSize" type="number" min="50" max="2000" step="50" value="500" /></div>
-            <div class="pill sm"><span><span data-i18n="label.cache">Cache</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.cache">リーダーボードAPIのキャッシュ有効期間（秒）。<br>Interval より短い値にすると毎回新鮮なデータを取得できます。</span></span></span><input id="estCacheSec" type="number" min="10" max="300" step="10" value="30" /><span data-i18n="unit.sec.short">s</span></div>
+            <div class="pill sm"><span data-i18n="label.windowstart">Window start</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowstart">バッチ検出に使うリーダーボードの開始順位。<br>例：2000 → 2001位以降を監視。<br>上位すぎると試合中のポイント変動と区別しにくくなります。</span></span></span><input id="estWindowStart" type="number" min="0" max="200000" step="1" value="2000" /></div>
+            <div class="pill sm"><span data-i18n="label.windowsize">Window size</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.windowsize">バッチ検出に使う件数。<br>例：500 → 500件を監視。多いほどバッチ検出が安定します。</span></span></span><input id="estWindowSize" type="number" min="50" max="2000" step="50" value="500" /></div>
+            <div class="pill sm"><span data-i18n="label.cache">Cache</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.cache">リーダーボードAPIのキャッシュ有効期間（秒）。<br>Interval より短い値にすると毎回新鮮なデータを取得できます。</span></span></span><input id="estCacheSec" type="number" min="10" max="300" step="10" value="30" /><span>s</span></div>
           </div>
           <div class="row tight" style="margin-top:6px;">
             <div class="pill sm"><span data-i18n="label.lastbatch">Last batch</span><span id="estLastBatch" class="mono">-</span></div>
@@ -245,7 +245,7 @@
             <div class="pill sm"><span data-i18n="label.mean">Mean</span><span id="estMean" class="mono">-</span></div>
             <div class="pill sm"><span data-i18n="label.median">Median</span><span id="estMedian" class="mono">-</span></div>
             <div class="pill sm"><span data-i18n="label.p90">P90</span><span id="estP90" class="mono">-</span></div>
-            <div class="pill sm"><span data-i18n="label.changedRows">Changed</span><span id="estChanged" class="mono">-</span></div>
+            <div class="pill sm"><span data-i18n="label.changedCount">Changed</span><span id="estChanged" class="mono">-</span></div>
           </div>
         </div>
 
@@ -258,13 +258,13 @@
             </div>
             <div class="field" style="flex:0 1 auto;">
               <label data-i18n="label.test">Test</label>
-              <button id="btnTest" data-i18n="btn.testfirst">Test first player</button>
+              <button id="btnTest" data-i18n="btn.testplayer">Test first player</button>
             </div>
             <div class="field" style="flex:0 1 auto;">
               <label data-i18n="label.export">Export</label>
               <div style="display:flex;gap:6px;">
-                <button id="btnExportCsv" data-i18n="btn.export.csv">CSV</button>
-                <button id="btnExportJsonl" data-i18n="btn.export.jsonl">JSONL</button>
+                <button id="btnExportCsv" data-i18n="btn.csv">CSV</button>
+                <button id="btnExportJsonl" data-i18n="btn.jsonl">JSONL</button>
               </div>
             </div>
           </div>
@@ -285,7 +285,7 @@
           <span data-i18n="log.title">📋 状態変化ログ</span> <span id="logCount" style="font-weight:400;color:#5a7aaa;font-size:12px;"></span>
         </summary>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button id="btnLogTimeline" data-i18n="btn.timeline">📊 タイムライン</button>
+          <button id="btnLogTimeline">📊 タイムライン</button>
           <button id="btnExportLogs" data-i18n="btn.exportlogs">CSV エクスポート</button>
           <button id="btnClearLogs" class="danger" data-i18n="btn.clearlogs">クリア</button>
           <span class="hint" style="margin:0;" data-i18n="log.hint">状態遷移（Offline→Lobby など）を自動記録</span>
@@ -304,9 +304,9 @@
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;">
           <div class="regionTabs">
             <button class="personalRegionTab regionTab active" data-pregion="all" data-i18n="region.all">🌐 全て</button>
-            <button class="personalRegionTab regionTab" data-pregion="AS" data-i18n="region.as">🌏 AS</button>
-            <button class="personalRegionTab regionTab" data-pregion="EU" data-i18n="region.eu">🌍 EU</button>
-            <button class="personalRegionTab regionTab" data-pregion="NA" data-i18n="region.na">🌎 NA</button>
+            <button class="personalRegionTab regionTab" data-pregion="AS">🌏 AS</button>
+            <button class="personalRegionTab regionTab" data-pregion="EU">🌍 EU</button>
+            <button class="personalRegionTab regionTab" data-pregion="NA">🌎 NA</button>
           </div>
           <button id="btnCopyToGlobal" style="padding:5px 14px;font-size:12px;border-radius:999px;" data-i18n="btn.copyToGlobal">📋 グローバルにコピー</button>
         </div>
@@ -322,15 +322,15 @@ playerB#5678"></textarea>
         <div id="globalStatus" class="hint" style="margin-top:4px">—</div>
         <div class="regionTabs" style="margin-top:10px">
           <button class="globalRegionTab regionTab active" data-region="all" data-i18n="region.all">🌐 全て</button>
-          <button class="globalRegionTab regionTab" data-region="AS" data-i18n="region.as">🌏 AS</button>
-          <button class="globalRegionTab regionTab" data-region="EU" data-i18n="region.eu">🌍 EU</button>
-          <button class="globalRegionTab regionTab" data-region="NA" data-i18n="region.na">🌎 NA</button>
+          <button class="globalRegionTab regionTab" data-region="AS">🌏 AS</button>
+          <button class="globalRegionTab regionTab" data-region="EU">🌍 EU</button>
+          <button class="globalRegionTab regionTab" data-region="NA">🌎 NA</button>
         </div>
         <div id="globalPlayerList" class="globalPlayerList"></div>
         <details class="communityAddWrap" style="margin-top:12px">
           <summary class="communityAddSummary" data-i18n="global.add.summary">＋ チーター / 注目プレイヤーを報告・追加</summary>
           <div class="communityAddForm">
-            <input id="communityName" type="text" placeholder="Embark ID（name#1234）" autocomplete="off" spellcheck="false" data-i18n-ph="community.name.ph" />
+            <input id="communityName" type="text" placeholder="Embark ID（name#1234）" autocomplete="off" spellcheck="false" />
             <select id="communityRegion" data-i18n-opt="opt.region.AS,opt.region.EU,opt.region.NA,opt.region.unknown">
               <option value="AS">🌏 AS（アジア）</option>
               <option value="EU">🌍 EU</option>
@@ -354,8 +354,14 @@ playerB#5678"></textarea>
   <footer class="siteFooter">
     <div class="footerDesc" data-i18n="footer.desc">Activity tracker for THE FINALS ranked players. Monitors leaderboard point changes to estimate real-time status (Lobby / In Match / Offline). Supports personal watchlists and a shared community global list.</div>
     <div class="footerTitle" data-i18n="footer.title">Feedback / Bug Report</div>
-    <div class="footerContacts" data-i18n-html="footer.contacts">🇬🇧 Found a bug or have feedback? Contact: <strong>Discord: yatoru</strong></div>
-    <div class="footerSub" data-i18n="footer.sub2">Data source: the-finals-leaderboard API (via proxy if needed).</div>
+    <div class="footerContacts">
+      <span>🇬🇧 Found a bug or have feedback? Contact: <strong>Discord: yatoru</strong></span>
+      <span>🇯🇵 バグ報告・フィードバックはこちら: <strong>Discord: yatoru</strong></span>
+      <span>🇰🇷 버그 제보 및 피드백: <strong>Discord: yatoru</strong></span>
+      <span>🇨🇳 错误报告或反馈请联系: <strong>Discord: yatoru</strong></span>
+      <span>🇪🇳 Avoid known cheaters with live ranked activity, server tags, and shared watchlists.</span>
+    </div>
+    <div class="footerSub">Data source: the-finals-leaderboard API (via proxy if needed).</div>
   </footer>
   <div id="globalTooltip" class="globalTooltip" role="tooltip" aria-hidden="true"></div>
 
@@ -416,7 +422,7 @@ playerB#5678"></textarea>
     document.getElementById("btnNotify").addEventListener("click", async () => {
       const granted = await requestNotifyPermission();
       if (granted) setNotifyEnabled(!notifyEnabled);
-      else alert(typeof t==="function"?t("notify.permission.denied"):"Please allow notifications in your browser settings.");
+      else alert("ブラウザの設定で通知を許可してください。");
     });
     // Service Worker 登録（PWA）
     if ("serviceWorker" in navigator) {

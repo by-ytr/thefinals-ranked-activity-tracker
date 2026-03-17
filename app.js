@@ -1,97 +1,11 @@
 const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
 const ROUND_TIMING={r1Min:10,r1Max:13,r2Min:10,r2Max:13,frMin:8,frMax:11,returningMin:25};
-function getRoundTiming(){return ROUND_TIMING;}
-function getTournamentTiming(matchWaitMin){
-  const rt=getRoundTiming();
-  const W=Math.max(0, Math.min(30, matchWaitMin ?? 5));
-  const r1Max=rt.r1Max;
-  const totalMin=rt.r1Min+rt.r2Min+rt.frMin;
-  const totalMax=rt.r1Max+rt.r2Max+rt.frMax;
-  return {W,r1Max,totalMin,totalMax,returningMin:rt.returningMin};
-}
-function encounterElapsedMin(roundKey,phaseKey){
-  const rt=getRoundTiming();
-  const bands={early:[1,4],mid:[5,8],late:[9,13]};
-  const [a,b]=bands[phaseKey]||[1,4];
-  const phase=Math.round((a+b)/2);
-  const r1Mid=Math.round((rt.r1Min+rt.r1Max)/2);
-  const r2Mid=Math.round((rt.r2Min+rt.r2Max)/2);
-  if(roundKey==="r1") return phase;
-  if(roundKey==="r2") return r1Mid+phase;
-  if(roundKey==="fr") return r1Mid+r2Mid+Math.min(phase,rt.frMax);
-  return phase;
-}
-
-function uiLang(){
-  try{ if(typeof currentLang === "string" && currentLang) return currentLang; }catch(_){ }
-  const q=new URLSearchParams(location.search).get("lang");
-  if(q && /^(ja|ko|en)$/.test(q)) return q;
-  const docLang=(document.documentElement.lang||"").toLowerCase();
-  if(docLang.startsWith("ko")) return "ko";
-  if(docLang.startsWith("ja")) return "ja";
-  const nav=(navigator.language||"en").toLowerCase();
-  if(nav.startsWith("ko")) return "ko";
-  if(nav.startsWith("ja")) return "ja";
-  return "en";
-}
-function uiText(key){
-  const lang=uiLang();
-  const dict={
-    ja:{
-      "enc.label":"📝 遭遇記録","enc.active":"記録中",
-      "enc.won":"勝","enc.final_end":"FINAL終了","enc.offline":"オフ",
-      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
-      "enc.early":"序盤","enc.mid":"中盤","enc.late":"終盤",
-      "action.delete":"削除","th.action":"操作","th.error.short":"Error",
-      "pickup.title":"ピックアップ（大型グラフに追加）"
-    },
-    ko:{
-      "enc.label":"📝 조우 기록","enc.active":"기록 중",
-      "enc.won":"승","enc.final_end":"FINAL 종료","enc.offline":"오프",
-      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
-      "enc.early":"초반","enc.mid":"중반","enc.late":"후반",
-      "action.delete":"삭제","th.action":"동작","th.error.short":"오류",
-      "pickup.title":"픽업(대형 그래프에 추가)"
-    },
-    en:{
-      "enc.label":"📝 Encounter record","enc.active":"Active",
-      "enc.won":"WIN","enc.final_end":"FINAL END","enc.offline":"OFF",
-      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
-      "enc.early":"Early","enc.mid":"Mid","enc.late":"Late",
-      "action.delete":"Delete","th.action":"Action","th.error.short":"Error",
-      "pickup.title":"Pick up (add to large graph)"
-    }
-  };
-  return (dict[lang]&&dict[lang][key]) || (dict.en[key]) || key;
-}
-function encounterDisplayLabel(typeKey){
-  const map={
-    won:uiText("enc.won"), final_end:uiText("enc.final_end"), offline:uiText("enc.offline"),
-    r1:uiText("enc.r1"), r2:uiText("enc.r2"), fr:uiText("enc.fr"),
-    r1_early:`${uiText("enc.r1")}${uiText("enc.early")}`,
-    r1_mid:`${uiText("enc.r1")}${uiText("enc.mid")}`,
-    r1_late:`${uiText("enc.r1")}${uiText("enc.late")}`,
-    r2_early:`${uiText("enc.r2")}${uiText("enc.early")}`,
-    r2_mid:`${uiText("enc.r2")}${uiText("enc.mid")}`,
-    r2_late:`${uiText("enc.r2")}${uiText("enc.late")}`,
-    fr_early:`${uiText("enc.fr")}${uiText("enc.early")}`,
-    fr_mid:`${uiText("enc.fr")}${uiText("enc.mid")}`,
-    fr_late:`${uiText("enc.fr")}${uiText("enc.late")}`
-  };
-  return map[typeKey] || typeKey;
-}
-function compactErrorText(err){ return err ? uiText("th.error.short") : ""; }
-function quickEncounterGroupHtml(group){
-  const subMap={
-    r1:["r1_early","r1_mid","r1_late"],
-    r2:["r2_early","r2_mid","r2_late"],
-    fr:["fr_early","fr_mid","fr_late"]
-  };
-  const items=(subMap[group]||[]).map(ev=>`<button class="encQuickSubBtn" data-ev="${ev}" style="display:block;width:100%;padding:5px 8px;border:0;background:transparent;color:#d9e7ff;text-align:left;font-size:11px;cursor:pointer;">${encounterDisplayLabel(ev)}</button>`).join("");
-  return `<div class="encQuickGroup" style="position:relative;display:inline-block;"><button class="encQuickGroupBtn" data-group="${group}" title="${encounterDisplayLabel(group)}" style="min-width:40px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #244a6b;background:#0c1d2d;color:#d9e7ff;font-size:11px;">${encounterDisplayLabel(group)} ▾</button><div class="encQuickMenu" style="display:none;position:absolute;top:26px;left:0;z-index:30;min-width:92px;background:#091626;border:1px solid #183450;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:4px;"><div>${items}</div></div></div>`;
-}
-
+function getTournamentTiming(matchWaitMin){const W=Math.max(0,Math.min(30,matchWaitMin??5));return{W,r1Min:ROUND_TIMING.r1Min,r1Max:ROUND_TIMING.r1Max,r2Min:ROUND_TIMING.r2Min,r2Max:ROUND_TIMING.r2Max,frMin:ROUND_TIMING.frMin,frMax:ROUND_TIMING.frMax,totalMin:ROUND_TIMING.r1Min+ROUND_TIMING.r2Min+ROUND_TIMING.frMin,totalMax:ROUND_TIMING.r1Max+ROUND_TIMING.r2Max+ROUND_TIMING.frMax,returningMin:ROUND_TIMING.returningMin};}
+function uiLang(){return (typeof currentLang==='string'&&currentLang)||document.documentElement.lang||'en';}
+function tt(key,fallback=''){try{return typeof t==='function'?(t(key)||fallback||key):(fallback||key);}catch{return fallback||key;}}
+function shortMinUnit(){return uiLang()==='ko'?'분':uiLang()==='ja'?'分':'m';}
+function rowManualBadgeText(rem){return `📌 ${rem}${shortMinUnit()}`;}
 // バックエンド URL 自動解決：明示設定がなければ同オリジン（Worker 配信時）を使用
 function autoOrigin(){const o=location.origin;return(o==="null"||o.startsWith("file:")||o.includes("localhost")||o.includes("127.0.0.1"))?"":o;}
 function effectiveProxyBase(s){return(s.proxyBase||"").replace(/\/$/,"")||autoOrigin();}
@@ -130,57 +44,64 @@ function buildPlayerSparkEl(row){
     barsEl.appendChild(bar);
   }
   const axisEl=document.createElement("div");axisEl.className="psAxis";
-  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"今":"+"+m+"m";axisEl.appendChild(s);});
+  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?tt("time.now","Now"):`+${m}${shortMinUnit()}`;axisEl.appendChild(s);});
   wrap.appendChild(barsEl);wrap.appendChild(axisEl);
   return wrap;
 }
 function buildExpandRow(r,key){
   const tr=document.createElement("tr");tr.className="expandRow";tr.dataset.for=key;
   const td=document.createElement("td");td.colSpan=10;td.className="expandCell";
+  // ── 遭遇記録パネル ──
   const panel=document.createElement("div");panel.className="encounterPanel";
-  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent=uiText("enc.label");panel.appendChild(elabel);
+  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent=tt("enc.title","📝 Encounter");panel.appendChild(elabel);
   const btns=document.createElement("div");btns.className="encounterBtns";
+  const s=currentSettings||getUiSettings();
   for(const et of ENCOUNTER_TYPES){
     if(et.group){
+      // ── グループボタン（R1/R2）：クリックでサブパネル展開 ──
       const wrap=document.createElement("div");wrap.className="encounterGroup";
       const gBtn=document.createElement("button");gBtn.className="encounterBtn encounterGroupBtn";
-      gBtn.title=encounterDisplayLabel(et.key);
-      gBtn.innerHTML=encounterDisplayLabel(et.key)+' <span class="groupCaret">▾</span>';
+      gBtn.title=et.desc;
+      gBtn.innerHTML=et.label+' <span class="groupCaret">▾</span>';
       const subPanel=document.createElement("div");subPanel.className="encounterSubPanel";
       for(const sub of et.sub){
         const sBtn=document.createElement("button");sBtn.className="encounterSubBtn";
-        sBtn.textContent=encounterDisplayLabel(sub.key);sBtn.title=encounterDisplayLabel(sub.key);
+        sBtn.textContent=sub.label;sBtn.title=`offset: -${sub.getOffset(s)} ${tt("unit.minute","min")}`;
         sBtn.addEventListener("click",(e)=>{
           e.stopPropagation();
           applyEncounterEvent(r.name,sub.key);
           subPanel.classList.remove("open");
-          const caret=gBtn.querySelector(".groupCaret"); if(caret) caret.textContent="▾";
-          renderTable(lastRows);
+          gBtn.querySelector(".groupCaret").textContent="▾";
         });
         subPanel.appendChild(sBtn);
       }
       gBtn.addEventListener("click",(e)=>{
         e.stopPropagation();
         const isOpen=subPanel.classList.contains("open");
+        // 他のサブパネルを全部閉じる
         btns.querySelectorAll(".encounterSubPanel.open").forEach(p=>{
           p.classList.remove("open");
           const gc=p.previousElementSibling&&p.previousElementSibling.querySelector(".groupCaret");if(gc)gc.textContent="▾";
         });
-        if(!isOpen){subPanel.classList.add("open"); const caret=gBtn.querySelector(".groupCaret"); if(caret) caret.textContent="▴";}
+        if(!isOpen){subPanel.classList.add("open");gBtn.querySelector(".groupCaret").textContent="▴";}
       });
       wrap.appendChild(gBtn);wrap.appendChild(subPanel);btns.appendChild(wrap);
     }else{
       const btn=document.createElement("button");
       btn.className="encounterBtn"+(et.key==="offline"?" encounterBtn--offline":"");
-      btn.title=encounterDisplayLabel(et.key);btn.textContent=encounterDisplayLabel(et.key);
-      btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);renderTable(lastRows);});
+      btn.title=et.desc;btn.textContent=et.label;
+      btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);});
       btns.appendChild(btn);
     }
   }
   panel.appendChild(btns);
+  // アクティブな手動記録があれば残り時間を表示
   if(r.manualEvent){
+    const now2=nowMs();
+    const rem=manualRem(r.manualEvent);
     const activeEl=document.createElement("div");activeEl.className="encounterActive";
-    activeEl.innerHTML="📌 <b>"+encounterDisplayLabel(r.manualEvent.type)+"</b> "+uiText("enc.active");
+    const et=findEncounterType(r.manualEvent.type);
+    activeEl.innerHTML=`📌 <b>${et?et.label:r.manualEvent.type}</b> ${tt("enc.active","recording")}`;
     panel.appendChild(activeEl);
   }
   td.appendChild(panel);
@@ -276,7 +197,7 @@ if(evts.length>=2){
 // ── サーバー選択 ──
 
   const regionWrap=document.createElement("div");regionWrap.style.cssText="margin-top:10px;display:flex;align-items:center;gap:8px;";
-  const rLabel=document.createElement("span");rLabel.textContent="Server";rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
+  const rLabel=document.createElement("span");rLabel.textContent=tt("label.server","Server");rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
   const rSel=document.createElement("select");rSel.style.cssText="height:28px;font-size:12px;padding:2px 6px;";
   [["","—"],["AS","🌏 AS"],["EU","🌍 EU"],["NA","🌎 NA"]].forEach(([v,l])=>{
     const o=document.createElement("option");o.value=v;o.textContent=l;if((r.region||"")===v)o.selected=true;rSel.appendChild(o);
@@ -285,7 +206,7 @@ if(evts.length>=2){
     const snaps=getSnapshots();const k2=r.name.toLowerCase();
     if(!snaps[k2])snaps[k2]={};snaps[k2].region=rSel.value;saveSnapshots(snaps);
     lastRows=lastRows.map(row=>row.name.toLowerCase()===k2?{...row,region:rSel.value}:row);
-    renderTable(lastRows);toast("Server: <b>"+r.name+"</b> → "+(rSel.value||"—"));
+    renderTable(lastRows);toast(`${tt("label.server","Server")}: <b>${r.name}</b> → ${rSel.value||"—"}`);
     // グローバルリスト編集の backend 同期
     const _rs=getUiSettings();
     {
@@ -296,7 +217,7 @@ if(evts.length>=2){
   regionWrap.appendChild(rLabel);regionWrap.appendChild(rSel);td.appendChild(regionWrap);
   // ── メモ ──
   const memoWrap=document.createElement("div");memoWrap.style.cssText="margin-top:8px;display:flex;align-items:flex-start;gap:8px;";
-  const memoLbl=document.createElement("span");memoLbl.textContent="📝 Memo";memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
+  const memoLbl=document.createElement("span");memoLbl.textContent=tt("label.memo","📝 Memo");memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
   const memoTa=document.createElement("textarea");memoTa.style.cssText="flex:1;height:44px;font-size:12px;padding:4px 6px;background:#0a1a2e;border:1px solid #1e2e40;color:#e7edf5;border-radius:4px;resize:vertical;font-family:inherit;";
   memoTa.value=(getSnapshots()[r.name.toLowerCase()]||{}).memo||"";
   memoTa.placeholder="個人メモ（自分のみ表示）";
@@ -376,8 +297,21 @@ function setNetHint(text){document.getElementById("netHint").textContent=text||"
 function setRunning(on){
   running=on;
   document.getElementById("statusDot").className="dot "+(on?"on":"off");
-  document.getElementById("runState").textContent=on?"running":"stopped";
+  document.getElementById("runState").textContent=on?tt("run.running","running"):tt("run.stopped","stopped");
 }
+
+function refreshStaticI18nLabels(){
+  const map=[
+    ['.ctrlLabel','adv.matchSetting'],
+  ];
+  const q=(sel)=>document.querySelector(sel);
+  const setText=(sel,key)=>{const el=q(sel); if(el) el.childNodes[0] ? (el.childNodes[0].nodeValue=tt(key,el.textContent.split(/\s+/)[0])+" ") : (el.textContent=tt(key,el.textContent));};
+  setText('.ctrlRow .pill.sm:nth-of-type(1) span','label.matchwait');
+  setText('.ctrlRow .pill.sm:nth-of-type(2) span','label.match');
+  setText('.ctrlRow .pill.sm:nth-of-type(3) span','label.jitter');
+  const sel=document.querySelector('summary[data-i18n="adv.summary"]'); if(sel) sel.textContent=tt('adv.summary',sel.textContent);
+}
+
 function loadSettings(){
   try{const raw=localStorage.getItem(LS.settings);if(!raw)return{...DEFAULTS};try{return{...DEFAULTS,...JSON.parse(raw)}}catch{return{...DEFAULTS}}}catch{return{...DEFAULTS}}
 }
@@ -410,7 +344,7 @@ function parseNames(text){
 // entry: { name, region:"AS"|"EU"|"NA"|"", category:"cheater"|"suspicious"|"notable", note, addedAt }
 const REGION_LABEL={"AS":"🌏 AS","EU":"🌍 EU","NA":"🌎 NA","":"🌐 不明"};
 const REGION_ORDER=["AS","EU","NA",""];
-const CAT_LABEL={"cheater":"opt.cat.cheater","suspicious":"opt.cat.suspicious","notable":"opt.cat.notable"};
+const CAT_LABEL={"cheater":"🚫 チーター","suspicious":"⚠️ 疑い","notable":"👁 注目"};
 function getCommunityList(){try{const r=localStorage.getItem(LS.community);if(!r)return[];const a=JSON.parse(r);return Array.isArray(a)?a:[];}catch{return[];}}
 function saveCommunityList(list){try{localStorage.setItem(LS.community,JSON.stringify(list));}catch{}}
 function addCommunityEntry(entry){
@@ -603,25 +537,19 @@ async function deleteCommunityEntryFromGlobal(globalUrl,name){
 }
 // 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
 const ENCOUNTER_TYPES=[
-  {key:"won",       label:"🏆 勝利",     desc:"試合に勝利した（即ロビーへ）",     overrideDurationMs:3600000, getOffset:s=>0},
-  {key:"final_end", label:"💀 FINAL終了", desc:"FINALラウンド終了（負け）",        getOffset:s=>0},
-  {key:"r1", label:"R1", desc:"ラウンド1で遭遇", group:true, sub:[
-    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r1","early")},
-    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r1","mid")},
-    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r1","late")},
+  {key:'won', get label(){return tt('enc.won','🏆 Win');}, get desc(){return tt('encdesc.won','Won the match (back to lobby)');}, getOffset:s=>0},
+  {key:'final_end', get label(){return tt('enc.final_end','💀 Final end');}, get desc(){return tt('encdesc.final_end','Lost after Final Round');}, getOffset:s=>0},
+  {key:'r1', get label(){return 'R1';}, get desc(){return tt('encdesc.r1','Encountered in Round 1');}, group:true, sub:[
+    {key:'r1_early', get label(){return tt('enc.phase.early','Early');}, getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+1},
+    {key:'r1_mid',   get label(){return tt('enc.phase.mid','Mid');},   getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+5},
+    {key:'r1_late',  get label(){return tt('enc.phase.late','Late');},  getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+9},
   ]},
-  {key:"r2", label:"R2", desc:"ラウンド2で遭遇", group:true, sub:[
-    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","early")},
-    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","mid")},
-    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","late")},
+  {key:'r2', get label(){return 'R2';}, get desc(){return tt('encdesc.r2','Encountered in Round 2');}, group:true, sub:[
+    {key:'r2_early', get label(){return tt('enc.phase.early','Early');}, getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+getTournamentTiming(s.matchWaitMin).r1Max+1},
+    {key:'r2_mid',   get label(){return tt('enc.phase.mid','Mid');},   getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+getTournamentTiming(s.matchWaitMin).r1Max+5},
+    {key:'r2_late',  get label(){return tt('enc.phase.late','Late');},  getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+getTournamentTiming(s.matchWaitMin).r1Max+9},
   ]},
-  {key:"fr", label:"FR", desc:"FINALラウンドで遭遇", group:true, sub:[
-    {key:"fr_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","early")},
-    {key:"fr_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","mid")},
-    {key:"fr_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","late")},
-  ]},
-  // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
-  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+getTournamentTiming(s.matchWaitMin).totalMax+30},
+  {key:'offline', get label(){return tt('enc.offline','⚫ Offline');}, get desc(){return tt('encdesc.offline','Mark as offline');}, overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+getTournamentTiming(s.matchWaitMin).totalMax+30},
 ];
 // サブタイプを含むフラット検索
 function findEncounterType(key){
@@ -908,25 +836,24 @@ function stateExplain(row,displayState){
   const manual=row?.manualEvent;
   if(manual&&isManualActive(manual)){
     const et=findEncounterType(manual.type);
-    if(manual.type==="offline") return "手動でオフライン状態として記録中";
-    if(manual.type==="won") return "手動で勝利後の戻り時間帯を記録中";
-    if(manual.type==="final_end") return "手動でFinal Round終了後の戻り時間帯を記録中";
-    if(String(manual.type||"").startsWith("r1_")) return "手動でR1試合中として記録中";
-    if(String(manual.type||"").startsWith("r2_")) return "手動でR2試合中として記録中";
-    if(String(manual.type||"").startsWith("fr_")) return "手動でFR試合中として記録中";
-    return `手動記録「${et?et.label:manual.type}」を優先表示中`;
+    if(manual.type==="offline") return tt("stateex.manual.offline","Manually recorded as offline.");
+    if(manual.type==="won") return tt("stateex.manual.won","Manually recorded after a win.");
+    if(manual.type==="final_end") return tt("stateex.manual.final","Manually recorded after Final Round ended.");
+    if(String(manual.type||"").startsWith("r1_")) return tt("stateex.manual.r1","Manually recorded as in R1.");
+    if(String(manual.type||"").startsWith("r2_")) return tt("stateex.manual.r2","Manually recorded as in R2 or later.");
+    return tt("stateex.manual.generic","Manual encounter record is overriding inferred state.")+` (${et?et.label:manual.type})`;
   }
   switch(displayState){
-    case "POST_MATCH_WAIT": return "試合終了直後の反映待ち時間帯です。";
-    case "LOBBY": return "試合終了後の待機中と推定。次の試合開始候補です。";
-    case "IN_MATCH": return "R1試合中と推定。次の更新までは試合継続扱いです。";
-    case "IN_TOURNAMENT_DEEP": return "R2以降の試合中と推定。Final進行中の可能性を含みます。";
-    case "RETURNING": return "Final Round終了後の戻り時間帯を推定中。次の更新待ちです。";
-    case "OFFLINE": return "最近の更新がなく、現在は非アクティブと推定。";
-    case "UNKNOWN": return "情報不足のため状態を判定できません。";
-    case "NOT_FOUND": return "リーダーボードで連続未検出。BANまたは名前変更の可能性があります。";
-    case "BANNED": return "リーダーボードから完全消失。BANの可能性が高い状態です。";
-    case "NAME_CHANGED": return "別名義の候補を検出。名前変更の可能性があります。";
+    case "POST_MATCH_WAIT": return tt("stateex.POST_MATCH_WAIT","Waiting for leaderboard reflection right after a match.");
+    case "LOBBY": return tt("stateex.LOBBY","Estimated to be in lobby / queue before the next match.");
+    case "IN_MATCH": return tt("stateex.IN_MATCH","Estimated to be in Round 1.");
+    case "IN_TOURNAMENT_DEEP": return tt("stateex.IN_TOURNAMENT_DEEP","Estimated to be in Round 2 or Final.");
+    case "RETURNING": return tt("stateex.RETURNING","Estimated returning after Final Round.");
+    case "OFFLINE": return tt("stateex.OFFLINE","No recent updates; likely offline.");
+    case "UNKNOWN": return tt("stateex.UNKNOWN","Not enough data to infer the state.");
+    case "NOT_FOUND": return tt("stateex.NOT_FOUND","Missing from leaderboard multiple times; possible BAN or name change.");
+    case "BANNED": return tt("stateex.BANNED","Completely removed from leaderboard; likely banned.");
+    case "NAME_CHANGED": return tt("stateex.NAME_CHANGED","Alternate entry found; likely renamed.");
     default: return "";
   }
 }
@@ -1099,12 +1026,12 @@ function renderTable(rows){
     const manualType=r.manualEvent?.type;
     const isWonOrFinal=manualType==="won"||manualType==="final_end";
     const manualRemMin=manualActive?manualRem(r.manualEvent):0;
-    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualRemMin}m</span>`:"";
+    const manualBadge=manualActive?`<span class="manualBadge">${rowManualBadgeText(manualRemMin)}</span>`:"";
     const tr=document.createElement("tr");
     if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
     else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
     tr.innerHTML=`
-      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="ピックアップ（大型グラフに追加）">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
+      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="${tt("pickup.pin","Pickup")}">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
       <td class="num">${r.lastDelta==null?"—":r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
@@ -1112,8 +1039,8 @@ function renderTable(rows){
       <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
-      <td class="errCell">${r.error||""}</td>
-      <td class="actCell"><button class="resetBtn" title="遭遇記録（クリックで展開）">⚔</button><button class="deleteBtn" title="削除">✕</button></td>
+      <td class="errCell" title="${r.error||""}">${r.error?tt("th.error","Error"):""}</td>
+      <td class="actCell"><button class="resetBtn" title="${tt("enc.title","Encounter")}">⚔</button><button class="deleteBtn" title="${tt("btn.delete","Delete")}">✕</button></td>
     `;
     tr.querySelector(".pickupBtn").addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
     tr.querySelector(".nameCell").addEventListener("click",()=>toggleExpand(r,tr,key));
@@ -1136,11 +1063,11 @@ function renderSpark(rows){
     let html="";
     if(dangerNow>0) html+=`<span class="dangerCount">🚨 ${dangerNow}人遭遇！</span>`;
     if(hotNow>0)    html+=`<span class="hotCount">${hotNow}人が試合開始近い</span>`;
-    if(!html)       html=`<span style="color:#5a7aaa;font-size:12px;">試合開始が近いプレイヤーなし</span>`;
+    if(!html)       html=`<span style="color:#5a7aaa;font-size:12px;">${tt("spark.none","No players close to next match")}</span>`;
     hotEl.innerHTML=html;
   }
   if(activeRows.length===0){
-    wrap.innerHTML="<div class='psEmpty'>プレイヤーを追加すると予測グラフが表示されます</div>";
+    wrap.innerHTML=`<div class="psEmpty">${tt("spark.empty","Add players to see the prediction graph")}</div>`;
     return;
   }
   for(const r of activeRows){
@@ -1315,7 +1242,7 @@ async function pollOnce(names,settings){
     return a.name.localeCompare(b.name);
   });
   document.getElementById("lastPoll").textContent=new Date(now).toLocaleTimeString();
-  if(anyCors) setNetHint("CORSっぽい失敗あり → ローカル環境の場合は worker.js をデプロイして使用してください");
+  if(anyCors) setNetHint(tt("hint.cors","Possible CORS failure — deploy worker.js in local environments."));
   else setNetHint("");
   lastRows=rows; // 遭遇ボタンの即時再描画用にキャッシュ
   renderTable(rows);renderSpark(rows);renderBanList(rows);renderPickupGraph();
@@ -1385,9 +1312,9 @@ function renderPickupGraph(){
     }
   }
   const axEl=document.getElementById("pickupAxis");
-  if(axEl){axEl.innerHTML="";[0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"今":"+"+m+"m";axEl.appendChild(s);});}
+  if(axEl){axEl.innerHTML="";[0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?tt("time.now","Now"):`+${m}${shortMinUnit()}`;axEl.appendChild(s);});}
   const nameEl=document.getElementById("pickupNames");if(nameEl)nameEl.textContent=picked.map(r=>r.name).join("、");
-  const pctEl=document.getElementById("pickupPeak");if(pctEl)pctEl.textContent=`ピーク ${combined[peak]}% (+${peak}分後)`;
+  const pctEl=document.getElementById("pickupPeak");if(pctEl)pctEl.textContent=tt("pickup.peak","Peak")+` ${combined[peak]}% (+${peak}${shortMinUnit()})`;
 }
 let logViewMode="list";
 const LOG_STATE_COLOR={OFFLINE:"#8ea0b7",LOBBY:"#5b9cf6",POST_MATCH_WAIT:"#7bb8f0",IN_MATCH:"#39d98a",IN_TOURNAMENT_DEEP:"#c77dff",RETURNING:"#c77dff",UNKNOWN:"#3a4a60",NOT_FOUND:"#ff9944",BANNED:"#ff5555",NAME_CHANGED:"#6de9ff"};
@@ -1498,7 +1425,7 @@ function renderLogTimeline(){
   axis+=`<text x="${nowX.toFixed(1)}" y="${padTop-3}" text-anchor="middle" fill="#ff9944" font-size="9" font-weight="bold" font-family="system-ui,sans-serif">NOW</text>`;
 
   // 凡例
-  const legendStates=[["OFFLINE","#8ea0b7",stateLabel("OFFLINE")],["LOBBY","#5b9cf6",stateLabel("LOBBY")],["IN_MATCH","#39d98a",stateLabel("IN_MATCH")],["IN_TOURNAMENT_DEEP","#c77dff",stateLabel("IN_TOURNAMENT_DEEP")],["NOT_FOUND","#ff9944",stateLabel("NOT_FOUND")],["BANNED","#ff5555",stateLabel("BANNED")]];
+  const legendStates=[["OFFLINE","#8ea0b7","Offline"],["LOBBY","#5b9cf6","Lobby"],["IN_MATCH","#39d98a","In Match"],["IN_TOURNAMENT_DEEP","#c77dff","Final/Tournament"],["NOT_FOUND","#ff9944","Missing"],["BANNED","#ff5555","Banned"]];
   let legend=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
   for(const [,color,label] of legendStates){
     legend+=`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#b8c4d6;"><span style="width:14px;height:14px;border-radius:3px;background:${color};opacity:0.85;display:inline-block;"></span>${label}</span>`;
@@ -1674,7 +1601,7 @@ function renderGlobalPlayerList(){
   const entries=getFilteredCommunity(globalFilter);
   const personalSet=new Set(parseNames(document.getElementById("namesBox").value).map(n=>n.toLowerCase()));
   if(entries.length===0){
-    el.innerHTML=`<div class='hint' style='padding:12px 0'>${txt("global.empty","このフィルターには登録がありません")}</div>`;
+    el.innerHTML="<div class='hint' style='padding:12px 0'>このフィルターには登録がありません</div>";
     return;
   }
   // 地域ごとにグループ表示（全て選択時）
@@ -1685,15 +1612,15 @@ function renderGlobalPlayerList(){
     const header=globalFilter==="all"?`<div class="regionGroupLabel">${REGION_LABEL[g.region]}</div>`:"";
     return header+g.items.map(e=>{
       const inPersonal=personalSet.has(e.name.toLowerCase());
-      const catLabel=txt(CAT_LABEL[e.category]||"", e.category||"");
+      const catLabel=CAT_LABEL[e.category]||e.category||"";
       const catClass=e.category==="cheater"?"catCheater":e.category==="suspicious"?"catSuspicious":"catNotable";
       return `<div class="globalPlayerItem">
         <span class="globalPlayerName">${e.name}</span>
         <span class="catBadge ${catClass}">${catLabel}</span>
         ${e.note?`<span class="communityNote">${e.note}</span>`:""}
-        ${inPersonal?`<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">${txt("global.watching","監視中")}</span>`
-          :`<button class="globalAddBtn" data-name="${e.name}">${txt("global.watch","＋監視")}</button>`}
-        <button class="communityDelBtn" data-name="${e.name}" title="${txt("action.delete","削除")}">×</button>
+        ${inPersonal?'<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">監視中</span>'
+          :`<button class="globalAddBtn" data-name="${e.name}">＋監視</button>`}
+        <button class="communityDelBtn" data-name="${e.name}" title="削除">×</button>
       </div>`;
     }).join("");
   }).join("");
@@ -1704,14 +1631,14 @@ function renderGlobalPlayerList(){
       if(!existing.map(x=>x.toLowerCase()).includes(btn.dataset.name.toLowerCase())){
         ta.value=ta.value.trim()+(ta.value.trim()?"\n":"")+btn.dataset.name;
         saveNamesToLocal(parseNames(ta.value));
-        toast(txt("toast.add_to_mylist","＋ <b>{name}</b> を自分のリストに追加").replace("{name}",btn.dataset.name));
+        toast("＋ <b>"+btn.dataset.name+"</b> を自分のリストに追加");
         renderGlobalPlayerList();
       }
     });
   });
   el.querySelectorAll(".communityDelBtn").forEach(btn=>{
     btn.addEventListener("click",async()=>{
-      if(!confirm(txt("confirm.global_delete","{name} をリストから削除しますか？").replace("{name}",btn.dataset.name)))return;
+      if(!confirm(btn.dataset.name+" をリストから削除しますか？"))return;
       const _ds=getUiSettings();
       const _gUrl=effectiveGlobalUrl(_ds);
       // サーバー削除を先に実行し、成功時のみローカルから除去
@@ -2148,6 +2075,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   }
 
   setRunning(false);
+  refreshStaticI18nLabels();
   toast(t("toast.ready"));
 }
 init();
