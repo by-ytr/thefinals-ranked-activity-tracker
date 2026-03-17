@@ -15,6 +15,75 @@ let personalRegionFilter="all"; // 自分のリスト サーバーフィルタ�
 let liveRegionFilter="all";    // Live tableリージョンフィルター
 let liveTabMode="personal";    // "personal" | "global" | "pickup"
 let liveSearchQuery="";        // Live table検索
+function appLang(){
+  const raw=((document.documentElement&&document.documentElement.lang)||navigator.language||"en").toLowerCase();
+  if(raw.startsWith("ja")) return "ja";
+  if(raw.startsWith("ko")) return "ko";
+  return "en";
+}
+function appUiText(){
+  const l=appLang();
+  if(l==="ja") return {
+    sparkAfter:(m,p)=>`+${m}分後: ${p}%`, sparkNow:"今", sparkMin:m=>`+${m}分`,
+    encounterTitle:"📝 遭遇記録", offset:min=>`offset: -${min}分`, active:(label,rem)=>`📌 <b>${label}</b> 記録中・残 <b>${rem}分</b> 優先予測`,
+    pointTrend:n=>`📈 ポイント推移（直近${n}回）`, old:"old", now:"new",
+    server:"Server", serverToast:(name,region)=>`Server: <b>${name}</b> → ${region||"—"}`,
+    memo:"📝 Memo", memoPh:"個人メモ（自分のみ表示）",
+    notifyOn:"通知ON（クリックでOFF）", notifyOff:"通知OFF（クリックでON）",
+    running:"監視中", stopped:"停止中",
+    deleteUser:id=>`${id}を削除`, encounterApply:(label,name,offset,dur)=>`${label} <b>${name}</b> を記録 (offset -${offset}分 / ${dur}分優先)`,
+    manualOffline:"手動でオフライン状態として記録中", pickupTitle:"ピックアップ（大型グラフに追加）", encounterExpand:"遭遇記録（クリックで展開）", del:"削除",
+    sharedData:"🌐 共有データ", globalSyncing:"🌐 同期中...", globalAll:"全サーバー", people:n=>`${n}人`, total:n=>`合計${n}人`, unknownRegion:"不明",
+    needName:"名前を入力してください", addedCommunity:(name,cat,region)=>`🌐 <b>${name}</b> をコミュニティリストに追加 (${cat||""} / ${region||"不明"})`, localOnly:"ローカルには追加済み / 共有反映は未完了",
+    listEmpty:"リストが空です", copied:n=>`🌐 <b>${n}人</b> をグローバルリストにコピーしました`, addedPersonal:name=>`＋ <b>${name}</b> を自分のリストに追加`, removeFromList:name=>`${name} をリストから削除しますか？`, removed:name=>`削除: <b>${name}</b>`, added:name=>`追加: <b>${name}</b>`, startWatch:n=>`監視開始：<b>${n}人</b>`, noLogs:"ログなし", count:n=>`(${n}件)`,
+    timeline:"📊 タイムライン", list:"📋 リスト", clearLogsConfirm:"ログをクリアしますか？", logsCleared:"ログをクリアしました",
+    clearLocalConfirm:"localStorage の settings/snapshots/events を削除します。よろしいですか？",
+    loginNeedBoth:"IDとパスワードを入力してください", loginInvalid:"IDまたはパスワードが正しくありません",
+    adminSet:"🔑 アドミンパスワードを設定しました", adminWrong:"❌ パスワードが正しくありません", idExists:"そのIDは既に登録されています", userAdded:id=>`✅ ユーザー <b>${id}</b> を追加しました`, newPass:"新しいパスワードを入力してください", adminChanged:"🔑 アドミンパスワードを変更しました",
+    needBackend:"⚠️ バックエンドに接続できません（ローカル環境では Worker URL の設定が必要です）", needAdmin:"⚠️ アドミンパスワードを先に設定してください", syncing:"同期中...", syncBtn:"☁️ バックエンドに同期", syncOk:"✅ 認証設定をバックエンドに同期しました", syncFail:"❌ 同期に失敗しました（URL・パスワードを確認してください）",
+    reflectHint:min=>`→ Reflect X を ${min}m に自動更新`
+  };
+  if(l==="ko") return {
+    sparkAfter:(m,p)=>`+${m}분 후: ${p}%`, sparkNow:"지금", sparkMin:m=>`+${m}분`,
+    encounterTitle:"📝 조우 기록", offset:min=>`offset: -${min}분`, active:(label,rem)=>`📌 <b>${label}</b> 기록중 · 남음 <b>${rem}분</b>`,
+    pointTrend:n=>`📈 포인트 추이 (최근 ${n}회)`, old:"old", now:"new",
+    server:"서버", serverToast:(name,region)=>`서버: <b>${name}</b> → ${region||"—"}`,
+    memo:"📝 메모", memoPh:"개인 메모 (본인만 표시)",
+    notifyOn:"알림 켜짐 (클릭하여 끄기)", notifyOff:"알림 꺼짐 (클릭하여 켜기)",
+    running:"추적 중", stopped:"정지",
+    deleteUser:id=>`${id} 삭제`, encounterApply:(label,name,offset,dur)=>`${label} <b>${name}</b> 기록 (offset -${offset}분 / ${dur}분 우선)`,
+    manualOffline:"수동으로 오프라인 상태 기록 중", pickupTitle:"픽업 (대형 그래프에 추가)", encounterExpand:"조우 기록 (클릭하여 펼치기)", del:"삭제",
+    sharedData:"🌐 공유 데이터", globalSyncing:"🌐 동기화 중...", globalAll:"전체 서버", people:n=>`${n}명`, total:n=>`총 ${n}명`, unknownRegion:"미상",
+    needName:"이름을 입력해 주세요", addedCommunity:(name,cat,region)=>`🌐 <b>${name}</b> 를 커뮤니티 목록에 추가 (${cat||""} / ${region||"미상"})`, localOnly:"로컬에는 추가됨 / 공유 반영은 아직 완료되지 않음",
+    listEmpty:"목록이 비어 있습니다", copied:n=>`🌐 <b>${n}명</b> 을 글로벌 목록에 복사했습니다`, addedPersonal:name=>`＋ <b>${name}</b> 을 내 목록에 추가`, removeFromList:name=>`${name} 을 목록에서 삭제할까요?`, removed:name=>`삭제: <b>${name}</b>`, added:name=>`추가: <b>${name}</b>`, startWatch:n=>`추적 시작: <b>${n}명</b>`, noLogs:"로그 없음", count:n=>`(${n}건)`,
+    timeline:"📊 타임라인", list:"📋 목록", clearLogsConfirm:"로그를 지울까요?", logsCleared:"로그를 지웠습니다",
+    clearLocalConfirm:"localStorage 의 settings/snapshots/events 를 삭제할까요?",
+    loginNeedBoth:"ID와 비밀번호를 입력해 주세요", loginInvalid:"ID 또는 비밀번호가 올바르지 않습니다",
+    adminSet:"🔑 관리자 비밀번호를 설정했습니다", adminWrong:"❌ 비밀번호가 올바르지 않습니다", idExists:"이미 등록된 ID입니다", userAdded:id=>`✅ 사용자 <b>${id}</b> 를 추가했습니다`, newPass:"새 비밀번호를 입력해 주세요", adminChanged:"🔑 관리자 비밀번호를 변경했습니다",
+    needBackend:"⚠️ 백엔드에 연결할 수 없습니다 (로컬 환경에서는 Worker URL 설정이 필요합니다)", needAdmin:"⚠️ 먼저 관리자 비밀번호를 설정해 주세요", syncing:"동기화 중...", syncBtn:"☁️ 백엔드에 동기화", syncOk:"✅ 인증 설정을 백엔드에 동기화했습니다", syncFail:"❌ 동기화에 실패했습니다 (URL·비밀번호를 확인해 주세요)",
+    reflectHint:min=>`→ Reflect X 를 ${min}m 로 자동 업데이트`
+  };
+  return {
+    sparkAfter:(m,p)=>`+${m}m: ${p}%`, sparkNow:"now", sparkMin:m=>`+${m}m`,
+    encounterTitle:"📝 Encounter", offset:min=>`offset: -${min}m`, active:(label,rem)=>`📌 <b>${label}</b> active · <b>${rem}m</b> remaining`,
+    pointTrend:n=>`📈 Point history (last ${n})`, old:"old", now:"new",
+    server:"Server", serverToast:(name,region)=>`Server: <b>${name}</b> → ${region||"—"}`,
+    memo:"📝 Memo", memoPh:"Personal memo (only visible to you)",
+    notifyOn:"Notifications on (click to disable)", notifyOff:"Notifications off (click to enable)",
+    running:"running", stopped:"stopped",
+    deleteUser:id=>`Delete ${id}`, encounterApply:(label,name,offset,dur)=>`${label} <b>${name}</b> recorded (offset -${offset}m / ${dur}m priority)`,
+    manualOffline:"Manually recorded as offline", pickupTitle:"Pickup (add to large graph)", encounterExpand:"Encounter record (click to expand)", del:"Delete",
+    sharedData:"🌐 Shared data", globalSyncing:"🌐 Syncing...", globalAll:"All servers", people:n=>`${n}`, total:n=>`Total ${n}`, unknownRegion:"Unknown",
+    needName:"Enter a name", addedCommunity:(name,cat,region)=>`🌐 Added <b>${name}</b> to community list (${cat||""} / ${region||"Unknown"})`, localOnly:"Added locally / shared sync not completed",
+    listEmpty:"List is empty", copied:n=>`🌐 Copied <b>${n}</b> to the global list`, addedPersonal:name=>`＋ Added <b>${name}</b> to your list`, removeFromList:name=>`Remove ${name} from the list?`, removed:name=>`Removed: <b>${name}</b>`, added:name=>`Added: <b>${name}</b>`, startWatch:n=>`Started tracking: <b>${n}</b>`, noLogs:"No logs", count:n=>`(${n})`,
+    timeline:"📊 Timeline", list:"📋 List", clearLogsConfirm:"Clear logs?", logsCleared:"Logs cleared",
+    clearLocalConfirm:"Delete settings/snapshots/events from localStorage?",
+    loginNeedBoth:"Enter both ID and password", loginInvalid:"Incorrect ID or password",
+    adminSet:"🔑 Admin password set", adminWrong:"❌ Incorrect password", idExists:"That ID is already registered", userAdded:id=>`✅ Added user <b>${id}</b>`, newPass:"Enter a new password", adminChanged:"🔑 Admin password changed",
+    needBackend:"⚠️ Cannot connect to backend (set Worker URL in local environment)", needAdmin:"⚠️ Set the admin password first", syncing:"Syncing...", syncBtn:"☁️ Sync to Backend", syncOk:"✅ Auth settings synced to backend", syncFail:"❌ Sync failed (check URL and password)",
+    reflectHint:min=>`→ Reflect X auto-updated to ${min}m`
+  };
+}
 function buildPlayerSparkEl(row){
   const slots=30,slotMin=1,now=nowMs();
   const lca=row.effectiveLCA??row.lastChangeAt;
@@ -34,84 +103,14 @@ function buildPlayerSparkEl(row){
     const lvl=v<0.33?"low":v<0.66?"mid":"high";
     bar.className="sparkBar "+(isDanger?"d-":"")+lvl+(i===peakSlot?" peak":"");
     bar.style.height=(4+Math.round(v*56))+"px";
-    bar.title=`+${i}分後: ${probs[i]}%`;
+    const L=appUiText();
+    bar.title=L.sparkAfter(i, probs[i]);
     barsEl.appendChild(bar);
   }
   const axisEl=document.createElement("div");axisEl.className="psAxis";
-  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?"今":"+"+m+"m";axisEl.appendChild(s);});
+  const L2=appUiText();
+  [0,5,10,15,20,25].forEach(m=>{const s=document.createElement("span");s.textContent=m===0?L2.sparkNow:L2.sparkMin(m);axisEl.appendChild(s);});
   wrap.appendChild(barsEl);wrap.appendChild(axisEl);
-  return wrap;
-}
-function uiLangSimple(){
-  const raw=((document.documentElement&&document.documentElement.lang)||navigator.language||"en").toLowerCase();
-  if(raw.startsWith("ja")) return "ja";
-  if(raw.startsWith("ko")) return "ko";
-  return "en";
-}
-function encUiText(){
-  const l=uiLangSimple();
-  if(l==="ja") return {record:"遭遇記録", recording:"記録中", early:"序盤", mid:"中盤", late:"終盤", r1:"R1", r2:"R2", fr:"FR", win:"勝", off:"オフ", error:"Error", del:"削除", action:"操作"};
-  if(l==="ko") return {record:"조우 기록", recording:"기록중", early:"초반", mid:"중반", late:"후반", r1:"R1", r2:"R2", fr:"FR", win:"승", off:"오프", error:"오류", del:"삭제", action:"동작"};
-  return {record:"Encounter", recording:"Recording", early:"Early", mid:"Mid", late:"Late", r1:"R1", r2:"R2", fr:"FR", win:"WIN", off:"OFF", error:"Error", del:"Delete", action:"Action"};
-}
-function ensureEncounterUiStyles(){
-  if(document.getElementById('encUiPatchStyle')) return;
-  const st=document.createElement('style');
-  st.id='encUiPatchStyle';
-  st.textContent=`
-  .errCell.errCompact{width:72px;max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:#c9d3df;}
-  .actCell.encActions{white-space:nowrap;width:260px;max-width:260px;}
-  .encActionWrap{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:nowrap;}
-  .encMiniSel{height:28px;min-width:44px;border-radius:8px;background:#091626;color:#dce7f5;border:1px solid #1a4c7a;font-size:12px;padding:0 6px;}
-  .encMiniBtn{height:28px;padding:0 8px;border-radius:8px;border:1px solid #36506e;background:#091626;color:#dce7f5;font-size:12px;font-weight:700;cursor:pointer;}
-  .encMiniBtn.win{border-color:#2f6d1f;background:#10230d;color:#aef08f;}
-  .encMiniBtn.off{border-color:#4d5562;background:#151922;color:#c9d3df;}
-  .encMiniBtn.del{padding:0 9px;min-width:28px;color:#9fb0c6;}
-  .encPanelControls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  `;
-  document.head.appendChild(st);
-}
-function manualEncounterLabel(type){
-  const L=encUiText();
-  switch(type){
-    case 'won': return L.win;
-    case 'offline': return L.off;
-    case 'r1_early': return `R1 ${L.early}`;
-    case 'r1_mid': return `R1 ${L.mid}`;
-    case 'r1_late': return `R1 ${L.late}`;
-    case 'r2_early': return `R2 ${L.early}`;
-    case 'r2_mid': return `R2 ${L.mid}`;
-    case 'r2_late': return `R2 ${L.late}`;
-    case 'fr_early': return `FR ${L.early}`;
-    case 'fr_mid': return `FR ${L.mid}`;
-    case 'fr_late': return `FR ${L.late}`;
-    case 'final_end': return 'FINAL';
-    default: return type||'';
-  }
-}
-function buildEncounterControls(row,opts={}){
-  ensureEncounterUiStyles();
-  const L=encUiText();
-  const showDelete=!!opts.showDelete;
-  const wrap=document.createElement('div');
-  wrap.className=opts.panel?'encPanelControls':'encActionWrap';
-  const mkSel=(base)=>{
-    const sel=document.createElement('select');
-    sel.className='encMiniSel';
-    sel.innerHTML=`<option value="">${base}</option><option value="${base.toLowerCase()}_early">${L.early}</option><option value="${base.toLowerCase()}_mid">${L.mid}</option><option value="${base.toLowerCase()}_late">${L.late}</option>`;
-    sel.addEventListener('change',(e)=>{ const v=e.target.value; if(!v) return; applyEncounterEvent(row.name,v); e.target.value=''; });
-    return sel;
-  };
-  wrap.appendChild(mkSel('R1'));
-  wrap.appendChild(mkSel('R2'));
-  wrap.appendChild(mkSel('FR'));
-  const win=document.createElement('button'); win.className='encMiniBtn win'; win.type='button'; win.textContent=L.win; win.addEventListener('click',(e)=>{e.stopPropagation(); applyEncounterEvent(row.name,'won');}); wrap.appendChild(win);
-  const off=document.createElement('button'); off.className='encMiniBtn off'; off.type='button'; off.textContent=L.off; off.addEventListener('click',(e)=>{e.stopPropagation(); applyEncounterEvent(row.name,'offline');}); wrap.appendChild(off);
-  if(showDelete){
-    const del=document.createElement('button'); del.className='encMiniBtn del deleteBtn'; del.type='button'; del.textContent='✕'; del.title=L.del;
-    del.addEventListener('click',(e)=>{e.stopPropagation(); removePlayer(row.name);});
-    wrap.appendChild(del);
-  }
   return wrap;
 }
 function buildExpandRow(r,key){
@@ -119,11 +118,55 @@ function buildExpandRow(r,key){
   const td=document.createElement("td");td.colSpan=10;td.className="expandCell";
   // ── 遭遇記録パネル ──
   const panel=document.createElement("div");panel.className="encounterPanel";
-  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent="📝 "+encUiText().record;panel.appendChild(elabel);
-  panel.appendChild(buildEncounterControls(r,{showDelete:false,panel:true}));
-  if(r.manualEvent&&isManualActive(r.manualEvent)){
+  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent=appUiText().encounterTitle;panel.appendChild(elabel);
+  const btns=document.createElement("div");btns.className="encounterBtns";
+  const s=currentSettings||getUiSettings();
+  for(const et of ENCOUNTER_TYPES){
+    if(et.group){
+      // ── グループボタン（R1/R2）：クリックでサブパネル展開 ──
+      const wrap=document.createElement("div");wrap.className="encounterGroup";
+      const gBtn=document.createElement("button");gBtn.className="encounterBtn encounterGroupBtn";
+      gBtn.title=et.desc;
+      gBtn.innerHTML=et.label+' <span class="groupCaret">▾</span>';
+      const subPanel=document.createElement("div");subPanel.className="encounterSubPanel";
+      for(const sub of et.sub){
+        const sBtn=document.createElement("button");sBtn.className="encounterSubBtn";
+        sBtn.textContent=sub.label;sBtn.title=appUiText().offset(sub.getOffset(s));
+        sBtn.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          applyEncounterEvent(r.name,sub.key);
+          subPanel.classList.remove("open");
+          gBtn.querySelector(".groupCaret").textContent="▾";
+        });
+        subPanel.appendChild(sBtn);
+      }
+      gBtn.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const isOpen=subPanel.classList.contains("open");
+        // 他のサブパネルを全部閉じる
+        btns.querySelectorAll(".encounterSubPanel.open").forEach(p=>{
+          p.classList.remove("open");
+          const gc=p.previousElementSibling&&p.previousElementSibling.querySelector(".groupCaret");if(gc)gc.textContent="▾";
+        });
+        if(!isOpen){subPanel.classList.add("open");gBtn.querySelector(".groupCaret").textContent="▴";}
+      });
+      wrap.appendChild(gBtn);wrap.appendChild(subPanel);btns.appendChild(wrap);
+    }else{
+      const btn=document.createElement("button");
+      btn.className="encounterBtn"+(et.key==="offline"?" encounterBtn--offline":"");
+      btn.title=et.desc;btn.textContent=et.label+(et.overrideDurationMs?" ("+Math.round(et.overrideDurationMs/60000)+(appLang()==="en"?"m":appUiText().sparkMin(0).replace("+0","").trim())+")":"");
+      btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);});
+      btns.appendChild(btn);
+    }
+  }
+  panel.appendChild(btns);
+  // アクティブな手動記録があれば残り時間を表示
+  if(r.manualEvent){
+    const now2=nowMs();
+    const rem=manualRem(r.manualEvent);
     const activeEl=document.createElement("div");activeEl.className="encounterActive";
-    activeEl.innerHTML="📌 <b>"+manualEncounterLabel(r.manualEvent.type)+"</b> "+encUiText().recording;
+    const et=findEncounterType(r.manualEvent.type);
+    activeEl.innerHTML=appUiText().active((et?et.label:r.manualEvent.type), rem);
     panel.appendChild(activeEl);
   }
   td.appendChild(panel);
@@ -139,7 +182,7 @@ if(evts.length>=2){
   const latestPts=pts[pts.length-1];
   const startPts=pts[0];
   const diffPts=(latestPts!=null&&startPts!=null)?latestPts-startPts:null;
-  chartTitle.innerHTML=`<span>📈 ポイント推移（直近${evts.length}回）</span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
+  chartTitle.innerHTML=`<span>${appUiText().pointTrend(evts.length)}</span><span style="font-weight:600;color:${diffPts>0?"#ff6b6b":diffPts<0?"#6ea8ff":"#8ea0b7"}">${diffPts==null?"":(diffPts>0?"+":"")+diffPts.toLocaleString()}</span>`;
   const canvas=document.createElement("canvas");
   canvas.width=720;canvas.height=180;
   canvas.style.cssText="width:100%;max-width:520px;height:140px;display:block;border-radius:8px;background:#091626;border:1px solid #16314f;";
@@ -212,14 +255,15 @@ if(evts.length>=2){
     // x labels
     ctx.font="10px monospace";
     ctx.fillStyle="#7f93ad";
-    ctx.fillText("old",padL,H-8);
-    ctx.fillText("new",W-padR-18,H-8);
+    const L3=appUiText();
+    ctx.fillText(L3.old,padL,H-8);
+    ctx.fillText(L3.now,W-padR-18,H-8);
   });
 }
 // ── サーバー選択 ──
 
   const regionWrap=document.createElement("div");regionWrap.style.cssText="margin-top:10px;display:flex;align-items:center;gap:8px;";
-  const rLabel=document.createElement("span");rLabel.textContent="Server";rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
+  const rLabel=document.createElement("span");rLabel.textContent=appUiText().server;rLabel.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;";
   const rSel=document.createElement("select");rSel.style.cssText="height:28px;font-size:12px;padding:2px 6px;";
   [["","—"],["AS","🌏 AS"],["EU","🌍 EU"],["NA","🌎 NA"]].forEach(([v,l])=>{
     const o=document.createElement("option");o.value=v;o.textContent=l;if((r.region||"")===v)o.selected=true;rSel.appendChild(o);
@@ -228,7 +272,7 @@ if(evts.length>=2){
     const snaps=getSnapshots();const k2=r.name.toLowerCase();
     if(!snaps[k2])snaps[k2]={};snaps[k2].region=rSel.value;saveSnapshots(snaps);
     lastRows=lastRows.map(row=>row.name.toLowerCase()===k2?{...row,region:rSel.value}:row);
-    renderTable(lastRows);toast("Server: <b>"+r.name+"</b> → "+(rSel.value||"—"));
+    renderTable(lastRows);toast(appUiText().serverToast(r.name,(rSel.value||"—")));
     // グローバルリスト編集の backend 同期
     const _rs=getUiSettings();
     {
@@ -239,10 +283,10 @@ if(evts.length>=2){
   regionWrap.appendChild(rLabel);regionWrap.appendChild(rSel);td.appendChild(regionWrap);
   // ── メモ ──
   const memoWrap=document.createElement("div");memoWrap.style.cssText="margin-top:8px;display:flex;align-items:flex-start;gap:8px;";
-  const memoLbl=document.createElement("span");memoLbl.textContent="📝 Memo";memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
+  const memoLbl=document.createElement("span");memoLbl.textContent=appUiText().memo;memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
   const memoTa=document.createElement("textarea");memoTa.style.cssText="flex:1;height:44px;font-size:12px;padding:4px 6px;background:#0a1a2e;border:1px solid #1e2e40;color:#e7edf5;border-radius:4px;resize:vertical;font-family:inherit;";
   memoTa.value=(getSnapshots()[r.name.toLowerCase()]||{}).memo||"";
-  memoTa.placeholder="個人メモ（自分のみ表示）";
+  memoTa.placeholder=appUiText().memoPh;
   let _memoTimer=null;
   memoTa.addEventListener("input",()=>{
     clearTimeout(_memoTimer);
@@ -312,14 +356,14 @@ function setNotifyEnabled(on){
   notifyEnabled=on;
   localStorage.setItem("finals_notify",on?"1":"0");
   const btn=document.getElementById("btnNotify");
-  if(btn)btn.title=on?"通知ON（クリックでOFF）":"通知OFF（クリックでON）";
+  if(btn)btn.title=on?appUiText().notifyOn:appUiText().notifyOff;
   if(btn)btn.style.opacity=on?"1":"0.45";
 }
 function setNetHint(text){document.getElementById("netHint").textContent=text||"";}
 function setRunning(on){
   running=on;
   document.getElementById("statusDot").className="dot "+(on?"on":"off");
-  document.getElementById("runState").textContent=on?"running":"stopped";
+  document.getElementById("runState").textContent=on?appUiText().running:appUiText().stopped;
 }
 function loadSettings(){
   try{const raw=localStorage.getItem(LS.settings);if(!raw)return{...DEFAULTS};try{return{...DEFAULTS,...JSON.parse(raw)}}catch{return{...DEFAULTS}}}catch{return{...DEFAULTS}}
@@ -558,11 +602,6 @@ const ENCOUNTER_TYPES=[
     {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
     {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
   ]},
-  {key:"fr", label:"FR", desc:"FINALラウンドで遭遇", group:true, sub:[
-    {key:"fr_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+s.matchAvgMin+2},
-    {key:"fr_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+s.matchAvgMin+5},
-    {key:"fr_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+s.matchAvgMin+8},
-  ]},
   // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
   {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
 ];
@@ -703,7 +742,7 @@ function renderAllowedUserList(){
   }
   el.innerHTML=auth.allowedUsers.map(u=>
     `<div class="allowedUserRow"><span class="allowedUserId">${u.id}</span>`+
-    `<button class="deleteBtn allowedDelBtn" data-id="${u.id}" title="${u.id}を削除">✕</button></div>`
+    `<button class="deleteBtn allowedDelBtn" data-id="${u.id}" title="${appUiText().deleteUser(u.id)}">✕</button></div>`
   ).join("");
   el.querySelectorAll(".allowedDelBtn").forEach(btn=>{
     btn.addEventListener("click",()=>{
@@ -729,7 +768,7 @@ function applyEncounterEvent(name,typeKey){
   snapshots[key].manualEvent={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
   saveSnapshots(snapshots);
   const durMin=Math.round(dur/60000);
-  toast(et.label+" <b>"+name+"</b> を記録 (offset -"+offsetMin+"分 / "+durMin+"分優先)");
+  toast(appUiText().encounterApply(et.label,name,offsetMin,durMin));
   // API呼び出しなし → キャッシュ行をその場で更新して即時再描画（フラッシュなし）
   if(lastRows.length>0){
     const manualEventObj={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
@@ -851,12 +890,11 @@ function stateExplain(row,displayState){
   const manual=row?.manualEvent;
   if(manual&&isManualActive(manual)){
     const et=findEncounterType(manual.type);
-    if(manual.type==="offline") return "手動でオフライン状態として記録中";
+    if(manual.type==="offline") return appUiText().manualOffline;
     if(manual.type==="won") return "手動で勝利後の戻り時間帯を記録中";
     if(manual.type==="final_end") return "手動でFinal Round終了後の戻り時間帯を記録中";
     if(String(manual.type||"").startsWith("r1_")) return "手動でR1試合中として記録中";
     if(String(manual.type||"").startsWith("r2_")) return "手動でR2以降の試合中として記録中";
-    if(String(manual.type||"").startsWith("fr_")) return "手動でFinal Round試合中として記録中";
     return `手動記録「${et?et.label:manual.type}」を優先表示中`;
   }
   switch(displayState){
@@ -1044,12 +1082,13 @@ function renderTable(rows){
     const manualActive=isManualActive(r.manualEvent);
     const manualType=r.manualEvent?.type;
     const isWonOrFinal=manualType==="won"||manualType==="final_end";
-    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualEncounterLabel(manualType)}</span>`:"";
+    const manualRemMin=manualActive?manualRem(r.manualEvent):0;
+    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualRemMin}m</span>`:"";
     const tr=document.createElement("tr");
     if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
     else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
     tr.innerHTML=`
-      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="ピックアップ（大型グラフに追加）">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
+      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="${appUiText().pickupTitle}">★</button>${statusBadge}${r.name} ${regionBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
       <td class="num">${r.lastDelta==null?"—":r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
@@ -1057,13 +1096,13 @@ function renderTable(rows){
       <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
-      <td class="errCell errCompact" title="${(r.error||"").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}">${r.error?encUiText().error:""}</td>
-      <td class="actCell encActions"></td>
+      <td class="errCell">${r.error||""}</td>
+      <td class="actCell"><button class="resetBtn" title="${appUiText().encounterExpand}">⚔</button><button class="deleteBtn" title="${appUiText().del}">✕</button></td>
     `;
     tr.querySelector(".pickupBtn").addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
     tr.querySelector(".nameCell").addEventListener("click",()=>toggleExpand(r,tr,key));
-    const actCell=tr.querySelector('.actCell');
-    actCell.appendChild(buildEncounterControls(r,{showDelete:liveTabMode!=="global"}));
+    tr.querySelector(".resetBtn").addEventListener("click",(e)=>{e.stopPropagation();toggleExpand(r,tr,key);});
+    tr.querySelector(".deleteBtn").addEventListener("click",(e)=>{e.stopPropagation();removePlayer(r.name);});
     tbody.appendChild(tr);
     if(isExpanded) tbody.appendChild(buildExpandRow(r,key));
   }
@@ -1342,7 +1381,7 @@ function renderLogList(){
   const allLogs=getStateLogs();
   const logs=allLogs.slice(-300).reverse();
   const count=document.getElementById("logCount");
-  if(count)count.textContent=`(${allLogs.length}件)`;
+  if(count)count.textContent=appUiText().count(allLogs.length);
   if(logs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
   let html="";let lastDate="";
   for(const e of logs){
@@ -1362,8 +1401,8 @@ function renderLogTimeline(){
   const el=document.getElementById("logList");if(!el)return;
   const allLogs=getStateLogs();
   const count=document.getElementById("logCount");
-  if(count)count.textContent=`(${allLogs.length}件)`;
-  if(allLogs.length===0){el.innerHTML='<div style="color:#5a7aaa;padding:8px 0">ログなし</div>';return;}
+  if(count)count.textContent=appUiText().count(allLogs.length);
+  if(allLogs.length===0){el.innerHTML=`<div style="color:#5a7aaa;padding:8px 0">${appUiText().noLogs}</div>`;return;}
 
   // プレイヤー別にグループ化
   const playerMap={};
@@ -1570,7 +1609,7 @@ async function preloadRemoteSnapshots(settings){
     const manualActive=isManualActive(manualEvent);
     const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:(snap.lastChangeAt??null);
     const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
-    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:"🌐 共有データ",isShared:true};
+    return {name,points:snap.points,delta:null,lastDelta:snap.lastDelta??null,lastChangeAt:snap.lastChangeAt??null,lastRealChangeAt:snap.lastRealChangeAt??null,effectiveLCA,manualEvent:manualActive?manualEvent:null,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt:snap.lastOkAt??null,leaderboardRank:snap.leaderboardRank??null,league:snap.league??null,region:snap.region??"",notFoundCount:snap.notFoundCount||0,lastFoundAt:snap.lastFoundAt,suspectedReason:snap.suspectedReason,suspectedNewName:snap.suspectedNewName,error:appUiText().sharedData,isShared:true};
   }).filter(Boolean);
   if(rows.length>0&&lastRows.length===0){lastRows=rows;renderTable(rows);renderSpark(rows);}
 }
@@ -1585,7 +1624,7 @@ async function switchToGlobal(){
   const settings=getUiSettings();
   // バックエンドがあればリモートとマージ
   if(effectiveGlobalUrl(settings)){
-    document.getElementById("globalStatus").textContent="🌐 同期中...";
+    document.getElementById("globalStatus").textContent=appUiText().globalSyncing;
     await Promise.all([
       fetchAndMergeCommunity(effectiveGlobalUrl(settings)),
       fetchAndMergeSnapshots(effectiveGlobalUrl(settings)),
@@ -1596,7 +1635,7 @@ async function switchToGlobal(){
   const filtered=getFilteredCommunity(globalFilter).length;
   document.getElementById("globalStatus").textContent=
     total===0?"ℹ️ まだ登録がありません。下のフォームから追加してください"
-    :`🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
+    :`🌐 ${globalFilter==="all"?appUiText().globalAll:REGION_LABEL[globalFilter]}：${appUiText().people(filtered)} / ${appUiText().total(total)}`;
   if(effectiveGlobalUrl(settings)) preloadRemoteSnapshots(settings);
   if(filtered>0)doStart();
 }
@@ -1638,7 +1677,7 @@ function renderGlobalPlayerList(){
         ${e.note?`<span class="communityNote">${e.note}</span>`:""}
         ${inPersonal?'<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">監視中</span>'
           :`<button class="globalAddBtn" data-name="${e.name}">＋監視</button>`}
-        <button class="communityDelBtn" data-name="${e.name}" title="削除">×</button>
+        <button class="communityDelBtn" data-name="${e.name}" title="${appUiText().del}">×</button>
       </div>`;
     }).join("");
   }).join("");
@@ -1649,14 +1688,14 @@ function renderGlobalPlayerList(){
       if(!existing.map(x=>x.toLowerCase()).includes(btn.dataset.name.toLowerCase())){
         ta.value=ta.value.trim()+(ta.value.trim()?"\n":"")+btn.dataset.name;
         saveNamesToLocal(parseNames(ta.value));
-        toast("＋ <b>"+btn.dataset.name+"</b> を自分のリストに追加");
+        toast(appUiText().addedPersonal(btn.dataset.name));
         renderGlobalPlayerList();
       }
     });
   });
   el.querySelectorAll(".communityDelBtn").forEach(btn=>{
     btn.addEventListener("click",async()=>{
-      if(!confirm(btn.dataset.name+" をリストから削除しますか？"))return;
+      if(!confirm(appUiText().removeFromList(btn.dataset.name)))return;
       const _ds=getUiSettings();
       const _gUrl=effectiveGlobalUrl(_ds);
       // サーバー削除を先に実行し、成功時のみローカルから除去
@@ -1668,7 +1707,7 @@ function renderGlobalPlayerList(){
       removeCommunityEntry(btn.dataset.name);
       renderGlobalPlayerList();
       const total=getCommunityList().length;
-      document.getElementById("globalStatus").textContent=`🌐 合計${total}人`;
+      document.getElementById("globalStatus").textContent=`🌐 ${appUiText().total(total)}`;
     });
   });
 }
@@ -1680,7 +1719,7 @@ function removePlayer(name){
   lastRows=lastRows.filter(r=>r.name.toLowerCase()!==name.toLowerCase());
   expandedRows.delete(name.toLowerCase());
   renderTable(lastRows);renderSpark(lastRows);
-  toast("削除: <b>"+name+"</b>");
+  toast(appUiText().removed(name));
   if(timer){clearTimeout(timer);timer=null;}
   if(remaining.length>0){doStart();}else{setRunning(false);}
 }
@@ -1705,7 +1744,7 @@ function addPlayerAndStart(name){
     const updated=[...lastRows.filter(r=>r.name.toLowerCase()!==name.toLowerCase()),newRow];
     lastRows=updated;
     renderTable(updated);renderSpark(updated);
-    toast("追加: <b>"+name+"</b>");
+    toast(appUiText().added(name));
   }
   doStart();
 }
@@ -1768,7 +1807,7 @@ async function init(){
   });
   document.getElementById("btnStop").addEventListener("click",()=>{
     if(timer){clearTimeout(timer);timer=null;}
-    setRunning(false);toast("stopped");
+    setRunning(false);toast(appUiText().stopped);
   });
   document.getElementById("btnAdd").addEventListener("click",()=>{
     const si=document.getElementById("playerSearch");
@@ -1776,8 +1815,8 @@ async function init(){
     if(name){addPlayerAndStart(name);return;}
     // 検索バーが空の場合 → namesBox の内容でモニタリング開始
     const names=parseNames(document.getElementById("namesBox").value);
-    if(names.length>0){doStart();toast("監視開始：<b>"+names.length+"人</b>");}
-    else{toast("名前を入力してください");}
+    if(names.length>0){doStart();toast(appUiText().startWatch(names.length));}
+    else{toast(appUiText().needName);}
   });
   document.getElementById("btnShare").addEventListener("click",async()=>{
     const names=parseNames(document.getElementById("namesBox").value);
@@ -1834,7 +1873,7 @@ async function init(){
       const filtered=getFilteredCommunity(globalFilter).length;
       const total=getCommunityList().length;
       document.getElementById("globalStatus").textContent=
-        `🌐 ${globalFilter==="all"?"全サーバー":REGION_LABEL[globalFilter]}：${filtered}人 / 合計${total}人`;
+        `🌐 ${globalFilter==="all"?appUiText().globalAll:REGION_LABEL[globalFilter]}：${appUiText().people(filtered)} / ${appUiText().total(total)}`;
       if(running&&currentSettings)pollOnce(getActiveNames(),currentSettings);
     });
   });
@@ -1845,7 +1884,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     return;
   }
   const name=(document.getElementById("communityName").value||"").trim();
-  if(!name){toast("名前を入力してください");return;}
+  if(!name){toast(appUiText().needName);return;}
 
   const entry={
     name,
@@ -1859,7 +1898,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
 
   document.getElementById("communityName").value="";
   document.getElementById("communityNote").value="";
-  toast("🌐 <b>"+name+"</b> をコミュニティリストに追加 ("+(CAT_LABEL[entry.category]||"")+" / "+(REGION_LABEL[entry.region]||"不明")+")");
+  toast(appUiText().addedCommunity(name,(CAT_LABEL[entry.category]||""),(REGION_LABEL[entry.region]||appUiText().unknownRegion)));
 
   const settings=getUiSettings();
   const gUrl=effectiveGlobalUrl(settings);
@@ -1869,12 +1908,12 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
       await fetchAndMergeCommunity(gUrl);
       renderGlobalPlayerList();
     }catch(e){
-      setGlobalSyncStatus("ローカルには追加済み / 共有反映は未完了",true);
+      setGlobalSyncStatus(appUiText().localOnly,true);
     }
   }
 
   const total=getCommunityList().length;
-  document.getElementById("globalStatus").textContent=`合計${total}人`;
+  document.getElementById("globalStatus").textContent=appUiText().total(total);
   if(viewMode==="global")doStart();
 });
   // 設定の自動保存（リロード・タブ閉じ時にも反映）
@@ -1895,7 +1934,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   // 自分のリスト → グローバルにコピー
   document.getElementById("btnCopyToGlobal")?.addEventListener("click",async()=>{
     const names=parseNames(document.getElementById("namesBox").value);
-    if(!names.length){toast("リストが空です");return;}
+    if(!names.length){toast(appUiText().listEmpty);return;}
     const settings=getUiSettings();
     let added=0;
     const newEntries=[];
@@ -1910,23 +1949,23 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     if(effectiveGlobalUrl(settings)){
       await Promise.all(newEntries.map(e=>submitCommunityEntryToGlobal(effectiveGlobalUrl(settings),e)));
     }
-    toast(`🌐 <b>${added}人</b> をグローバルリストにコピーしました`);
+    toast(appUiText().copied(added));
     if(viewMode==="global")renderGlobalPlayerList();
   });
   // ログ
   document.getElementById("btnLogTimeline")?.addEventListener("click",()=>{
     logViewMode=logViewMode==="list"?"timeline":"list";
     const btn=document.getElementById("btnLogTimeline");
-    if(btn)btn.textContent=logViewMode==="list"?"📊 タイムライン":"📋 リスト";
+    if(btn)btn.textContent=logViewMode==="list"?appUiText().timeline:appUiText().list;
     logViewMode==="timeline"?renderLogTimeline():renderLogList();
   });
   document.getElementById("btnExportLogs")?.addEventListener("click",exportStateLogs);
   document.getElementById("btnClearLogs")?.addEventListener("click",()=>{
-    if(!confirm("ログをクリアしますか？"))return;
-    clearStateLogs();renderLogList();toast("ログをクリアしました");
+    if(!confirm(appUiText().clearLogsConfirm))return;
+    clearStateLogs();renderLogList();toast(appUiText().logsCleared);
     logViewMode="list";
     const btn=document.getElementById("btnLogTimeline");
-    if(btn)btn.textContent="📊 タイムライン";
+    if(btn)btn.textContent=appUiText().timeline;
   });
   // ── テーブルヘッダー ? アイコン: fixed グローバルツールチップ ──────────
   // tableWrap の overflow:auto / position:sticky による clipping を回避
@@ -1964,11 +2003,11 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   document.getElementById("btnLoginSubmit").addEventListener("click",async()=>{
     const id=document.getElementById("loginId").value.trim();
     const pw=document.getElementById("loginPassword").value;
-    if(!id||!pw){document.getElementById("loginError").textContent="IDとパスワードを入力してください";return;}
+    if(!id||!pw){document.getElementById("loginError").textContent=appUiText().loginNeedBoth;return;}
     const hash=await sha256(pw);
     const ok=getEffectiveAllowedUsers().find(u=>u.id.toLowerCase()===id.toLowerCase()&&u.passwordHash===hash);
     if(ok){setCurrentUser(id);hideLoginModal();if(_loginCallback)_loginCallback();}
-    else{document.getElementById("loginError").textContent="IDまたはパスワードが正しくありません";}
+    else{document.getElementById("loginError").textContent=appUiText().loginInvalid;}
   });
   document.getElementById("btnLoginCancel").addEventListener("click",hideLoginModal);
   document.getElementById("loginPassword").addEventListener("keydown",(e)=>{if(e.key==="Enter")document.getElementById("btnLoginSubmit").click();});
@@ -1985,9 +2024,9 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
       // 初回：パスワードを新規設定
       auth.adminPasswordHash=await sha256(pw);
       saveAuthData(auth);
-      toast("🔑 アドミンパスワードを設定しました");
+      toast(appUiText().adminSet);
     }else{
-      if(await sha256(pw)!==auth.adminPasswordHash){toast("❌ パスワードが正しくありません");return;}
+      if(await sha256(pw)!==auth.adminPasswordHash){toast(appUiText().adminWrong);return;}
     }
     document.getElementById("adminPanel").style.display="";
     renderAllowedUserList();
@@ -1995,9 +2034,9 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
   document.getElementById("btnAddUser").addEventListener("click",async()=>{
     const id=document.getElementById("newUserId").value.trim();
     const pw=document.getElementById("newUserPassword").value;
-    if(!id||!pw){toast("IDとパスワードを入力してください");return;}
+    if(!id||!pw){toast(appUiText().loginNeedBoth);return;}
     const auth=getAuthData();
-    if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast("そのIDは既に登録されています");return;}
+    if(auth.allowedUsers.find(u=>u.id.toLowerCase()===id.toLowerCase())){toast(appUiText().idExists);return;}
     auth.allowedUsers.push({id,passwordHash:await sha256(pw)});
     saveAuthData(auth);
     // バックエンドキャッシュを無効化してローカルリストにフォールバックさせる。
@@ -2008,32 +2047,32 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     document.getElementById("newUserPassword").value="";
     renderAllowedUserList();
     updateLoginStatus();
-    toast("✅ ユーザー <b>"+id+"</b> を追加しました");
+    toast(appUiText().userAdded(id));
   });
   document.getElementById("btnChangeAdminPassword").addEventListener("click",async()=>{
     const pw=document.getElementById("newAdminPassword").value;
-    if(!pw){toast("新しいパスワードを入力してください");return;}
+    if(!pw){toast(appUiText().newPass);return;}
     const auth=getAuthData();
     auth.adminPasswordHash=await sha256(pw);
     saveAuthData(auth);
     document.getElementById("newAdminPassword").value="";
-    toast("🔑 アドミンパスワードを変更しました");
+    toast(appUiText().adminChanged);
   });
 
   // ── バックエンドに同期ボタン ─────────────────────────────────
   document.getElementById("btnSyncAuth").addEventListener("click",async()=>{
     const settings=getUiSettings();
-    if(!effectiveGlobalUrl(settings)){toast("⚠️ バックエンドに接続できません（ローカル環境では Worker URL の設定が必要です）");return;}
+    if(!effectiveGlobalUrl(settings)){toast(appUiText().needBackend);return;}
     const auth=getAuthData();
-    if(!auth.adminPasswordHash){toast("⚠️ アドミンパスワードを先に設定してください");return;}
-    document.getElementById("btnSyncAuth").textContent="同期中...";
+    if(!auth.adminPasswordHash){toast(appUiText().needAdmin);return;}
+    document.getElementById("btnSyncAuth").textContent=appUiText().syncing;
     const ok=await syncAuthToBackend(effectiveGlobalUrl(settings),auth.adminPasswordHash,auth.allowedUsers);
-    document.getElementById("btnSyncAuth").textContent="☁️ バックエンドに同期";
+    document.getElementById("btnSyncAuth").textContent=appUiText().syncBtn;
     if(ok){
-      toast("✅ 認証設定をバックエンドに同期しました");
+      toast(appUiText().syncOk);
       _backendAllowedUsers=auth.allowedUsers;
     }else{
-      toast("❌ 同期に失敗しました（URL・パスワードを確認してください）");
+      toast(appUiText().syncFail);
     }
   });
 
@@ -2202,7 +2241,7 @@ function autoUpdateReflect(){
   el.value = String(newMin);
   if(currentSettings) currentSettings.reflectDelayMin = newMin;
   const hint = document.getElementById("estReflectHint");
-  if(hint) hint.textContent = `→ Reflect X を ${newMin}m に自動更新`;
+  if(hint) hint.textContent = appUiText().reflectHint(newMin);
 }
 function updateEstimatorUi(){
   const last = document.getElementById("estLastBatch");
