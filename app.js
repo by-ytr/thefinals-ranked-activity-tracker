@@ -1,97 +1,5 @@
 const LS={settings:"finals_tracker_settings_v3",snapshots:"finals_tracker_snapshots_v3",events:"finals_tracker_events_v3",names:"finals_tracker_names_v1",community:"finals_tracker_community_v1",auth:"finals_tracker_auth_v1",session:"finals_tracker_session_v1"};
 const DEFAULTS={proxyBase:"",globalUrl:"",leaderboardId:"s9",platform:"crossplay",pollIntervalSec:60,reflectDelayMin:8,matchWaitMin:5,matchAvgMin:31,matchJitterMin:3,tournamentTotalMin:45,estimatorEnabled:true,estWindowStart:2000,estWindowSize:500,estCacheSec:30,maxEvents:5000,rsDropThreshold:1000};
-const ROUND_TIMING={r1Min:10,r1Max:13,r2Min:10,r2Max:13,frMin:8,frMax:11,returningMin:25};
-function getRoundTiming(){return ROUND_TIMING;}
-function getTournamentTiming(matchWaitMin){
-  const rt=getRoundTiming();
-  const W=Math.max(0, Math.min(30, matchWaitMin ?? 5));
-  const r1Max=rt.r1Max;
-  const totalMin=rt.r1Min+rt.r2Min+rt.frMin;
-  const totalMax=rt.r1Max+rt.r2Max+rt.frMax;
-  return {W,r1Max,totalMin,totalMax,returningMin:rt.returningMin};
-}
-function encounterElapsedMin(roundKey,phaseKey){
-  const rt=getRoundTiming();
-  const bands={early:[1,4],mid:[5,8],late:[9,13]};
-  const [a,b]=bands[phaseKey]||[1,4];
-  const phase=Math.round((a+b)/2);
-  const r1Mid=Math.round((rt.r1Min+rt.r1Max)/2);
-  const r2Mid=Math.round((rt.r2Min+rt.r2Max)/2);
-  if(roundKey==="r1") return phase;
-  if(roundKey==="r2") return r1Mid+phase;
-  if(roundKey==="fr") return r1Mid+r2Mid+Math.min(phase,rt.frMax);
-  return phase;
-}
-
-function uiLang(){
-  try{ if(typeof currentLang === "string" && currentLang) return currentLang; }catch(_){ }
-  const q=new URLSearchParams(location.search).get("lang");
-  if(q && /^(ja|ko|en)$/.test(q)) return q;
-  const docLang=(document.documentElement.lang||"").toLowerCase();
-  if(docLang.startsWith("ko")) return "ko";
-  if(docLang.startsWith("ja")) return "ja";
-  const nav=(navigator.language||"en").toLowerCase();
-  if(nav.startsWith("ko")) return "ko";
-  if(nav.startsWith("ja")) return "ja";
-  return "en";
-}
-function uiText(key){
-  const lang=uiLang();
-  const dict={
-    ja:{
-      "enc.label":"📝 遭遇記録","enc.active":"記録中",
-      "enc.won":"勝","enc.final_end":"FINAL終了","enc.offline":"オフ",
-      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
-      "enc.early":"序盤","enc.mid":"中盤","enc.late":"終盤",
-      "action.delete":"削除","th.action":"操作","th.error.short":"Error",
-      "pickup.title":"ピックアップ（大型グラフに追加）"
-    },
-    ko:{
-      "enc.label":"📝 조우 기록","enc.active":"기록 중",
-      "enc.won":"승","enc.final_end":"FINAL 종료","enc.offline":"오프",
-      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
-      "enc.early":"초반","enc.mid":"중반","enc.late":"후반",
-      "action.delete":"삭제","th.action":"동작","th.error.short":"오류",
-      "pickup.title":"픽업(대형 그래프에 추가)"
-    },
-    en:{
-      "enc.label":"📝 Encounter record","enc.active":"Active",
-      "enc.won":"WIN","enc.final_end":"FINAL END","enc.offline":"OFF",
-      "enc.r1":"R1","enc.r2":"R2","enc.fr":"FR",
-      "enc.early":"Early","enc.mid":"Mid","enc.late":"Late",
-      "action.delete":"Delete","th.action":"Action","th.error.short":"Error",
-      "pickup.title":"Pick up (add to large graph)"
-    }
-  };
-  return (dict[lang]&&dict[lang][key]) || (dict.en[key]) || key;
-}
-function encounterDisplayLabel(typeKey){
-  const map={
-    won:uiText("enc.won"), final_end:uiText("enc.final_end"), offline:uiText("enc.offline"),
-    r1:uiText("enc.r1"), r2:uiText("enc.r2"), fr:uiText("enc.fr"),
-    r1_early:`${uiText("enc.r1")}${uiText("enc.early")}`,
-    r1_mid:`${uiText("enc.r1")}${uiText("enc.mid")}`,
-    r1_late:`${uiText("enc.r1")}${uiText("enc.late")}`,
-    r2_early:`${uiText("enc.r2")}${uiText("enc.early")}`,
-    r2_mid:`${uiText("enc.r2")}${uiText("enc.mid")}`,
-    r2_late:`${uiText("enc.r2")}${uiText("enc.late")}`,
-    fr_early:`${uiText("enc.fr")}${uiText("enc.early")}`,
-    fr_mid:`${uiText("enc.fr")}${uiText("enc.mid")}`,
-    fr_late:`${uiText("enc.fr")}${uiText("enc.late")}`
-  };
-  return map[typeKey] || typeKey;
-}
-function compactErrorText(err){ return err ? uiText("th.error.short") : ""; }
-function quickEncounterGroupHtml(group){
-  const subMap={
-    r1:["r1_early","r1_mid","r1_late"],
-    r2:["r2_early","r2_mid","r2_late"],
-    fr:["fr_early","fr_mid","fr_late"]
-  };
-  const items=(subMap[group]||[]).map(ev=>`<button class="encQuickSubBtn" data-ev="${ev}" style="display:block;width:100%;padding:5px 8px;border:0;background:transparent;color:#d9e7ff;text-align:left;font-size:11px;cursor:pointer;">${encounterDisplayLabel(ev)}</button>`).join("");
-  return `<div class="encQuickGroup" style="position:relative;display:inline-block;"><button class="encQuickGroupBtn" data-group="${group}" title="${encounterDisplayLabel(group)}" style="min-width:40px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #244a6b;background:#0c1d2d;color:#d9e7ff;font-size:11px;">${encounterDisplayLabel(group)} ▾</button><div class="encQuickMenu" style="display:none;position:absolute;top:26px;left:0;z-index:30;min-width:92px;background:#091626;border:1px solid #183450;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:4px;"><div>${items}</div></div></div>`;
-}
-
 // バックエンド URL 自動解決：明示設定がなければ同オリジン（Worker 配信時）を使用
 function autoOrigin(){const o=location.origin;return(o==="null"||o.startsWith("file:")||o.includes("localhost")||o.includes("127.0.0.1"))?"":o;}
 function effectiveProxyBase(s){return(s.proxyBase||"").replace(/\/$/,"")||autoOrigin();}
@@ -134,53 +42,88 @@ function buildPlayerSparkEl(row){
   wrap.appendChild(barsEl);wrap.appendChild(axisEl);
   return wrap;
 }
+function uiLangSimple(){
+  const raw=((document.documentElement&&document.documentElement.lang)||navigator.language||"en").toLowerCase();
+  if(raw.startsWith("ja")) return "ja";
+  if(raw.startsWith("ko")) return "ko";
+  return "en";
+}
+function encUiText(){
+  const l=uiLangSimple();
+  if(l==="ja") return {record:"遭遇記録", recording:"記録中", early:"序盤", mid:"中盤", late:"終盤", r1:"R1", r2:"R2", fr:"FR", win:"勝", off:"オフ", error:"Error", del:"削除", action:"操作"};
+  if(l==="ko") return {record:"조우 기록", recording:"기록중", early:"초반", mid:"중반", late:"후반", r1:"R1", r2:"R2", fr:"FR", win:"승", off:"오프", error:"오류", del:"삭제", action:"동작"};
+  return {record:"Encounter", recording:"Recording", early:"Early", mid:"Mid", late:"Late", r1:"R1", r2:"R2", fr:"FR", win:"WIN", off:"OFF", error:"Error", del:"Delete", action:"Action"};
+}
+function ensureEncounterUiStyles(){
+  if(document.getElementById('encUiPatchStyle')) return;
+  const st=document.createElement('style');
+  st.id='encUiPatchStyle';
+  st.textContent=`
+  .errCell.errCompact{width:72px;max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:#c9d3df;}
+  .actCell.encActions{white-space:nowrap;width:260px;max-width:260px;}
+  .encActionWrap{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:nowrap;}
+  .encMiniSel{height:28px;min-width:44px;border-radius:8px;background:#091626;color:#dce7f5;border:1px solid #1a4c7a;font-size:12px;padding:0 6px;}
+  .encMiniBtn{height:28px;padding:0 8px;border-radius:8px;border:1px solid #36506e;background:#091626;color:#dce7f5;font-size:12px;font-weight:700;cursor:pointer;}
+  .encMiniBtn.win{border-color:#2f6d1f;background:#10230d;color:#aef08f;}
+  .encMiniBtn.off{border-color:#4d5562;background:#151922;color:#c9d3df;}
+  .encMiniBtn.del{padding:0 9px;min-width:28px;color:#9fb0c6;}
+  .encPanelControls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  `;
+  document.head.appendChild(st);
+}
+function manualEncounterLabel(type){
+  const L=encUiText();
+  switch(type){
+    case 'won': return L.win;
+    case 'offline': return L.off;
+    case 'r1_early': return `R1 ${L.early}`;
+    case 'r1_mid': return `R1 ${L.mid}`;
+    case 'r1_late': return `R1 ${L.late}`;
+    case 'r2_early': return `R2 ${L.early}`;
+    case 'r2_mid': return `R2 ${L.mid}`;
+    case 'r2_late': return `R2 ${L.late}`;
+    case 'fr_early': return `FR ${L.early}`;
+    case 'fr_mid': return `FR ${L.mid}`;
+    case 'fr_late': return `FR ${L.late}`;
+    case 'final_end': return 'FINAL';
+    default: return type||'';
+  }
+}
+function buildEncounterControls(row,opts={}){
+  ensureEncounterUiStyles();
+  const L=encUiText();
+  const showDelete=!!opts.showDelete;
+  const wrap=document.createElement('div');
+  wrap.className=opts.panel?'encPanelControls':'encActionWrap';
+  const mkSel=(base)=>{
+    const sel=document.createElement('select');
+    sel.className='encMiniSel';
+    sel.innerHTML=`<option value="">${base}</option><option value="${base.toLowerCase()}_early">${L.early}</option><option value="${base.toLowerCase()}_mid">${L.mid}</option><option value="${base.toLowerCase()}_late">${L.late}</option>`;
+    sel.addEventListener('change',(e)=>{ const v=e.target.value; if(!v) return; applyEncounterEvent(row.name,v); e.target.value=''; });
+    return sel;
+  };
+  wrap.appendChild(mkSel('R1'));
+  wrap.appendChild(mkSel('R2'));
+  wrap.appendChild(mkSel('FR'));
+  const win=document.createElement('button'); win.className='encMiniBtn win'; win.type='button'; win.textContent=L.win; win.addEventListener('click',(e)=>{e.stopPropagation(); applyEncounterEvent(row.name,'won');}); wrap.appendChild(win);
+  const off=document.createElement('button'); off.className='encMiniBtn off'; off.type='button'; off.textContent=L.off; off.addEventListener('click',(e)=>{e.stopPropagation(); applyEncounterEvent(row.name,'offline');}); wrap.appendChild(off);
+  if(showDelete){
+    const del=document.createElement('button'); del.className='encMiniBtn del deleteBtn'; del.type='button'; del.textContent='✕'; del.title=L.del;
+    del.addEventListener('click',(e)=>{e.stopPropagation(); removePlayer(row.name);});
+    wrap.appendChild(del);
+  }
+  return wrap;
+}
 function buildExpandRow(r,key){
   const tr=document.createElement("tr");tr.className="expandRow";tr.dataset.for=key;
   const td=document.createElement("td");td.colSpan=10;td.className="expandCell";
+  // ── 遭遇記録パネル ──
   const panel=document.createElement("div");panel.className="encounterPanel";
-  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent=uiText("enc.label");panel.appendChild(elabel);
-  const btns=document.createElement("div");btns.className="encounterBtns";
-  for(const et of ENCOUNTER_TYPES){
-    if(et.group){
-      const wrap=document.createElement("div");wrap.className="encounterGroup";
-      const gBtn=document.createElement("button");gBtn.className="encounterBtn encounterGroupBtn";
-      gBtn.title=encounterDisplayLabel(et.key);
-      gBtn.innerHTML=encounterDisplayLabel(et.key)+' <span class="groupCaret">▾</span>';
-      const subPanel=document.createElement("div");subPanel.className="encounterSubPanel";
-      for(const sub of et.sub){
-        const sBtn=document.createElement("button");sBtn.className="encounterSubBtn";
-        sBtn.textContent=encounterDisplayLabel(sub.key);sBtn.title=encounterDisplayLabel(sub.key);
-        sBtn.addEventListener("click",(e)=>{
-          e.stopPropagation();
-          applyEncounterEvent(r.name,sub.key);
-          subPanel.classList.remove("open");
-          const caret=gBtn.querySelector(".groupCaret"); if(caret) caret.textContent="▾";
-          renderTable(lastRows);
-        });
-        subPanel.appendChild(sBtn);
-      }
-      gBtn.addEventListener("click",(e)=>{
-        e.stopPropagation();
-        const isOpen=subPanel.classList.contains("open");
-        btns.querySelectorAll(".encounterSubPanel.open").forEach(p=>{
-          p.classList.remove("open");
-          const gc=p.previousElementSibling&&p.previousElementSibling.querySelector(".groupCaret");if(gc)gc.textContent="▾";
-        });
-        if(!isOpen){subPanel.classList.add("open"); const caret=gBtn.querySelector(".groupCaret"); if(caret) caret.textContent="▴";}
-      });
-      wrap.appendChild(gBtn);wrap.appendChild(subPanel);btns.appendChild(wrap);
-    }else{
-      const btn=document.createElement("button");
-      btn.className="encounterBtn"+(et.key==="offline"?" encounterBtn--offline":"");
-      btn.title=encounterDisplayLabel(et.key);btn.textContent=encounterDisplayLabel(et.key);
-      btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,et.key);renderTable(lastRows);});
-      btns.appendChild(btn);
-    }
-  }
-  panel.appendChild(btns);
-  if(r.manualEvent){
+  const elabel=document.createElement("div");elabel.className="encounterLabel";elabel.textContent="📝 "+encUiText().record;panel.appendChild(elabel);
+  panel.appendChild(buildEncounterControls(r,{showDelete:false,panel:true}));
+  if(r.manualEvent&&isManualActive(r.manualEvent)){
     const activeEl=document.createElement("div");activeEl.className="encounterActive";
-    activeEl.innerHTML="📌 <b>"+encounterDisplayLabel(r.manualEvent.type)+"</b> "+uiText("enc.active");
+    activeEl.innerHTML="📌 <b>"+manualEncounterLabel(r.manualEvent.type)+"</b> "+encUiText().recording;
     panel.appendChild(activeEl);
   }
   td.appendChild(panel);
@@ -606,22 +549,22 @@ const ENCOUNTER_TYPES=[
   {key:"won",       label:"🏆 勝利",     desc:"試合に勝利した（即ロビーへ）",     getOffset:s=>0},
   {key:"final_end", label:"💀 FINAL終了", desc:"FINALラウンド終了（負け）",        getOffset:s=>0},
   {key:"r1", label:"R1", desc:"ラウンド1で遭遇", group:true, sub:[
-    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r1","early")},
-    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r1","mid")},
-    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r1","late")},
+    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
+    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
+    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
   ]},
   {key:"r2", label:"R2", desc:"ラウンド2で遭遇", group:true, sub:[
-    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","early")},
-    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","mid")},
-    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("r2","late")},
+    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
+    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
+    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
   ]},
   {key:"fr", label:"FR", desc:"FINALラウンドで遭遇", group:true, sub:[
-    {key:"fr_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","early")},
-    {key:"fr_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","mid")},
-    {key:"fr_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+encounterElapsedMin("fr","late")},
+    {key:"fr_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+s.matchAvgMin+2},
+    {key:"fr_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+s.matchAvgMin+5},
+    {key:"fr_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+s.matchAvgMin+8},
   ]},
   // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
-  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+getTournamentTiming(s.matchWaitMin).W+getTournamentTiming(s.matchWaitMin).totalMax+30},
+  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
 ];
 // サブタイプを含むフラット検索
 function findEncounterType(key){
@@ -912,8 +855,8 @@ function stateExplain(row,displayState){
     if(manual.type==="won") return "手動で勝利後の戻り時間帯を記録中";
     if(manual.type==="final_end") return "手動でFinal Round終了後の戻り時間帯を記録中";
     if(String(manual.type||"").startsWith("r1_")) return "手動でR1試合中として記録中";
-    if(String(manual.type||"").startsWith("r2_")) return "手動でR2試合中として記録中";
-    if(String(manual.type||"").startsWith("fr_")) return "手動でFR試合中として記録中";
+    if(String(manual.type||"").startsWith("r2_")) return "手動でR2以降の試合中として記録中";
+    if(String(manual.type||"").startsWith("fr_")) return "手動でFinal Round試合中として記録中";
     return `手動記録「${et?et.label:manual.type}」を優先表示中`;
   }
   switch(displayState){
@@ -974,50 +917,53 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
   if(!lastChangeAtMs) return { state:"UNKNOWN", nextMatchProb:0 };
 
   const tMin = (now - lastChangeAtMs) / 60000;
-  const X = Math.max(0, reflectDelayMin || 0);
-  const tm = getTournamentTiming(matchWaitMin);
-  const W = tm.W;
-  const R1_END = X + W + tm.r1Max;
-  const TOURNEY_END = X + W + tm.totalMax;
-  const RETURN_END = TOURNEY_END + tm.returningMin;
-
-  let state = "LOBBY";
-  if(tMin < X)                   state = "POST_MATCH_WAIT";
-  else if(tMin < X + W)          state = "LOBBY";
-  else if(tMin < R1_END)         state = "IN_MATCH";
-  else if(tMin < TOURNEY_END)    state = "IN_TOURNAMENT_DEEP";
-  else if(tMin < RETURN_END)     state = "RETURNING";
-  else                           state = "OFFLINE";
+  const X = reflectDelayMin;
 
   if(!skipOffline20){
+    // ① バッチ検出済み：lastBatchAt が lastChangeAt より 5分以上新しい
+    //    → 最新バッチでこのプレイヤーのポイント変動なし = OFFLINE確定
     const lastBatch = estimator.lastBatchAt;
-    const BATCH_BUF_MS = 5 * 60 * 1000;
-    const seenNewBatch = !!(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS);
-    const lobbyLike = state === "LOBBY" || state === "RETURNING" || state === "POST_MATCH_WAIT";
-    if(seenNewBatch && lobbyLike && tMin >= 30){
+    const BATCH_BUF_MS = 5 * 60 * 1000; // ポーリングズレ吸収バッファ
+    if(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS){
       return { state:"OFFLINE", nextMatchProb:0 };
     }
+    // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック（20分固定）
+    if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
   }
+  const W = Math.max(0, Math.min(30, matchWaitMin ?? 5));   // lobby/queue wait before next match
+  const M = Math.max(20, Math.min(60, matchAvgMin || 31));  // minimum match duration (31min fastest)
+  const J = Math.max(0, Math.min(10, matchJitterMin ?? 3)); // +jitter tolerance (one-sided)
+  const T = Math.max(M + W + 5, Math.min(180, tournamentTotalMin || 70));
 
+  // State transitions
+  let state = "LOBBY";
+  if(tMin < X)                 state = "POST_MATCH_WAIT";
+  else if(tMin < X + W)        state = "LOBBY";              // queuing for next match
+  else if(tMin < X + W + M)    state = "IN_MATCH";           // minimum 31min not elapsed → in match
+  else if(tMin < X + W + M + J) state = "IN_MATCH";          // +3min gray zone
+  else if(tMin < X + T)        state = "IN_TOURNAMENT_DEEP";
+  else if(tMin < X + T + 25)   state = "RETURNING";
+  else                         state = "OFFLINE";
+
+  // next_match%: peaks at (X+W) = when next match is expected to start
   const peak = X + W;
+  const matchEnd = X + W + M + J;
   let p = 0;
   if(tMin < X) {
     p = 0.05 * (tMin / Math.max(1, X));
   } else if(tMin <= peak) {
     p = 0.10 + 0.90 * ((tMin - X) / Math.max(1, W));
-  } else if(tMin <= peak + 4) {
-    p = 1.00 - 0.45 * ((tMin - peak) / 4);
-  } else if(tMin <= R1_END) {
-    p = 0.55 - 0.15 * ((tMin - (peak + 4)) / Math.max(1, R1_END - (peak + 4)));
-  } else if(tMin <= TOURNEY_END) {
-    p = 0.40 - 0.22 * ((tMin - R1_END) / Math.max(1, TOURNEY_END - R1_END));
-  } else if(tMin <= RETURN_END) {
-    p = 0.18 - 0.13 * ((tMin - TOURNEY_END) / Math.max(1, RETURN_END - TOURNEY_END));
+  } else if(tMin <= peak + M * 0.25) {
+    p = 1.00 - 0.55 * ((tMin - peak) / Math.max(1, M * 0.25));
+  } else if(tMin <= matchEnd) {
+    p = 0.45 - 0.25 * ((tMin - (peak + M * 0.25)) / Math.max(1, matchEnd - peak - M * 0.25));
+  } else if(tMin <= X + T) {
+    p = 0.20 - 0.10 * ((tMin - matchEnd) / Math.max(1, X + T - matchEnd));
   } else {
-    p = 0.02;
+    p = 0.05;
   }
 
-  p = Math.min(0.80, clamp01(p));
+  p = Math.min(0.80, clamp01(p)); // 最高80%（100%前提の見え方を避ける）
   return { state, nextMatchProb: Math.round(p * 100) };
 }
 
@@ -1098,8 +1044,7 @@ function renderTable(rows){
     const manualActive=isManualActive(r.manualEvent);
     const manualType=r.manualEvent?.type;
     const isWonOrFinal=manualType==="won"||manualType==="final_end";
-    const manualRemMin=manualActive?manualRem(r.manualEvent):0;
-    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualRemMin}m</span>`:"";
+    const manualBadge=manualActive?`<span class="manualBadge">📌 ${manualEncounterLabel(manualType)}</span>`:"";
     const tr=document.createElement("tr");
     if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
     else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
@@ -1112,13 +1057,13 @@ function renderTable(rows){
       <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
-      <td class="errCell">${r.error||""}</td>
-      <td class="actCell"><button class="resetBtn" title="遭遇記録（クリックで展開）">⚔</button><button class="deleteBtn" title="削除">✕</button></td>
+      <td class="errCell errCompact" title="${(r.error||"").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}">${r.error?encUiText().error:""}</td>
+      <td class="actCell encActions"></td>
     `;
     tr.querySelector(".pickupBtn").addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
     tr.querySelector(".nameCell").addEventListener("click",()=>toggleExpand(r,tr,key));
-    tr.querySelector(".resetBtn").addEventListener("click",(e)=>{e.stopPropagation();toggleExpand(r,tr,key);});
-    tr.querySelector(".deleteBtn").addEventListener("click",(e)=>{e.stopPropagation();removePlayer(r.name);});
+    const actCell=tr.querySelector('.actCell');
+    actCell.appendChild(buildEncounterControls(r,{showDelete:liveTabMode!=="global"}));
     tbody.appendChild(tr);
     if(isExpanded) tbody.appendChild(buildExpandRow(r,key));
   }
