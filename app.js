@@ -557,18 +557,52 @@ async function deleteCommunityEntryFromGlobal(globalUrl,name){
   }
 }
 // 遭遇タイプ: group:true のものは sub[] をドロップダウン表示
+// ラウンド時間の基準値（要件）:
+// R1 = 10〜12分 / R2 = 10〜12分 / Final Round = 8〜10分
+const ROUND_WINDOWS={
+  r1:{min:10,max:12},
+  r2:{min:10,max:12},
+  fr:{min:8,max:10},
+};
+function roundAvg(key){
+  const r=ROUND_WINDOWS[key];
+  return r?Math.round((r.min+r.max)/2):0;
+}
+function roundPhaseOffset(key,phase){
+  const r=ROUND_WINDOWS[key];
+  if(!r)return 0;
+  const avg=roundAvg(key);
+  switch(phase){
+    case "early": return Math.max(1,Math.round(r.min*0.25));
+    case "mid":   return Math.max(2,Math.round(avg*0.55));
+    case "late":  return Math.max(r.min,Math.round(r.max*0.85));
+    default:       return avg;
+  }
+}
+function tournamentRoundBase(s,key){
+  const base=(s.reflectDelayMin||0)+(s.matchWaitMin||0);
+  if(key==="r1") return base;
+  if(key==="r2") return base+roundAvg("r1");
+  if(key==="fr") return base+roundAvg("r1")+roundAvg("r2");
+  return base;
+}
 const ENCOUNTER_TYPES=[
-  {key:"won",       label:"🏆 勝利",     desc:"試合に勝利した（即ロビーへ）",     getOffset:s=>0},
-  {key:"final_end", label:"💀 FINAL終了", desc:"FINALラウンド終了（負け）",        getOffset:s=>0},
+  {key:"won",       label:"🏆 勝利",      desc:"試合に勝利した（即ロビーへ）",        getOffset:s=>0},
+  {key:"final_end", label:"💀 FINAL終了",  desc:"FINALラウンド終了（負け）",           getOffset:s=>0},
   {key:"r1", label:"R1", desc:"ラウンド1で遭遇", group:true, sub:[
-    {key:"r1_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r1_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r1_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+    {key:"r1_early", label:"序盤", getOffset:s=>tournamentRoundBase(s,"r1")+roundPhaseOffset("r1","early")},
+    {key:"r1_mid",   label:"中盤", getOffset:s=>tournamentRoundBase(s,"r1")+roundPhaseOffset("r1","mid")},
+    {key:"r1_late",  label:"終盤", getOffset:s=>tournamentRoundBase(s,"r1")+roundPhaseOffset("r1","late")},
   ]},
   {key:"r2", label:"R2", desc:"ラウンド2で遭遇", group:true, sub:[
-    {key:"r2_early", label:"序盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.2)},
-    {key:"r2_mid",   label:"中盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.5)},
-    {key:"r2_late",  label:"終盤", getOffset:s=>s.reflectDelayMin+s.matchAvgMin+s.matchWaitMin+Math.round(s.matchAvgMin*0.8)},
+    {key:"r2_early", label:"序盤", getOffset:s=>tournamentRoundBase(s,"r2")+roundPhaseOffset("r2","early")},
+    {key:"r2_mid",   label:"中盤", getOffset:s=>tournamentRoundBase(s,"r2")+roundPhaseOffset("r2","mid")},
+    {key:"r2_late",  label:"終盤", getOffset:s=>tournamentRoundBase(s,"r2")+roundPhaseOffset("r2","late")},
+  ]},
+  {key:"fr", label:"FR", desc:"Final Roundで遭遇", group:true, sub:[
+    {key:"fr_early", label:"序盤", getOffset:s=>tournamentRoundBase(s,"fr")+roundPhaseOffset("fr","early")},
+    {key:"fr_mid",   label:"中盤", getOffset:s=>tournamentRoundBase(s,"fr")+roundPhaseOffset("fr","mid")},
+    {key:"fr_late",  label:"終盤", getOffset:s=>tournamentRoundBase(s,"fr")+roundPhaseOffset("fr","late")},
   ]},
   // オフラインのみ有効期間5分固定・offset は必ずOFFLINE状態になる値
   {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
@@ -862,7 +896,8 @@ function stateExplain(row,displayState){
     if(manual.type==="won") return "手動で勝利後の戻り時間帯を記録中";
     if(manual.type==="final_end") return "手動でFinal Round終了後の戻り時間帯を記録中";
     if(String(manual.type||"").startsWith("r1_")) return "手動でR1試合中として記録中";
-    if(String(manual.type||"").startsWith("r2_")) return "手動でR2以降の試合中として記録中";
+    if(String(manual.type||"").startsWith("r2_")) return "手動でR2試合中として記録中";
+    if(String(manual.type||"").startsWith("fr_")) return "手動でFinal Round試合中として記録中";
     return `手動記録「${et?et.label:manual.type}」を優先表示中`;
   }
   switch(displayState){
@@ -923,7 +958,7 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
   if(!lastChangeAtMs) return { state:"UNKNOWN", nextMatchProb:0 };
 
   const tMin = (now - lastChangeAtMs) / 60000;
-  const X = reflectDelayMin;
+  const X = Math.max(0, reflectDelayMin||0);
 
   if(!skipOffline20){
     // ① バッチ検出済み：lastBatchAt が lastChangeAt より 5分以上新しい
@@ -933,43 +968,49 @@ function inferState(now,lastChangeAtMs,reflectDelayMin,matchWaitMin,matchAvgMin,
     if(lastBatch && lastBatch > lastChangeAtMs + BATCH_BUF_MS){
       return { state:"OFFLINE", nextMatchProb:0 };
     }
-    // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック（20分固定）
-    if(!lastBatch && tMin >= 20) return { state:"OFFLINE", nextMatchProb:0 };
+    // ② バッチデータなし（エスティメーター未起動）→ 時間ベースのフォールバック
+    //    ラウンド長の要件（R1 10-12 / R2 10-12 / FR 8-10）に合わせて上限を決定
+    if(!lastBatch){
+      const offlineFallback = X + (matchWaitMin||5) + ROUND_WINDOWS.r1.max + ROUND_WINDOWS.r2.max + ROUND_WINDOWS.fr.max + 5;
+      if(tMin >= offlineFallback) return { state:"OFFLINE", nextMatchProb:0 };
+    }
   }
-  const W = Math.max(0, Math.min(30, matchWaitMin ?? 5));   // lobby/queue wait before next match
-  const M = Math.max(20, Math.min(60, matchAvgMin || 31));  // minimum match duration (31min fastest)
-  const J = Math.max(0, Math.min(10, matchJitterMin ?? 3)); // +jitter tolerance (one-sided)
-  const T = Math.max(M + W + 5, Math.min(180, tournamentTotalMin || 70));
 
-  // State transitions
+  const W = Math.max(0, Math.min(30, matchWaitMin ?? 5));
+  const R1 = ROUND_WINDOWS.r1.max; // 10〜12分 → 状態判定は上限側で保持
+  const R2 = ROUND_WINDOWS.r2.max; // 10〜12分
+  const FR = ROUND_WINDOWS.fr.max; // 8〜10分
+  const startR1 = X + W;
+  const startR2 = startR1 + R1;
+  const startFR = startR2 + R2;
+  const endFR = startFR + FR;
+
   let state = "LOBBY";
-  if(tMin < X)                 state = "POST_MATCH_WAIT";
-  else if(tMin < X + W)        state = "LOBBY";              // queuing for next match
-  else if(tMin < X + W + M)    state = "IN_MATCH";           // minimum 31min not elapsed → in match
-  else if(tMin < X + W + M + J) state = "IN_MATCH";          // +3min gray zone
-  else if(tMin < X + T)        state = "IN_TOURNAMENT_DEEP";
-  else if(tMin < X + T + 25)   state = "RETURNING";
-  else                         state = "OFFLINE";
+  if(tMin < X)            state = "POST_MATCH_WAIT";
+  else if(tMin < startR1) state = "LOBBY";
+  else if(tMin < startR2) state = "IN_MATCH";            // R1
+  else if(tMin < startFR) state = "IN_TOURNAMENT_DEEP";  // R2
+  else if(tMin < endFR)   state = "RETURNING";           // UI表示は Final Round
+  else                    state = "OFFLINE";
 
-  // next_match%: peaks at (X+W) = when next match is expected to start
-  const peak = X + W;
-  const matchEnd = X + W + M + J;
+  // next_match%: ロビーで上昇し、試合開始後はラウンド進行に応じて低下
+  const peak = startR1;
   let p = 0;
-  if(tMin < X) {
+  if(tMin < X){
     p = 0.05 * (tMin / Math.max(1, X));
-  } else if(tMin <= peak) {
+  }else if(tMin <= peak){
     p = 0.10 + 0.90 * ((tMin - X) / Math.max(1, W));
-  } else if(tMin <= peak + M * 0.25) {
-    p = 1.00 - 0.55 * ((tMin - peak) / Math.max(1, M * 0.25));
-  } else if(tMin <= matchEnd) {
-    p = 0.45 - 0.25 * ((tMin - (peak + M * 0.25)) / Math.max(1, matchEnd - peak - M * 0.25));
-  } else if(tMin <= X + T) {
-    p = 0.20 - 0.10 * ((tMin - matchEnd) / Math.max(1, X + T - matchEnd));
-  } else {
+  }else if(tMin <= startR2){
+    p = 1.00 - 0.55 * ((tMin - startR1) / Math.max(1, R1));
+  }else if(tMin <= startFR){
+    p = 0.45 - 0.20 * ((tMin - startR2) / Math.max(1, R2));
+  }else if(tMin <= endFR){
+    p = 0.25 - 0.20 * ((tMin - startFR) / Math.max(1, FR));
+  }else{
     p = 0.05;
   }
 
-  p = Math.min(0.80, clamp01(p)); // 最高80%（100%前提の見え方を避ける）
+  p = Math.min(0.80, clamp01(p));
   return { state, nextMatchProb: Math.round(p * 100) };
 }
 

@@ -159,12 +159,12 @@
           <span>m</span>
         </div>
         <div class="pill sm">
-          <span data-i18n="label.match">Match</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">1ラウンド（R1）の平均所要時間（分）。<br>Lobby 終了からこの時間内は <b>In Match (R1)</b> と推定します。<br>※1試合 = R1+R2+Final の全体。このMatch値はR1基準。<br>目安：約31分</span></span></span>
+          <span data-i18n="label.match">Match</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">現在の状態推定は固定ラウンド長を使用します。<br><b>R1 = 10〜12分 / R2 = 10〜12分 / Final = 8〜10分</b><br>この入力欄は旧ロジック互換のため残しています</span></span></span>
           <input id="matchAvg" type="number" min="20" max="60" step="1" value="31" />
           <span>m</span>
         </div>
         <div class="pill sm">
-          <span data-i18n="label.jitter">+jitter</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">試合時間の誤差マージン（分）。<br>Match+jitter を超えると <b>In Match (R2)</b> 推定に移行します。<br>試合が長引いた際のバッファとして機能します。</span></span></span>
+          <span data-i18n="label.jitter">+jitter</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">現在の状態推定は <b>R1 / R2 / Final</b> の固定ラウンド長で判定します。<br><b>jitter</b> は旧ロジック互換のため残しています</span></span></span>
           <input id="matchJitter" type="number" min="0" max="10" step="1" value="3" />
           <span>m</span>
         </div>
@@ -210,7 +210,7 @@
               <span>m</span>
             </div>
             <div class="pill sm">
-              <span data-i18n="label.tournament">Tournament</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.tournament">1大会全体の想定時間（分）。<br>全ラウンドの合計時間。この時間を超えると <b>Final Round → Offline</b> に移行します。<br>目安：45分（Wait+Match×1〜2R）</span></span></span>
+              <span data-i18n="label.tournament">Tournament</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.tournament">大会全体の参考時間です。<br>現在の状態推定は <b>R1 10〜12 / R2 10〜12 / Final 8〜10</b> を優先して判定します</span></span></span>
               <input id="tournamentTotal" type="number" min="10" max="120" step="1" value="45" />
               <span>m</span>
             </div>
