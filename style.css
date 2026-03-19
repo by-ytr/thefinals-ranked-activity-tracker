@@ -77,9 +77,10 @@ tbody tr td:first-child{font-weight:600;color:#cfe0ff}
 .psAxis{display:flex;justify-content:space-between;padding:0 1px;margin-top:3px}
 .psAxis span{font-size:10px;color:#5a7aaa}
 .psEmpty{color:#5a7aaa;font-size:13px;padding:16px 0;text-align:center}
-.nameCell{cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
+.nameCell{cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;white-space:nowrap}
 .nameCell:hover .expandCaret{color:#b8c4d6}
-.expandCaret{font-size:9px;color:#5a7aaa;margin-left:5px;vertical-align:middle}
+.playerName{flex-shrink:1;overflow:hidden;text-overflow:ellipsis;min-width:60px}
+.expandCaret{font-size:9px;color:#5a7aaa;margin-left:auto;flex-shrink:0}
 .expandRow .expandCell{padding:8px 16px 12px!important;background:#090d14;border-top:none}
 .toast{position:fixed;right:16px;bottom:16px;max-width:560px;padding:10px 12px;border-radius:12px;border:1px solid #223249;background:#0f1622;color:#e7edf5;display:none;box-shadow:0 10px 40px rgba(0,0,0,.35)}
 .toast.show{display:block}
