@@ -2128,24 +2128,45 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     renderTable(lastRows);
   });
 
-  // ── Live table 状態フィルター ──
+  // ── Live table 状態フィルター（ドロップダウン+チェックボックス） ──
   (function initStateFilter(){
     const STATES=["LOBBY","POST_MATCH_WAIT","IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING","OFFLINE","UNKNOWN","NOT_FOUND","BANNED","NAME_CHANGED"];
-    const wrap=document.getElementById("stateFilterTabs");if(!wrap)return;
-    const allBtn=document.createElement("button");allBtn.className="stateFilterBtn active";allBtn.dataset.state="all";allBtn.textContent=t("region.all")||"All";
-    allBtn.addEventListener("click",()=>{liveStateFilter.clear();wrap.querySelectorAll(".stateFilterBtn").forEach(b=>b.classList.remove("active"));allBtn.classList.add("active");renderTable(lastRows);});
-    wrap.appendChild(allBtn);
-    for(const s of STATES){
-      const btn=document.createElement("button");btn.className="stateFilterBtn";btn.dataset.state=s;
-      btn.innerHTML=`<span class="state ${s}" style="font-size:10px;padding:2px 6px;">${stateLabel(s)}</span>`;
-      btn.addEventListener("click",()=>{
-        if(liveStateFilter.has(s))liveStateFilter.delete(s);else liveStateFilter.add(s);
-        btn.classList.toggle("active",liveStateFilter.has(s));
-        allBtn.classList.toggle("active",liveStateFilter.size===0);
-        renderTable(lastRows);
-      });
-      wrap.appendChild(btn);
+    const toggle=document.getElementById("stateFilterToggle");
+    const menu=document.getElementById("stateFilterMenu");
+    if(!toggle||!menu)return;
+    function updateToggleLabel(){
+      const n=liveStateFilter.size;
+      toggle.textContent=n===0?"状態で絞り込み ▾":`状態フィルター (${n}) ▾`;
+      toggle.classList.toggle("hasFilter",n>0);
     }
+    toggle.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      menu.style.display=menu.style.display==="none"?"block":"none";
+    });
+    document.addEventListener("click",(e)=>{
+      if(!e.target.closest("#stateFilterWrap"))menu.style.display="none";
+    });
+    const FILTER_LABEL={POST_MATCH_WAIT:"state.REFLECT"};
+    for(const s of STATES){
+      const item=document.createElement("label");item.className="stateFilterItem";
+      const cb=document.createElement("input");cb.type="checkbox";cb.dataset.state=s;
+      const lbl=FILTER_LABEL[s]?t(FILTER_LABEL[s]):stateLabel(s);
+      const label=document.createElement("span");label.className=`state ${s}`;label.style.cssText="font-size:11px;padding:2px 8px;";label.textContent=lbl;
+      item.appendChild(cb);item.appendChild(label);
+      cb.addEventListener("change",()=>{
+        if(cb.checked)liveStateFilter.add(s);else liveStateFilter.delete(s);
+        updateToggleLabel();renderTable(lastRows);
+      });
+      menu.appendChild(item);
+    }
+    const reset=document.createElement("button");reset.className="stateFilterReset";reset.textContent="リセット";
+    reset.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      liveStateFilter.clear();
+      menu.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.checked=false);
+      updateToggleLabel();renderTable(lastRows);
+    });
+    menu.appendChild(reset);
   })();
 
   // ── ヘッダー認証ボタン ──

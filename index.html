@@ -114,7 +114,9 @@
         <input id="liveSearch" type="text" placeholder="🔍 名前で絞り込み…" data-i18n-ph="live.search" autocomplete="off" spellcheck="false"
           style="flex:1;min-width:140px;max-width:240px;height:28px;font-size:12px;padding:0 10px;border-radius:999px;border:1px solid #1e2e40;background:#0d1520;color:#cfe0ff" />
       </div>
-      <div id="stateFilterTabs" class="stateFilterTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+      <div id="stateFilterWrap" class="stateFilterWrap" style="position:relative;display:inline-block;margin-bottom:8px;">
+        <button id="stateFilterToggle" class="stateFilterToggle">状態で絞り込み ▾</button>
+        <div id="stateFilterMenu" class="stateFilterMenu" style="display:none;"></div>
       </div>
       <div class="tableWrap">
         <table id="tbl">

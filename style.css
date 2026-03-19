@@ -141,10 +141,17 @@ code{background:#0b101a;border:1px solid #223249;padding:2px 6px;border-radius:8
 .regionTab{padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;color:#8ea0b7}
 .regionTab.active{background:#223249;border-color:#3a5580;color:#e7edf5}
 .regionGroupLabel{font-size:10px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;padding-left:2px}
-.stateFilterTabs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
-.stateFilterBtn{padding:2px 8px;border-radius:999px;font-size:11px;cursor:pointer;background:transparent;border:1px solid #1e2e40;color:#5a7aaa;opacity:.6;transition:opacity .15s}
-.stateFilterBtn:hover{opacity:1}
-.stateFilterBtn.active{opacity:1;border-color:#3a5580;background:#0d1a2a}
+.stateFilterWrap{position:relative;display:inline-block}
+.stateFilterToggle{padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;background:#0d1520;border:1px solid #1e2e40;color:#8ea0b7;transition:border-color .15s,color .15s}
+.stateFilterToggle:hover{border-color:#3a5580;color:#e7edf5}
+.stateFilterToggle.hasFilter{border-color:#5b9cf6;color:#5b9cf6;background:#0a1828}
+.stateFilterMenu{position:absolute;top:calc(100% + 4px);left:0;z-index:40;min-width:200px;background:#0b101a;border:1px solid #223249;border-radius:10px;padding:6px 0;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.stateFilterItem{display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:12px;color:#b8c4d6;transition:background .1s}
+.stateFilterItem:hover{background:#111a28}
+.stateFilterItem input[type="checkbox"]{accent-color:#5b9cf6;width:14px;height:14px;cursor:pointer}
+.stateFilterItem .state{font-size:11px;padding:2px 8px}
+.stateFilterReset{display:block;width:calc(100% - 16px);margin:4px 8px 2px;padding:4px 0;border-radius:6px;font-size:11px;cursor:pointer;background:transparent;border:1px solid #1e2e40;color:#5a7aaa;text-align:center}
+.stateFilterReset:hover{border-color:#5b9cf6;color:#5b9cf6}
 .catBadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;flex-shrink:0}
 .catCheater{background:#2a0808;color:#ff5555;border:1px solid #7a1a1a}
 .catSuspicious{background:#2a1a00;color:#ffaa44;border:1px solid #7a4a00}
