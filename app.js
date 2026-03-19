@@ -86,7 +86,9 @@ function buildPlayerSparkEl(row){
 function buildExpandRow(r,key){
   const tr=document.createElement("tr");tr.className="expandRow";tr.dataset.for=key;
   const td=document.createElement("td");td.colSpan=10;td.className="expandCell";
-  td.appendChild(buildPlayerSparkEl(r));
+  const contentRow=document.createElement("div");contentRow.style.cssText="display:flex;gap:12px;align-items:flex-start;";
+  const graphArea=document.createElement("div");graphArea.style.cssText="flex:1;min-width:0;";
+  graphArea.appendChild(buildPlayerSparkEl(r));
 
 // ── ポイント推移グラフ ──
 const evts=getEvents().filter(e=>e.name.toLowerCase()===r.name.toLowerCase()&&e.delta!=null).slice(-48);
@@ -102,7 +104,7 @@ if(evts.length>=2){
   const canvas=document.createElement("canvas");
   canvas.width=720;canvas.height=180;
   canvas.style.cssText="width:100%;max-width:520px;height:140px;display:block;border-radius:8px;background:#091626;border:1px solid #16314f;";
-  chartWrap.appendChild(chartTitle);chartWrap.appendChild(canvas);td.appendChild(chartWrap);
+  chartWrap.appendChild(chartTitle);chartWrap.appendChild(canvas);graphArea.appendChild(chartWrap);
   requestAnimationFrame(()=>{
     const ctx=canvas.getContext("2d");if(!ctx)return;
     const W=canvas.width,H=canvas.height,padL=42,padR=12,padT=14,padB=24;
@@ -195,13 +197,13 @@ if(evts.length>=2){
       if(_re)submitCommunityEntryToGlobal(effectiveGlobalUrl(_rs),{..._re,region:rSel.value});
     }
   });
-  regionWrap.appendChild(rLabel);regionWrap.appendChild(rSel);td.appendChild(regionWrap);
-  // ── メモ ──
-  const memoWrap=document.createElement("div");memoWrap.style.cssText="margin-top:8px;display:flex;align-items:flex-start;gap:8px;";
-  const memoLbl=document.createElement("span");memoLbl.textContent="📝 Memo";memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;min-width:44px;padding-top:4px;white-space:nowrap;";
-  const memoTa=document.createElement("textarea");memoTa.style.cssText="flex:1;height:44px;font-size:12px;padding:4px 6px;background:#0a1a2e;border:1px solid #1e2e40;color:#e7edf5;border-radius:4px;resize:vertical;font-family:inherit;";
+  regionWrap.appendChild(rLabel);regionWrap.appendChild(rSel);
+  // ── メモ（グラフ横に配置） ──
+  const memoWrap=document.createElement("div");memoWrap.style.cssText="width:160px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;";
+  const memoLbl=document.createElement("span");memoLbl.textContent=t("label.memo");memoLbl.style.cssText="font-size:11px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;";
+  const memoTa=document.createElement("textarea");memoTa.style.cssText="width:100%;height:100%;min-height:44px;font-size:12px;padding:4px 6px;background:#0a1a2e;border:1px solid #1e2e40;color:#e7edf5;border-radius:4px;resize:vertical;font-family:inherit;box-sizing:border-box;";
   memoTa.value=(getSnapshots()[r.name.toLowerCase()]||{}).memo||"";
-  memoTa.placeholder="個人メモ（自分のみ表示）";
+  memoTa.placeholder=t("memo.placeholder");
   let _memoTimer=null;
   memoTa.addEventListener("input",()=>{
     clearTimeout(_memoTimer);
@@ -210,7 +212,9 @@ if(evts.length>=2){
       if(!snaps[k2])snaps[k2]={};snaps[k2].memo=memoTa.value;saveSnapshots(snaps);
     },500);
   });
-  memoWrap.appendChild(memoLbl);memoWrap.appendChild(memoTa);td.appendChild(memoWrap);
+  memoWrap.appendChild(memoLbl);memoWrap.appendChild(memoTa);
+  contentRow.appendChild(graphArea);contentRow.appendChild(memoWrap);
+  td.appendChild(contentRow);td.appendChild(regionWrap);
   tr.appendChild(td);return tr;
 }
 function toggleExpand(r,rowEl,key){

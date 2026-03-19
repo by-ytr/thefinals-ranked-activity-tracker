@@ -371,6 +371,7 @@ const LANGS = {
 Object.assign(LANGS.ja, {
   "label.server": "サーバー",
   "label.memo": "📝 メモ",
+  "memo.placeholder": "個人メモ（自分のみ表示）",
   "label.matchwait": "マッチ待機時間",
   "label.match": "Match",
   "label.jitter": "+jitter",
@@ -429,6 +430,7 @@ Object.assign(LANGS.ja, {
 Object.assign(LANGS.ko, {
   "label.server": "서버",
   "label.memo": "📝 메모",
+  "memo.placeholder": "개인 메모 (본인만 표시)",
   "label.matchwait": "매치 대기 시간",
   "label.match": "Match",
   "label.jitter": "+jitter",
@@ -487,6 +489,7 @@ Object.assign(LANGS.ko, {
 Object.assign(LANGS.en, {
   "label.server": "Server",
   "label.memo": "📝 Memo",
+  "memo.placeholder": "Personal memo (only visible to you)",
   "label.matchwait": "Match wait",
   "label.match": "Match",
   "label.jitter": "+jitter",
