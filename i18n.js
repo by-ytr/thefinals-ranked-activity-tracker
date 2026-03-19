@@ -115,6 +115,12 @@ const LANGS = {
     "btn.exportlogs":       "CSV エクスポート",
     "btn.clearlogs":        "クリア",
     "log.hint":             "状態遷移（Offline→Lobby など）を自動記録",
+    "filter.state":         "状態で絞り込み",
+    "filter.state.n":       "状態フィルター",
+    "filter.reset":         "リセット",
+    "global.inMyList":      "✓ マイリスト",
+    "global.addMyList":     "＋マイリスト",
+    "toast.addMyList":      "＋ <b>{name}</b> → マイリスト",
   },
   ko: {
     "site.sub":          "외부 리더보드 업데이트를 통해 활동 상태를 추정합니다.",
@@ -231,6 +237,12 @@ const LANGS = {
     "btn.exportlogs":       "CSV 내보내기",
     "btn.clearlogs":        "지우기",
     "log.hint":             "상태 전환（Offline→Lobby 등）자동 기록",
+    "filter.state":         "상태로 필터",
+    "filter.state.n":       "상태 필터",
+    "filter.reset":         "리셋",
+    "global.inMyList":      "✓ 내 목록",
+    "global.addMyList":     "＋내 목록",
+    "toast.addMyList":      "＋ <b>{name}</b> → 내 목록",
   },
   en: {
     "site.sub":          "Estimates player activity status from leaderboard updates.",
@@ -347,6 +359,12 @@ const LANGS = {
     "btn.exportlogs":       "Export CSV",
     "btn.clearlogs":        "Clear",
     "log.hint":             "Auto-records state transitions (Offline→Lobby, etc.)",
+    "filter.state":         "Filter by state",
+    "filter.state.n":       "State filter",
+    "filter.reset":         "Reset",
+    "global.inMyList":      "✓ My List",
+    "global.addMyList":     "＋My List",
+    "toast.addMyList":      "＋ <b>{name}</b> → My List",
   }
 };
 

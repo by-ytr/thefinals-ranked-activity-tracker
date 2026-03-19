@@ -1696,8 +1696,8 @@ function renderGlobalPlayerList(){
         <span class="globalPlayerName">${e.name}</span>
         <span class="catBadge ${catClass}">${catLbl}</span>
         ${e.note?`<span class="communityNote">${e.note}</span>`:""}
-        ${inPersonal?'<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">✓ マイリスト</span>'
-          :`<button class="globalAddBtn" data-name="${e.name}">＋マイリスト</button>`}
+        ${inPersonal?`<span class="badge" style="background:#0d2a0d;color:#39d98a;border-color:#1e5a1e;font-size:10px;">${t("global.inMyList")}</span>`
+          :`<button class="globalAddBtn" data-name="${e.name}">${t("global.addMyList")}</button>`}
         <button class="communityDelBtn" data-name="${e.name}" title="削除">×</button>
       </div>`;
     }).join("");
@@ -1709,7 +1709,7 @@ function renderGlobalPlayerList(){
       if(!existing.map(x=>x.toLowerCase()).includes(btn.dataset.name.toLowerCase())){
         ta.value=ta.value.trim()+(ta.value.trim()?"\n":"")+btn.dataset.name;
         saveNamesToLocal(parseNames(ta.value));
-        toast("＋ <b>"+btn.dataset.name+"</b> → マイリスト");
+        toast(t("toast.addMyList").replace("{name}",btn.dataset.name));
         renderGlobalPlayerList();
       }
     });
@@ -2136,7 +2136,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     if(!toggle||!menu)return;
     function updateToggleLabel(){
       const n=liveStateFilter.size;
-      toggle.textContent=n===0?"状態で絞り込み ▾":`状態フィルター (${n}) ▾`;
+      toggle.textContent=n===0?t("filter.state")+" ▾":`${t("filter.state.n")} (${n}) ▾`;
       toggle.classList.toggle("hasFilter",n>0);
     }
     toggle.addEventListener("click",(e)=>{
@@ -2159,7 +2159,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
       });
       menu.appendChild(item);
     }
-    const reset=document.createElement("button");reset.className="stateFilterReset";reset.textContent="リセット";
+    const reset=document.createElement("button");reset.className="stateFilterReset";reset.textContent=t("filter.reset");
     reset.addEventListener("click",(e)=>{
       e.stopPropagation();
       liveStateFilter.clear();
