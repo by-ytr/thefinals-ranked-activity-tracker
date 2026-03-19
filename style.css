@@ -77,7 +77,7 @@ tbody tr td:first-child{font-weight:600;color:#cfe0ff}
 .psAxis{display:flex;justify-content:space-between;padding:0 1px;margin-top:3px}
 .psAxis span{font-size:10px;color:#5a7aaa}
 .psEmpty{color:#5a7aaa;font-size:13px;padding:16px 0;text-align:center}
-.nameCell{cursor:pointer;user-select:none}
+.nameCell{cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
 .nameCell:hover .expandCaret{color:#b8c4d6}
 .expandCaret{font-size:9px;color:#5a7aaa;margin-left:5px;vertical-align:middle}
 .expandRow .expandCell{padding:8px 16px 12px!important;background:#090d14;border-top:none}
@@ -150,6 +150,22 @@ code{background:#0b101a;border:1px solid #223249;padding:2px 6px;border-radius:8
 .catSuspicious{background:#2a1a00;color:#ffaa44;border:1px solid #7a4a00}
 .catNotable{background:#0a1a2a;color:#6de9ff;border:1px solid #1e4a6a}
 .catPro{background:#1a1a08;color:#ffd700;border:1px solid #6a5a1a}
+.manualBadge{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:#2a0a0a;color:#ff6666;border:1px solid #7a1a1a;margin-left:5px;vertical-align:middle}
+tbody tr.tr--danger td:first-child{border-left:3px solid #ff3333}
+tbody tr.tr--danger{background:rgba(255,51,51,.07)!important}
+tbody tr.tr--danger:hover{background:rgba(255,51,51,.14)!important}
+.psItem--danger{border-color:#7a1a1a!important;box-shadow:0 0 12px rgba(255,51,51,.3);animation:dangerPulse 2s ease-in-out infinite}
+@keyframes dangerPulse{0%,100%{box-shadow:0 0 8px rgba(255,51,51,.25)}50%{box-shadow:0 0 18px rgba(255,51,51,.55)}}
+.psDangerBadge{font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;background:#3a0808;color:#ff6666;border:1px solid #7a1a1a;margin:0 4px}
+.dangerCount{color:#ff4444;font-weight:900;font-size:18px;margin-right:8px;animation:dangerPulse 1.5s ease-in-out infinite}
+.sparkBar.d-low{background:#7a2020;opacity:.5}
+.sparkBar.d-mid{background:#cc4422;opacity:.75}
+.sparkBar.d-high{background:#ff3333;opacity:.9}
+.sparkBar.d-high.peak{background:#ff0000;box-shadow:0 0 10px rgba(255,0,0,.7);opacity:1}
+.psGraph--danger .psAxis span{color:#ff6666}
+tbody tr.tr--watching td:first-child{border-left:3px solid #9b5de5}
+tbody tr.tr--watching{background:rgba(155,93,229,.07)!important}
+tbody tr.tr--watching:hover{background:rgba(155,93,229,.14)!important}
 .communityNote{font-size:11px;color:#8ea0b7;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .communityDelBtn{padding:2px 7px;font-size:11px;border-radius:6px;color:#666;border-color:#333;opacity:.6;margin-left:auto}
 .communityDelBtn:hover{opacity:1;color:#ff5555;border-color:#7a1a1a}
@@ -198,7 +214,7 @@ code{background:#0b101a;border:1px solid #223249;padding:2px 6px;border-radius:8
 .logTo{font-weight:700}
 .logDelta{font-family:ui-monospace,monospace;font-size:11px;margin-left:2px}
 /* ── region タグ ── */
-.regionTag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;vertical-align:middle;margin-left:4px}
+.regionTag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;vertical-align:middle;flex-shrink:0}
 .regionTag-AS{background:#0d2030;color:#6de9ff;border:1px solid #1e5a8a}
 .regionTag-EU{background:#1a2010;color:#7fff6e;border:1px solid #3a6a1a}
 .regionTag-NA{background:#2a1a00;color:#ffaa44;border:1px solid #7a4a00}

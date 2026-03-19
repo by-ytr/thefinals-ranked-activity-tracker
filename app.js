@@ -28,30 +28,52 @@ function uiLang(){
 function uiText(key){
   const lang=uiLang();
   const dict={
-    ja:{"action.delete":"削除","th.error.short":"Error","pickup.title":"ピックアップ（大型グラフに追加）"},
-    ko:{"action.delete":"삭제","th.error.short":"오류","pickup.title":"픽업(대형 그래프에 추가)"},
-    en:{"action.delete":"Delete","th.error.short":"Error","pickup.title":"Pick up (add to large graph)"}
+    ja:{"enc.won":"勝","enc.offline":"オフ","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","enc.early":"序盤","enc.mid":"中盤","enc.late":"終盤","action.delete":"削除","th.error.short":"Error","pickup.title":"ピックアップ（大型グラフに追加）"},
+    ko:{"enc.won":"승","enc.offline":"오프","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","enc.early":"초반","enc.mid":"중반","enc.late":"후반","action.delete":"삭제","th.error.short":"오류","pickup.title":"픽업(대형 그래프에 추가)"},
+    en:{"enc.won":"WIN","enc.offline":"OFF","enc.r1":"R1","enc.r2":"R2","enc.fr":"FR","enc.early":"Early","enc.mid":"Mid","enc.late":"Late","action.delete":"Delete","th.error.short":"Error","pickup.title":"Pick up (add to large graph)"}
   };
   return (dict[lang]&&dict[lang][key]) || (dict.en[key]) || key;
 }
+function encounterDisplayLabel(typeKey){
+  const map={
+    won:uiText("enc.won"), offline:uiText("enc.offline"),
+    r1:uiText("enc.r1"), r2:uiText("enc.r2"), fr:uiText("enc.fr"),
+    r1_early:`${uiText("enc.r1")}${uiText("enc.early")}`,
+    r1_mid:`${uiText("enc.r1")}${uiText("enc.mid")}`,
+    r1_late:`${uiText("enc.r1")}${uiText("enc.late")}`,
+    r2_early:`${uiText("enc.r2")}${uiText("enc.early")}`,
+    r2_mid:`${uiText("enc.r2")}${uiText("enc.mid")}`,
+    r2_late:`${uiText("enc.r2")}${uiText("enc.late")}`,
+    fr_early:`${uiText("enc.fr")}${uiText("enc.early")}`,
+    fr_mid:`${uiText("enc.fr")}${uiText("enc.mid")}`,
+    fr_late:`${uiText("enc.fr")}${uiText("enc.late")}`
+  };
+  return map[typeKey] || typeKey;
+}
 function compactErrorText(err){ return err ? uiText("th.error.short") : ""; }
+function renderQuickEncounterGroup(group){
+  const subMap={r1:["r1_early","r1_mid","r1_late"],r2:["r2_early","r2_mid","r2_late"],fr:["fr_early","fr_mid","fr_late"]};
+  const items=(subMap[group]||[]).map(ev=>`<button class="encQuickSubBtn" data-ev="${ev}" style="display:block;width:100%;padding:5px 8px;border:0;background:transparent;color:#d9e7ff;text-align:left;font-size:11px;cursor:pointer;">${encounterDisplayLabel(ev)}</button>`).join("");
+  return `<div class="encQuickGroup" style="position:relative;display:inline-block;"><button class="encQuickGroupBtn" data-group="${group}" title="${encounterDisplayLabel(group)}" style="min-width:40px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #244a6b;background:#0c1d2d;color:#d9e7ff;font-size:11px;">${encounterDisplayLabel(group)} ▾</button><div class="encQuickMenu" style="display:none;position:absolute;top:26px;left:0;z-index:30;min-width:92px;background:#091626;border:1px solid #183450;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:4px;"><div>${items}</div></div></div>`;
+}
 function buildPlayerSparkEl(row){
   const slots=30,slotMin=1,now=nowMs();
   const lca=row.effectiveLCA??row.lastChangeAt;
+  const isDanger=isEncounterDanger(row.manualEvent);
   const probs=[];
   for(let i=0;i<slots;i++){
     const future=now+(i*slotMin*60000);
-    const inf=inferState(future,lca,row.reflectDelayMin,row.matchWaitMin,row.matchAvgMin,row.matchJitterMin,row.tournamentTotalMin,false);
+    const inf=inferState(future,lca,row.reflectDelayMin,row.matchWaitMin,row.matchAvgMin,row.matchJitterMin,row.tournamentTotalMin,isDanger);
     probs.push(inf.nextMatchProb||0);
   }
   const peakSlot=probs.indexOf(Math.max(...probs));
-  const wrap=document.createElement("div");wrap.className="psGraph";
+  const wrap=document.createElement("div");wrap.className="psGraph"+(isDanger?" psGraph--danger":"");
   const barsEl=document.createElement("div");barsEl.className="psBars";
   for(let i=0;i<slots;i++){
     const v=probs[i]/100;
     const bar=document.createElement("div");
     const lvl=v<0.33?"low":v<0.66?"mid":"high";
-    bar.className="sparkBar "+lvl+(i===peakSlot?" peak":"");
+    bar.className="sparkBar "+(isDanger?"d-":"")+lvl+(i===peakSlot?" peak":"");
     bar.style.height=(4+Math.round(v*56))+"px";
     bar.title=`+${i}分後: ${probs[i]}%`;
     barsEl.appendChild(bar);
@@ -368,6 +390,7 @@ async function fetchAndMergeSnapshots(globalUrl){
       const merged={
         ...locSnap,
         ...remSnap,
+        ...(locSnap.manualEvent?{manualEvent:locSnap.manualEvent}:{}),
       };
       if(!merged.lastChangeAt&&remSnap.lastChangeAt)merged.lastChangeAt=remSnap.lastChangeAt;
       if(!merged.lastRealChangeAt&&remSnap.lastRealChangeAt)merged.lastRealChangeAt=remSnap.lastRealChangeAt;
@@ -487,6 +510,58 @@ const ROUND_WINDOWS={
   r2:{min:10,max:12},
   fr:{min:8,max:10},
 };
+function roundAvg(key){
+  const r=ROUND_WINDOWS[key];
+  return r?Math.round((r.min+r.max)/2):0;
+}
+function roundPhaseOffset(key,phase){
+  const r=ROUND_WINDOWS[key];
+  if(!r)return 0;
+  const avg=roundAvg(key);
+  switch(phase){
+    case "early": return Math.max(1,Math.round(r.min*0.25));
+    case "mid":   return Math.max(2,Math.round(avg*0.55));
+    case "late":  return Math.max(r.min,Math.round(r.max*0.85));
+    default:       return avg;
+  }
+}
+function tournamentRoundBase(s,key){
+  const base=(s.reflectDelayMin||0)+(s.matchWaitMin||0);
+  if(key==="r1") return base;
+  if(key==="r2") return base+roundAvg("r1");
+  if(key==="fr") return base+roundAvg("r1")+roundAvg("r2");
+  return base;
+}
+const ENCOUNTER_TYPES=[
+  {key:"won",       label:"🏆 勝利",      desc:"試合に勝利した（即ロビーへ）",        getOffset:s=>0},
+  {key:"final_end", label:"💀 FINAL終了",  desc:"FINALラウンド終了（負け）",           getOffset:s=>0},
+  {key:"r1", label:"R1", desc:"ラウンド1で遭遇", group:true, sub:[
+    {key:"r1_early", label:"序盤", getOffset:s=>tournamentRoundBase(s,"r1")+roundPhaseOffset("r1","early")},
+    {key:"r1_mid",   label:"中盤", getOffset:s=>tournamentRoundBase(s,"r1")+roundPhaseOffset("r1","mid")},
+    {key:"r1_late",  label:"終盤", getOffset:s=>tournamentRoundBase(s,"r1")+roundPhaseOffset("r1","late")},
+  ]},
+  {key:"r2", label:"R2", desc:"ラウンド2で遭遇", group:true, sub:[
+    {key:"r2_early", label:"序盤", getOffset:s=>tournamentRoundBase(s,"r2")+roundPhaseOffset("r2","early")},
+    {key:"r2_mid",   label:"中盤", getOffset:s=>tournamentRoundBase(s,"r2")+roundPhaseOffset("r2","mid")},
+    {key:"r2_late",  label:"終盤", getOffset:s=>tournamentRoundBase(s,"r2")+roundPhaseOffset("r2","late")},
+  ]},
+  {key:"fr", label:"FR", desc:"Final Roundで遭遇", group:true, sub:[
+    {key:"fr_early", label:"序盤", getOffset:s=>tournamentRoundBase(s,"fr")+roundPhaseOffset("fr","early")},
+    {key:"fr_mid",   label:"中盤", getOffset:s=>tournamentRoundBase(s,"fr")+roundPhaseOffset("fr","mid")},
+    {key:"fr_late",  label:"終盤", getOffset:s=>tournamentRoundBase(s,"fr")+roundPhaseOffset("fr","late")},
+  ]},
+  {key:"offline", label:"⚫ オフライン", desc:"オフライン確認（5分のみ有効）", overrideDurationMs:300000, getOffset:s=>s.reflectDelayMin+s.tournamentTotalMin+30},
+];
+function findEncounterType(key){
+  for(const et of ENCOUNTER_TYPES){
+    if(et.key===key)return et;
+    if(et.sub){const s=et.sub.find(s=>s.key===key);if(s)return s;}
+  }
+  return null;
+}
+function isManualActive(me){if(!me)return false;return(nowMs()-me.recordedAt)<(me.overrideDurationMs??3600000);}
+function manualRem(me){if(!me)return 0;return Math.max(0,Math.round(((me.recordedAt+(me.overrideDurationMs??3600000))-nowMs())/60000));}
+function isEncounterDanger(me){return isManualActive(me)&&me.type!=="offline"&&me.type!=="won"&&me.type!=="final_end";}
 
 // ── 認証（ID + パスワード制限） ───────────────────────────────
 // SHA-256 ハッシュ（Web Crypto API）
@@ -623,6 +698,34 @@ function renderAllowedUserList(){
     });
   });
 }
+function applyEncounterEvent(name,typeKey){
+  const settings=currentSettings||getUiSettings();
+  const et=findEncounterType(typeKey);
+  if(!et||et.group)return;
+  const now=nowMs();
+  const offsetMin=et.getOffset(settings);
+  const lastChangeAtOverride=now-offsetMin*60000;
+  const snapshots=getSnapshots();
+  const key=name.toLowerCase();
+  if(!snapshots[key])snapshots[key]={};
+  const dur=et.overrideDurationMs??3600000;
+  snapshots[key].manualEvent={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
+  saveSnapshots(snapshots);
+  const durMin=Math.round(dur/60000);
+  toast(et.label+" <b>"+name+"</b> を記録 (offset -"+offsetMin+"分 / "+durMin+"分優先)");
+  if(lastRows.length>0){
+    const manualEventObj={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
+    const updatedRows=lastRows.map(r=>{
+      if(r.name.toLowerCase()!==key)return r;
+      const inf=typeKey==="offline"?{state:"OFFLINE",nextMatchProb:0}:inferState(now,lastChangeAtOverride,r.reflectDelayMin,r.matchWaitMin,r.matchAvgMin,r.matchJitterMin,r.tournamentTotalMin,true);
+      return {...r,manualEvent:manualEventObj,effectiveLCA:lastChangeAtOverride,state:inf.state,nextMatchProb:inf.nextMatchProb};
+    });
+    lastRows=updatedRows;
+    renderTable(updatedRows);renderSpark(updatedRows);
+  }else if(running&&currentSettings){
+    pollOnce(getActiveNames(),currentSettings);
+  }
+}
 function getActiveNames(){
   // 個人リストとグローバルリスト両方を常にポーリング → 状態を共有
   const personal=parseNames(document.getElementById("namesBox").value);
@@ -727,6 +830,17 @@ const STATE_I18N_KEY={
 function stateLabel(s){return(typeof t==="function"?t(STATE_I18N_KEY[s]||"state.UNKNOWN"):s)||s;}
 
 function stateExplain(row,displayState){
+  const manual=row?.manualEvent;
+  if(manual&&isManualActive(manual)){
+    const et=findEncounterType(manual.type);
+    if(manual.type==="offline") return "手動でオフライン状態として記録中";
+    if(manual.type==="won") return "手動で勝利後の戻り時間帯を記録中";
+    if(manual.type==="final_end") return "手動でFinal Round終了後の戻り時間帯を記録中";
+    if(String(manual.type||"").startsWith("r1_")) return "手動でR1試合中として記録中";
+    if(String(manual.type||"").startsWith("r2_")) return "手動でR2試合中として記録中";
+    if(String(manual.type||"").startsWith("fr_")) return "手動でFinal Round試合中として記録中";
+    return `手動記録「${et?et.label:manual.type}」を優先表示中`;
+  }
   switch(displayState){
     case "POST_MATCH_WAIT": return "試合終了直後の反映待ち時間帯です。";
     case "LOBBY": return "試合終了後の待機中と推定。次の試合開始候補です。";
@@ -923,23 +1037,46 @@ function renderTable(rows){
     const comCatBadge=comEntry&&comEntry.category?`<span class="catBadge ${comEntry.category==="cheater"?"catCheater":comEntry.category==="suspicious"?"catSuspicious":comEntry.category==="pro"?"catPro":"catNotable"}">${catLabel(comEntry.category)}</span>`:"";
     const isExpanded=expandedRows.has(key);
     const isPicked=pickedUp.has(key);
+    const manualActive=isManualActive(r.manualEvent);
+    const manualType=r.manualEvent?.type;
+    const isWonOrFinal=manualType==="won"||manualType==="final_end";
+    const manualBadge=manualActive?`<span class="manualBadge">📌 記録中</span>`:"";
     const errShort=compactErrorText(r.error);
+    const actionHtml=[
+      renderQuickEncounterGroup("r1"),
+      renderQuickEncounterGroup("r2"),
+      renderQuickEncounterGroup("fr"),
+      `<button class="encQuickBtn encQuickSingle" data-ev="won" title="${encounterDisplayLabel("won")}" style="min-width:36px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #2d5f15;background:#122b09;color:#d8ffd0;font-size:11px;cursor:pointer;">${encounterDisplayLabel("won")}</button>`,
+      `<button class="encQuickBtn encQuickSingle" data-ev="offline" title="${encounterDisplayLabel("offline")}" style="min-width:36px;height:24px;padding:0 8px;border-radius:6px;border:1px solid #39475c;background:#151d29;color:#d4dceb;font-size:11px;cursor:pointer;">${encounterDisplayLabel("offline")}</button>`
+    ].join("");
     const deleteHtml=isGlobalView?"":`<button class="deleteBtn" title="${uiText("action.delete")}" style="margin-left:4px;">✕</button>`;
     const tr=document.createElement("tr");
+    if(manualActive&&!isWonOrFinal&&manualType!=="offline")tr.classList.add("tr--danger");
+    else if(manualActive&&isWonOrFinal)tr.classList.add("tr--watching");
     tr.innerHTML=`
-      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="${uiText("pickup.title")}">★</button>${statusBadge}${r.name} ${regionBadge}${comCatBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
+      <td class="nameCell"><button class="pickupBtn${isPicked?" pickupOn":""}" title="${uiText("pickup.title")}">★</button>${statusBadge}<span class="playerName">${r.name}</span>${regionBadge}${comCatBadge}${missingBadge}<span class="expandCaret">${isExpanded?"▴":"▾"}</span></td>
       <td class="rankCell">${renderBadge(r.leaderboardRank,r.league)}</td>
       <td class="num">${(r.points==null)?"N/A":r.points.toLocaleString()}</td>
       <td class="num">${r.lastDelta==null?"—":r.lastDelta>0?`<span style="color:#ff4d4d;font-weight:700">+${r.lastDelta}</span>`:`<span style="color:#5b9cf6;font-weight:700">${r.lastDelta}</span>`}</td>
       <td class="tsCell">${r.lastDelta==null?"—":fmtAgo(r.lastRealChangeAt)}</td>
-      <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span></td>
+      <td><span class="state ${displayState}" title="${stateExplain(r,displayState)}">${stateLabel(displayState)}</span>${manualBadge}</td>
       <td class="num">${isMissing?"—":r.nextMatchProb??0}%</td>
       <td class="tsCell">${r.lastOkAt?fmtTs(r.lastOkAt):"—"}</td>
       <td class="errCell" title="${(r.error||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")}" style="max-width:68px;width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${errShort}</td>
-      <td class="actCell" style="white-space:nowrap;display:flex;align-items:center;gap:4px;">${deleteHtml}</td>
+      <td class="actCell" style="white-space:nowrap;display:flex;align-items:center;gap:4px;">${actionHtml}${deleteHtml}</td>
     `;
     tr.querySelector(".pickupBtn")?.addEventListener("click",(e)=>{e.stopPropagation();if(pickedUp.has(key))pickedUp.delete(key);else pickedUp.add(key);renderTable(lastRows);renderPickupGraph();});
     tr.querySelector(".nameCell")?.addEventListener("click",()=>toggleExpand(r,tr,key));
+    tr.querySelectorAll(".encQuickSingle").forEach(btn=>btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,btn.dataset.ev);renderTable(lastRows);}));
+    tr.querySelectorAll(".encQuickGroupBtn").forEach(btn=>btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const wrap=btn.closest(".encQuickGroup");
+      const menu=wrap?.querySelector(".encQuickMenu");
+      const isOpen=menu&&menu.style.display!=="none";
+      tr.querySelectorAll(".encQuickMenu").forEach(m=>m.style.display="none");
+      if(menu) menu.style.display=isOpen?"none":"block";
+    }));
+    tr.querySelectorAll(".encQuickSubBtn").forEach(btn=>btn.addEventListener("click",(e)=>{e.stopPropagation();applyEncounterEvent(r.name,btn.dataset.ev);renderTable(lastRows);}));
     tr.querySelector(".deleteBtn")?.addEventListener("click",(e)=>{e.stopPropagation();removePlayer(r.name);});
     tbody.appendChild(tr);
     if(isExpanded) tbody.appendChild(buildExpandRow(r,key));
@@ -952,8 +1089,10 @@ function renderSpark(rows){
   const activeRows=rows.filter(r=>r.lastChangeAt&&!(r.notFoundCount>=3&&r.lastFoundAt));
   const hotEl=document.getElementById("sparkHotCount");
   if(hotEl){
-    const hotNow=activeRows.filter(r=>r.nextMatchProb>=60).length;
+    const dangerNow=activeRows.filter(r=>isEncounterDanger(r.manualEvent)).length;
+    const hotNow=activeRows.filter(r=>!r.manualEvent&&r.nextMatchProb>=60).length;
     let html="";
+    if(dangerNow>0) html+=`<span class="dangerCount">🚨 ${dangerNow}人遭遇！</span>`;
     if(hotNow>0)    html+=`<span class="hotCount">${hotNow}人が試合開始近い</span>`;
     if(!html)       html=`<span style="color:#5a7aaa;font-size:12px;">試合開始が近いプレイヤーなし</span>`;
     hotEl.innerHTML=html;
@@ -963,12 +1102,16 @@ function renderSpark(rows){
     return;
   }
   for(const r of activeRows){
-    const item=document.createElement("div");item.className="psItem";
+    const isDanger=isEncounterDanger(r.manualEvent);
+    const item=document.createElement("div");item.className="psItem"+(isDanger?" psItem--danger":"");
     const [handle,tag]=r.name.split("#");
     const prob=r.nextMatchProb??0;
-    const probColor=prob>=60?"#39d98a":prob>=30?"#ffcf5c":"#5a7aaa";
+    const probColor=isDanger?"#ff4444":prob>=60?"#39d98a":prob>=30?"#ffcf5c":"#5a7aaa";
     const header=document.createElement("div");header.className="psHeader";
-    header.innerHTML=`<span class="psName">${handle}<span class="psTag">#${tag||""}</span></span><span class="psPct" style="color:${probColor}">${prob+"%"}</span>`;
+    const dangerBadge=isDanger?`<span class="psDangerBadge">🚨 遭遇</span>`:"";
+    const et=isDanger?findEncounterType(r.manualEvent.type):null;
+    const etLabel=et?et.label:"";
+    header.innerHTML=`<span class="psName">${handle}<span class="psTag">#${tag||""}</span></span>${dangerBadge}<span class="psPct" style="color:${probColor}">${isDanger?etLabel:prob+"%"}</span>`;
     item.appendChild(header);
     item.appendChild(buildPlayerSparkEl(r));
     wrap.appendChild(item);
@@ -1031,6 +1174,7 @@ async function pollOnce(names,settings){
     let lastDelta=prev.lastDelta??null; // 最後の非ゼロ変動値（表示固定用）
     let lastChangeAt=prev.lastChangeAt??null;
     let lastRealChangeAt=prev.lastRealChangeAt??null; // 実際のポイント変動のみ記録（表示用）
+    let manualEvent=prev.manualEvent??null;
     let currentPoints=prev.points??null;
     let lastOkAt=prev.lastOkAt??null;
     let leaderboardRank=prev.leaderboardRank??null;
@@ -1087,10 +1231,13 @@ async function pollOnce(names,settings){
         banNotified=true;
       }
     }
-    const effectiveLCA=lastChangeAt;
+    if(delta!==null&&delta!==0)manualEvent=null;
+    const manualActive=isManualActive(manualEvent);
+    if(!manualActive)manualEvent=null;
+    const effectiveLCA=manualActive?manualEvent.lastChangeAtOverride:lastChangeAt;
     const region=communityRegionMap.get(key)||prev.region||"";
-    snapshots[key]={points:currentPoints,lastDelta,lastChangeAt,lastRealChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region};
-    const inf=inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,false);
+    snapshots[key]={points:currentPoints,lastDelta,lastChangeAt,lastRealChangeAt,lastOkAt,leaderboardRank,league,notFoundCount,lastFoundAt,banNotified,altNames,suspectedReason,suspectedNewName,region,...(manualEvent?{manualEvent}:{})};
+    const inf=(manualActive&&manualEvent?.type==="offline")?{state:"OFFLINE",nextMatchProb:0}:inferState(now,effectiveLCA,settings.reflectDelayMin,settings.matchWaitMin,settings.matchAvgMin,settings.matchJitterMin,settings.tournamentTotalMin,manualActive);
     // 状態変化をログ記録
     const prevRowState=lastRows.find(r=>r.name.toLowerCase()===key)?.state;
     if(prevRowState && prevRowState!==inf.state){
@@ -1103,7 +1250,7 @@ async function pollOnce(names,settings){
         else if(leaving)sendNotification(`🏁 ${name} が試合終了`,`${stateLabel(prevRowState)} → ${stateLabel(inf.state)}`);
       }
     }
-    rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,error:stale?errMsg:""});
+    rows.push({name,points:currentPoints,delta,lastDelta,lastChangeAt,lastRealChangeAt,effectiveLCA,state:inf.state,nextMatchProb:inf.nextMatchProb,reflectDelayMin:settings.reflectDelayMin,matchWaitMin:settings.matchWaitMin,matchAvgMin:settings.matchAvgMin,matchJitterMin:settings.matchJitterMin,tournamentTotalMin:settings.tournamentTotalMin,lastOkAt,leaderboardRank,league,region,notFoundCount,lastFoundAt,suspectedReason,suspectedNewName,manualEvent,error:stale?errMsg:""});
   }));
   saveSnapshots(snapshots);
   // コミュニティ登録済みプレイヤーのスナップショットをバックエンドに送信（タブに関係なく共有）
