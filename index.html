@@ -114,6 +114,8 @@
         <input id="liveSearch" type="text" placeholder="🔍 名前で絞り込み…" data-i18n-ph="live.search" autocomplete="off" spellcheck="false"
           style="flex:1;min-width:140px;max-width:240px;height:28px;font-size:12px;padding:0 10px;border-radius:999px;border:1px solid #1e2e40;background:#0d1520;color:#cfe0ff" />
       </div>
+      <div id="stateFilterTabs" class="stateFilterTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+      </div>
       <div class="tableWrap">
         <table id="tbl">
           <thead>
@@ -123,7 +125,7 @@
               <th class="num" data-i18n="th.points">points</th>
               <th class="num" data-i18n="th.delta">delta</th>
               <th data-i18n="th.changed">変動</th>
-              <th><span data-i18n="th.state">inferred state</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="th.state.tip"><div class="thHelpRow"><span class="thHelpState" style="color:#5b9cf6">Lobby</span><span>Post-match or queuing. <b style="color:#5b9cf6">Encounter chance rising.</b></span></div></span></span></th>
+              <th><span data-i18n="th.state">inferred state</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="th.state.tip"><div class="thHelpRow"><span class="thHelpState" style="color:#5b9cf6">Lobby</span><span>Post-match or queuing. <b style="color:#5b9cf6">Match chance rising.</b></span></div></span></span></th>
               <th class="num" data-i18n="th.nextmatch">next_match%</th>
               <th data-i18n="th.lastpoll">last_poll</th>
               <th data-i18n="th.error">error</th>
@@ -140,7 +142,7 @@
       <div class="row between" style="margin-bottom:8px;">
         <div>
           <div class="h2" data-i18n="pickup.title">⭐ Pickup グラフ（合算・30分）</div>
-          <div class="hint" data-i18n="pickup.hint">★ でピックアップしたプレイヤーの合算遭遇確率（1 - ∏(1-pᵢ)）</div>
+          <div class="hint" data-i18n="pickup.hint">★ でピックアップしたプレイヤーの合算試合確率（1 - ∏(1-pᵢ)）</div>
         </div>
         <div id="pickupPeak" class="psPct" style="color:#ffcf5c;font-size:14px;"></div>
       </div>
@@ -328,7 +330,7 @@ playerB#5678"></textarea>
         </div>
         <div id="globalPlayerList" class="globalPlayerList"></div>
         <details class="communityAddWrap" style="margin-top:12px">
-          <summary class="communityAddSummary" data-i18n="global.add.summary">＋ チーター / 注目プレイヤーを報告・追加</summary>
+          <summary class="communityAddSummary" data-i18n="global.add.summary">＋ チーター / 注目 / プロ プレイヤーを報告・追加</summary>
           <div class="communityAddForm">
             <input id="communityName" type="text" placeholder="Embark ID（name#1234）" autocomplete="off" spellcheck="false" />
             <select id="communityRegion" data-i18n-opt="opt.region.AS,opt.region.EU,opt.region.NA,opt.region.unknown">
@@ -337,10 +339,11 @@ playerB#5678"></textarea>
               <option value="NA">🌎 NA</option>
               <option value="">🌐 地域不明</option>
             </select>
-            <select id="communityCategory" data-i18n-opt="opt.cat.cheater,opt.cat.suspicious,opt.cat.notable">
+            <select id="communityCategory" data-i18n-opt="opt.cat.cheater,opt.cat.suspicious,opt.cat.notable,opt.cat.pro">
               <option value="cheater">🚫 チーター</option>
               <option value="suspicious">⚠️ 疑い</option>
               <option value="notable">👁 注目</option>
+              <option value="pro">🏅 プロ</option>
             </select>
             <input id="communityNote" type="text" placeholder="メモ（任意）" data-i18n-ph="global.note.ph" />
             <button id="btnCommunityAdd" class="primary" data-i18n="btn.global.add">追加</button>

@@ -141,10 +141,15 @@ code{background:#0b101a;border:1px solid #223249;padding:2px 6px;border-radius:8
 .regionTab{padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;color:#8ea0b7}
 .regionTab.active{background:#223249;border-color:#3a5580;color:#e7edf5}
 .regionGroupLabel{font-size:10px;font-weight:700;color:#5a7aaa;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;padding-left:2px}
+.stateFilterTabs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.stateFilterBtn{padding:2px 8px;border-radius:999px;font-size:11px;cursor:pointer;background:transparent;border:1px solid #1e2e40;color:#5a7aaa;opacity:.6;transition:opacity .15s}
+.stateFilterBtn:hover{opacity:1}
+.stateFilterBtn.active{opacity:1;border-color:#3a5580;background:#0d1a2a}
 .catBadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;flex-shrink:0}
 .catCheater{background:#2a0808;color:#ff5555;border:1px solid #7a1a1a}
 .catSuspicious{background:#2a1a00;color:#ffaa44;border:1px solid #7a4a00}
 .catNotable{background:#0a1a2a;color:#6de9ff;border:1px solid #1e4a6a}
+.catPro{background:#1a1a08;color:#ffd700;border:1px solid #6a5a1a}
 .communityNote{font-size:11px;color:#8ea0b7;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .communityDelBtn{padding:2px 7px;font-size:11px;border-radius:6px;color:#666;border-color:#333;opacity:.6;margin-left:auto}
 .communityDelBtn:hover{opacity:1;color:#ff5555;border-color:#7a1a1a}
@@ -171,42 +176,7 @@ code{background:#0b101a;border:1px solid #223249;padding:2px 6px;border-radius:8
 .banAlertReason{font-size:12px;color:#c09060;font-weight:600;flex:1}
 .banAlertNameChange .banAlertReason{color:#6de9ff}
 .banAlertMeta{font-size:11px;color:#9a7040;flex-basis:100%}
-.encounterPanel{display:flex;flex-direction:column;gap:6px;padding:8px 0 10px;border-bottom:1px solid #1e2a3a;margin-bottom:10px}
-.encounterLabel{font-size:11px;font-weight:700;color:#8ea0b7;text-transform:uppercase;letter-spacing:.5px}
-.encounterBtns{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
-.encounterBtn{padding:5px 13px;font-size:12px;border-radius:8px;opacity:.7;cursor:pointer}
-.encounterBtn:hover{opacity:1;border-color:#ffcf5c;color:#ffcf5c}
-.encounterGroup{display:inline-flex;flex-direction:column;gap:3px;position:relative}
-.encounterGroupBtn{white-space:nowrap}
-.groupCaret{font-size:9px;margin-left:3px}
-.encounterSubPanel{display:none;gap:4px}
-.encounterSubPanel.open{display:flex;flex-wrap:wrap;position:absolute;left:0;top:calc(100% + 3px);z-index:20;background:#0f1622;border:1px solid #223249;border-radius:8px;padding:6px;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,.6);}
-.encounterSubBtn{padding:4px 12px;font-size:12px;border-radius:7px;cursor:pointer;background:#0b101a;border:1px solid #2a3a50;color:#b8c4d6}
-.encounterSubBtn:hover{border-color:#ff9944;color:#ff9944}
-.encounterActive{font-size:11px;color:#39d98a;background:#0d2a1a;border:1px solid #1e5a2a;border-radius:6px;padding:4px 10px;margin-top:2px;display:inline-block}
-.manualBadge{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:#2a0a0a;color:#ff6666;border:1px solid #7a1a1a;margin-left:5px;vertical-align:middle}
-/* ── 遭遇中 danger スタイル ── */
-tbody tr.tr--danger td:first-child{border-left:3px solid #ff3333}
-tbody tr.tr--danger{background:rgba(255,51,51,.07)!important}
-tbody tr.tr--danger:hover{background:rgba(255,51,51,.14)!important}
-.psItem--danger{border-color:#7a1a1a!important;box-shadow:0 0 12px rgba(255,51,51,.3);animation:dangerPulse 2s ease-in-out infinite}
-@keyframes dangerPulse{0%,100%{box-shadow:0 0 8px rgba(255,51,51,.25)}50%{box-shadow:0 0 18px rgba(255,51,51,.55)}}
-.psDangerBadge{font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;background:#3a0808;color:#ff6666;border:1px solid #7a1a1a;margin:0 4px}
-.dangerCount{color:#ff4444;font-weight:900;font-size:18px;margin-right:8px;animation:dangerPulse 1.5s ease-in-out infinite}
 .hotCount{color:#39d98a;font-weight:900;font-size:14px}
-/* 遭遇中グラフバー（danger カラー）*/
-.sparkBar.d-low{background:#7a2020;opacity:.5}
-.sparkBar.d-mid{background:#cc4422;opacity:.75}
-.sparkBar.d-high{background:#ff3333;opacity:.9}
-.sparkBar.d-high.peak{background:#ff0000;box-shadow:0 0 10px rgba(255,0,0,.7);opacity:1}
-.psGraph--danger .psAxis span{color:#ff6666}
-/* オフラインボタン専用（グレー系） */
-.encounterBtn--offline{border-color:#333;color:#7a8a9a;opacity:.65}
-.encounterBtn--offline:hover{border-color:#888;color:#c0c8d0;opacity:1}
-/* ── 遭遇記録（勝利/FINAL終了）watching スタイル ── */
-tbody tr.tr--watching td:first-child{border-left:3px solid #9b5de5}
-tbody tr.tr--watching{background:rgba(155,93,229,.07)!important}
-tbody tr.tr--watching:hover{background:rgba(155,93,229,.14)!important}
 /* ── pickup ★ ボタン ── */
 .pickupBtn{padding:2px 5px;font-size:11px;border-radius:6px;opacity:.35;line-height:1;margin-right:4px;background:transparent;border-color:transparent;color:#e7edf5}
 .pickupBtn:hover{opacity:.8;color:#ffcf5c}
