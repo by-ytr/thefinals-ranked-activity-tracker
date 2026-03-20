@@ -2143,7 +2143,7 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
 
   // ── Live table 状態フィルター（ドロップダウン+チェックボックス） ──
   (function initStateFilter(){
-    const STATES=["LOBBY","POST_MATCH_WAIT","IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING","OFFLINE","UNKNOWN","NOT_FOUND","BANNED","NAME_CHANGED"];
+    const STATES=["LOBBY","IN_MATCH","IN_TOURNAMENT_DEEP","RETURNING","OFFLINE","UNKNOWN","NOT_FOUND","BANNED","NAME_CHANGED"];
     const toggle=document.getElementById("stateFilterToggle");
     const menu=document.getElementById("stateFilterMenu");
     if(!toggle||!menu)return;
@@ -2159,15 +2159,15 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     document.addEventListener("click",(e)=>{
       if(!e.target.closest("#stateFilterWrap"))menu.style.display="none";
     });
-    const FILTER_LABEL={POST_MATCH_WAIT:"state.REFLECT"};
     for(const s of STATES){
       const item=document.createElement("label");item.className="stateFilterItem";
       const cb=document.createElement("input");cb.type="checkbox";cb.dataset.state=s;
-      const lbl=FILTER_LABEL[s]?t(FILTER_LABEL[s]):stateLabel(s);
+      const lbl=stateLabel(s);
       const label=document.createElement("span");label.className=`state ${s}`;label.style.cssText="font-size:11px;padding:2px 8px;";label.textContent=lbl;
       item.appendChild(cb);item.appendChild(label);
       cb.addEventListener("change",()=>{
-        if(cb.checked)liveStateFilter.add(s);else liveStateFilter.delete(s);
+        if(cb.checked){liveStateFilter.add(s);if(s==="LOBBY")liveStateFilter.add("POST_MATCH_WAIT");}
+        else{liveStateFilter.delete(s);if(s==="LOBBY")liveStateFilter.delete("POST_MATCH_WAIT");}
         updateToggleLabel();renderTable(lastRows);
       });
       menu.appendChild(item);
