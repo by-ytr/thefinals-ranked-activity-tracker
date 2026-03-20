@@ -181,16 +181,6 @@
           <input id="matchWait" type="number" min="0" max="30" step="1" value="5" />
           <span>m</span>
         </div>
-        <div class="pill sm">
-          <span data-i18n="label.match">Match</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">現在の状態推定は固定ラウンド長を使用します。<br><b>R1 = 10〜12分 / R2 = 10〜12分 / Final = 8〜10分</b><br>この入力欄は旧ロジック互換のため残しています</span></span></span>
-          <input id="matchAvg" type="number" min="20" max="60" step="1" value="31" />
-          <span>m</span>
-        </div>
-        <div class="pill sm">
-          <span data-i18n="label.jitter">+jitter</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">現在の状態推定は <b>R1 / R2 / Final</b> の固定ラウンド長で判定します。<br><b>jitter</b> は旧ロジック互換のため残しています</span></span></span>
-          <input id="matchJitter" type="number" min="0" max="10" step="1" value="3" />
-          <span>m</span>
-        </div>
         <div class="ctrlSep"></div>
         <button id="btnStop" data-i18n="btn.stop">Stop</button>
         <button id="btnShare" data-i18n="btn.share">Share</button>
@@ -198,6 +188,22 @@
 
       <details class="advanced" id="advancedDetails">
         <summary data-i18n="adv.summary">Advanced 設定</summary>
+
+        <div class="advSection">
+          <div class="advLabel"><span data-i18n="adv.matchTiming">マッチ時間設定</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.matchTiming">状態推定に使用するマッチ時間のパラメータです。通常は変更不要。</span></span></div>
+          <div class="row tight">
+            <div class="pill sm">
+              <span data-i18n="label.match">Match</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.match">現在の状態推定は固定ラウンド長を使用します。<br><b>R1 = 10〜12分 / R2 = 10〜12分 / Final = 8〜10分</b><br>この入力欄は旧ロジック互換のため残しています</span></span></span>
+              <input id="matchAvg" type="number" min="20" max="60" step="1" value="31" />
+              <span>m</span>
+            </div>
+            <div class="pill sm">
+              <span data-i18n="label.jitter">+jitter</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.jitter">現在の状態推定は <b>R1 / R2 / Final</b> の固定ラウンド長で判定します。<br><b>jitter</b> は旧ロジック互換のため残しています</span></span></span>
+              <input id="matchJitter" type="number" min="0" max="10" step="1" value="3" />
+              <span>m</span>
+            </div>
+          </div>
+        </div>
 
         <div class="advSection">
           <div class="advLabel"><span data-i18n="adv.leaderboard">リーダーボード</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.leaderboard">Embark 公式リーダーボードAPIの取得設定です。</span></span></div>
