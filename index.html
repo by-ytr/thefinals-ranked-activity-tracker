@@ -191,6 +191,11 @@
           <input id="matchJitter" type="number" min="0" max="10" step="1" value="3" />
           <span>m</span>
         </div>
+        <div class="pill sm">
+          <span data-i18n="label.encDuration">記録</span> <span class="thHelp"><span class="thHelpIcon">?</span><span class="thHelpTip" data-i18n-html="tip.encDuration">手動遭遇記録の有効時間（分）。<br>この時間が経過すると記録が自動で消えます。<br>目安：60分</span></span></span>
+          <input id="encDuration" type="number" min="5" max="180" step="5" value="60" />
+          <span>m</span>
+        </div>
         <div class="ctrlSep"></div>
         <button id="btnStop" data-i18n="btn.stop">Stop</button>
         <button id="btnShare" data-i18n="btn.share">Share</button>

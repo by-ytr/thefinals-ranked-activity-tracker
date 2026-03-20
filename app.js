@@ -564,8 +564,9 @@ function findEncounterType(key){
   }
   return null;
 }
-function isManualActive(me){if(!me)return false;return(nowMs()-me.recordedAt)<(me.overrideDurationMs??3600000);}
-function manualRem(me){if(!me)return 0;return Math.max(0,Math.round(((me.recordedAt+(me.overrideDurationMs??3600000))-nowMs())/60000));}
+function _encDurDefault(){return(parseInt(document.getElementById("encDuration")?.value)||60)*60000;}
+function isManualActive(me){if(!me)return false;return(nowMs()-me.recordedAt)<(me.overrideDurationMs??_encDurDefault());}
+function manualRem(me){if(!me)return 0;return Math.max(0,Math.round(((me.recordedAt+(me.overrideDurationMs??_encDurDefault()))-nowMs())/60000));}
 function isEncounterDanger(me){return isManualActive(me)&&me.type!=="offline"&&me.type!=="won"&&me.type!=="final_end";}
 
 // ── 認証（ID + パスワード制限） ───────────────────────────────
@@ -713,7 +714,8 @@ function applyEncounterEvent(name,typeKey){
   const snapshots=getSnapshots();
   const key=name.toLowerCase();
   if(!snapshots[key])snapshots[key]={};
-  const dur=et.overrideDurationMs??3600000;
+  const userDurMin=parseInt(document.getElementById("encDuration")?.value)||60;
+  const dur=et.overrideDurationMs??(userDurMin*60000);
   snapshots[key].manualEvent={type:typeKey,recordedAt:now,lastChangeAtOverride,overrideDurationMs:dur};
   saveSnapshots(snapshots);
   const durMin=Math.round(dur/60000);
