@@ -16,6 +16,7 @@ let liveRegionFilter="all";    // Live tableリージョンフィルター
 let liveTabMode="personal";    // "personal" | "global" | "pickup"
 let liveSearchQuery="";        // Live table検索
 let liveStateFilter=new Set(); // 状態フィルター（空=全表示、複数選択可）
+let liveCatFilter=new Set();   // カテゴリフィルター（空=全表示）
 
 function uiLang(){
   const doc=(document.documentElement.getAttribute("lang")||"").toLowerCase();
@@ -995,6 +996,12 @@ function renderTable(rows){
     const isMissing=r.notFoundCount>=3&&r.lastFoundAt;
     const ds=isMissing&&r.suspectedReason==="BAN"?"BANNED":isMissing&&r.suspectedReason==="NAME_CHANGE"?"NAME_CHANGED":isMissing?"NOT_FOUND":r.state;
     return liveStateFilter.has(ds);
+  });
+  if(liveCatFilter.size>0) filtered=filtered.filter(r=>{
+    const ce=communityMap.get(r.name.toLowerCase());
+    const cat=ce?ce.category||"":"";
+    if(!cat) return liveCatFilter.has("none");
+    return liveCatFilter.has(cat);
   });
 
   const statePriority=(r)=>{
@@ -2167,6 +2174,54 @@ document.getElementById("btnCommunityAdd").addEventListener("click",async()=>{
     reset.addEventListener("click",(e)=>{
       e.stopPropagation();
       liveStateFilter.clear();
+      menu.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.checked=false);
+      updateToggleLabel();renderTable(lastRows);
+    });
+    menu.appendChild(reset);
+  })();
+
+  // ── Live table カテゴリフィルター（ドロップダウン+チェックボックス） ──
+  (function initCatFilter(){
+    const CATS=[
+      {key:"cheater",cls:"catCheater",label:()=>catLabel("cheater")},
+      {key:"suspicious",cls:"catSuspicious",label:()=>catLabel("suspicious")},
+      {key:"notable",cls:"catNotable",label:()=>catLabel("notable")},
+      {key:"pro",cls:"catPro",label:()=>catLabel("pro")},
+      {key:"none",cls:"",label:()=>t("filter.cat.none")}
+    ];
+    const toggle=document.getElementById("catFilterToggle");
+    const menu=document.getElementById("catFilterMenu");
+    if(!toggle||!menu)return;
+    function updateToggleLabel(){
+      const n=liveCatFilter.size;
+      toggle.textContent=n===0?t("filter.category")+" ▾":`${t("filter.category.n")} (${n}) ▾`;
+      toggle.classList.toggle("hasFilter",n>0);
+    }
+    toggle.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      menu.style.display=menu.style.display==="none"?"block":"none";
+    });
+    document.addEventListener("click",(e)=>{
+      if(!e.target.closest("#catFilterWrap"))menu.style.display="none";
+    });
+    for(const c of CATS){
+      const item=document.createElement("label");item.className="stateFilterItem";
+      const cb=document.createElement("input");cb.type="checkbox";cb.dataset.cat=c.key;
+      const span=document.createElement("span");
+      if(c.cls)span.className=c.cls;
+      span.style.cssText="font-size:11px;padding:2px 8px;border-radius:4px;";
+      span.textContent=c.label();
+      item.appendChild(cb);item.appendChild(span);
+      cb.addEventListener("change",()=>{
+        if(cb.checked)liveCatFilter.add(c.key);else liveCatFilter.delete(c.key);
+        updateToggleLabel();renderTable(lastRows);
+      });
+      menu.appendChild(item);
+    }
+    const reset=document.createElement("button");reset.className="stateFilterReset";reset.textContent=t("filter.reset");
+    reset.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      liveCatFilter.clear();
       menu.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.checked=false);
       updateToggleLabel();renderTable(lastRows);
     });
