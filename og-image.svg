@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#080e1a"/>
+      <stop offset="100%" stop-color="#0f1f35"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3a7bd5"/>
+      <stop offset="100%" stop-color="#00d2ff"/>
+    </linearGradient>
+    <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#73b7ff"/>
+      <stop offset="100%" stop-color="#9dd0ff"/>
+    </linearGradient>
+    <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(94,168,255,0.35)"/>
+      <stop offset="100%" stop-color="rgba(94,168,255,0.03)"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Grid lines -->
+  <g stroke="rgba(120,150,190,0.08)" stroke-width="1">
+    <line x1="0" y1="126" x2="1200" y2="126"/>
+    <line x1="0" y1="252" x2="1200" y2="252"/>
+    <line x1="0" y1="378" x2="1200" y2="378"/>
+    <line x1="0" y1="504" x2="1200" y2="504"/>
+    <line x1="240" y1="0" x2="240" y2="630"/>
+    <line x1="480" y1="0" x2="480" y2="630"/>
+    <line x1="720" y1="0" x2="720" y2="630"/>
+    <line x1="960" y1="0" x2="960" y2="630"/>
+  </g>
+
+  <!-- Decorative chart in background -->
+  <g opacity="0.25" transform="translate(500, 180)">
+    <path d="M0,200 L60,180 L120,190 L180,140 L240,150 L300,90 L360,100 L420,50 L480,60 L540,20 L600,40 L600,280 L0,280 Z" fill="url(#chartArea)"/>
+    <path d="M0,200 L60,180 L120,190 L180,140 L240,150 L300,90 L360,100 L420,50 L480,60 L540,20 L600,40" fill="none" stroke="url(#chartLine)" stroke-width="3" filter="url(#glow)"/>
+    <circle cx="540" cy="20" r="5" fill="#9dd0ff" filter="url(#glow)"/>
+    <circle cx="600" cy="40" r="5" fill="#9dd0ff" filter="url(#glow)"/>
+  </g>
+
+  <!-- Top accent bar -->
+  <rect x="0" y="0" width="1200" height="4" fill="url(#accent)"/>
+
+  <!-- THE FINALS logo text -->
+  <text x="80" y="120" font-family="'Segoe UI', Arial, sans-serif" font-size="18" font-weight="700" fill="#5a7aaa" letter-spacing="4">THE FINALS</text>
+
+  <!-- Main title -->
+  <text x="80" y="200" font-family="'Segoe UI', Arial, sans-serif" font-size="56" font-weight="800" fill="#e7edf5">Ranked Activity</text>
+  <text x="80" y="270" font-family="'Segoe UI', Arial, sans-serif" font-size="56" font-weight="800" fill="#e7edf5">Tracker</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="330" font-family="'Segoe UI', Arial, sans-serif" font-size="22" fill="#7f93ad">Real-time player status detection &amp; cheater flagging</text>
+
+  <!-- Feature pills -->
+  <g transform="translate(80, 380)">
+    <rect x="0" y="0" width="140" height="38" rx="19" fill="rgba(58,123,213,0.2)" stroke="#3a7bd5" stroke-width="1"/>
+    <text x="70" y="24" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="600" fill="#73b7ff" text-anchor="middle">Live Status</text>
+
+    <rect x="158" y="0" width="160" height="38" rx="19" fill="rgba(58,123,213,0.2)" stroke="#3a7bd5" stroke-width="1"/>
+    <text x="238" y="24" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="600" fill="#73b7ff" text-anchor="middle">Point History</text>
+
+    <rect x="336" y="0" width="190" height="38" rx="19" fill="rgba(255,77,77,0.15)" stroke="#ff4d4d" stroke-width="1"/>
+    <text x="431" y="24" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="600" fill="#ff6b6b" text-anchor="middle">Cheater Detection</text>
+
+    <rect x="544" y="0" width="140" height="38" rx="19" fill="rgba(58,123,213,0.2)" stroke="#3a7bd5" stroke-width="1"/>
+    <text x="614" y="24" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="600" fill="#73b7ff" text-anchor="middle">3 Languages</text>
+  </g>
+
+  <!-- Status indicators demo -->
+  <g transform="translate(80, 460)">
+    <circle cx="8" cy="8" r="6" fill="#4caf50"/>
+    <text x="22" y="13" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#8ea0b7">In Lobby</text>
+
+    <circle cx="118" cy="8" r="6" fill="#ff9800"/>
+    <text x="132" y="13" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#8ea0b7">In Match</text>
+
+    <circle cx="238" cy="8" r="6" fill="#f44336"/>
+    <text x="252" y="13" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#8ea0b7">Tournament</text>
+
+    <circle cx="368" cy="8" r="6" fill="#607d8b"/>
+    <text x="382" y="13" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#8ea0b7">Offline</text>
+  </g>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="540" width="1200" height="90" fill="rgba(0,0,0,0.3)"/>
+  <text x="80" y="593" font-family="'Segoe UI', Arial, sans-serif" font-size="16" fill="#5a7aaa">thefinals-ranked-activity-tracker.yatoru19.workers.dev</text>
+  <text x="1120" y="593" font-family="'Segoe UI', Arial, sans-serif" font-size="14" fill="#3a5a7a" text-anchor="end">Free &amp; No Install Required</text>
+</svg>
