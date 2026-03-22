@@ -73,11 +73,37 @@ async function verifyWriteKey(request, env) {
 }
 
 
-// ── Durable Object: strongly-consistent shared snapshots ───────────────────
+// ── Durable Object: strongly-consistent shared state ────────────────────────
+// snapshots + community list を強整合性で管理
+// KV (結果整合性) から DO に移行することで、他ユーザーへの即時反映を実現
 export class SnapshotStateDO {
   constructor(state, env) {
     this.state = state;
     this.env = env;
+  }
+
+  // KV → DO 初回マイグレーション（community が DO に無ければ KV から読み込む）
+  async _ensureCommunity() {
+    let list = await this.state.storage.get("community");
+    if (list == null) {
+      // KV からマイグレーション
+      try {
+        const raw = await this.env.DATA.get("community");
+        list = raw ? JSON.parse(raw) : [];
+      } catch { list = []; }
+      // /names の後方互換補完
+      try {
+        const rawN = await this.env.DATA.get("names");
+        const names = rawN ? JSON.parse(rawN) : [];
+        for (const name of names) {
+          if (!list.find(e => e.name.toLowerCase() === name.toLowerCase())) {
+            list.push({ name, region: "", category: "notable", note: "", addedAt: 0 });
+          }
+        }
+      } catch {}
+      await this.state.storage.put("community", list);
+    }
+    return list;
   }
 
   async fetch(request) {
@@ -85,9 +111,10 @@ export class SnapshotStateDO {
     const path = url.pathname;
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders("GET, POST, OPTIONS") });
+      return new Response(null, { status: 204, headers: corsHeaders("GET, POST, DELETE, OPTIONS") });
     }
 
+    // ── /snapshots ──────────────────────────────────────────────
     if (path === "/snapshots" && request.method === "GET") {
       const snaps = await this.state.storage.get("snapshots") || {};
       return jsonRes(snaps);
@@ -107,6 +134,55 @@ export class SnapshotStateDO {
         await this.state.storage.put("snapshots", snaps);
       }
       return jsonRes({ ok: true, skipped: !!same });
+    }
+
+    // ── /community (強整合性) ───────────────────────────────────
+    if (path === "/community") {
+      if (request.method === "GET") {
+        const list = await this._ensureCommunity();
+        return jsonRes(list);
+      }
+
+      if (request.method === "POST") {
+        let body;
+        try { body = await request.json(); } catch { return jsonRes({ error: "invalid json" }, 400); }
+        if (!body.name) return jsonRes({ error: "missing name" }, 400);
+
+        const list = await this._ensureCommunity();
+        const key = (body.name || "").toLowerCase();
+        const idx = list.findIndex(e => e.name.toLowerCase() === key);
+        const now = Date.now();
+        const entry = {
+          name:       body.name,
+          region:     body.region     || "",
+          category:   body.category   || "notable",
+          note:       body.note       || "",
+          addedAt:    body.addedAt    || now,
+          updatedAt:  body.updatedAt  || now,
+          sourceUser: body.sourceUser || "",
+        };
+        if (idx >= 0) {
+          const existing = list[idx];
+          if (!existing.updatedAt || entry.updatedAt >= existing.updatedAt) {
+            list[idx] = entry;
+          }
+        } else {
+          list.push(entry);
+        }
+        await this.state.storage.put("community", list);
+        return jsonRes({ ok: true });
+      }
+
+      if (request.method === "DELETE") {
+        const name = url.searchParams.get("name");
+        if (!name) return jsonRes({ error: "missing name" }, 400);
+        const list = await this._ensureCommunity();
+        const next = list.filter(e => e.name.toLowerCase() !== name.toLowerCase());
+        if (next.length !== list.length) {
+          await this.state.storage.put("community", next);
+        }
+        return jsonRes({ ok: true });
+      }
     }
 
     return jsonRes({ error: "not found" }, 404);
@@ -210,71 +286,11 @@ export default {
       return resp;
     }
 
-    // ── /community ─────────────────────────────────────────────────────────
+    // ── /community → Durable Object (強整合性) ────────────────────────────
+    // KV の結果整合性では他ユーザーへの反映が遅延するため、DO にルーティング
     if (path === "/community") {
-      if (request.method === "GET") {
-        const list = await kvGet(env, "community", []);
-        // 後方互換 + 自動マイグレーション: /names にあって /community にないエントリを補完し
-        // 差分があれば非同期で /community KV へ書き戻す（初回アクセス時のみ実質書き込みが走る）
-        const names = await kvGet(env, "names", []);
-        let migrated = false;
-        for (const name of names) {
-          if (!list.find(e => e.name.toLowerCase() === name.toLowerCase())) {
-            list.push({ name, region: "", category: "notable", note: "", addedAt: 0 });
-            migrated = true;
-          }
-        }
-        if (migrated) ctx.waitUntil(kvPut(env, "community", list));
-        return jsonRes(list);
-      }
-      if (request.method === "POST") {
-        // TODO: 認証システム構築後に verifyWriteKey を有効化
-        // if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
-        let body;
-        try { body = await request.json(); } catch { return jsonRes({ error: "invalid json" }, 400); }
-        if (!body.name) return jsonRes({ error: "missing name" }, 400);
-
-        const list = await kvGet(env, "community", []);
-        const key  = (body.name || "").toLowerCase();
-        const idx  = list.findIndex(e => e.name.toLowerCase() === key);
-        const now  = Date.now();
-        const entry = {
-          name:       body.name,
-          region:     body.region     || "",
-          category:   body.category   || "notable",
-          note:       body.note       || "",
-          addedAt:    body.addedAt    || now,
-          updatedAt:  body.updatedAt  || now,     // エントリ更新時刻（merge 判定用）
-          sourceUser: body.sourceUser || "",      // 追加/更新したユーザーID
-          // status / lastSeen は /submit (snapshots) で管理 → community には含めない
-        };
-        if (idx >= 0) {
-          // updatedAt が新しいときだけ上書き（古いデータで巻き戻さない）
-          const existing = list[idx];
-          if (!existing.updatedAt || entry.updatedAt >= existing.updatedAt) {
-            list[idx] = entry;
-          }
-        } else {
-          list.push(entry);
-        }
-        const prev = await kvGet(env, "community", []);
-        if (JSON.stringify(prev) !== JSON.stringify(list)) {
-          await kvPut(env, "community", list);
-        }
-        return jsonRes({ ok: true });
-      }
-      if (request.method === "DELETE") {
-        // TODO: 認証システム構築後に verifyWriteKey を有効化
-        // if (!await verifyWriteKey(request, env)) return jsonRes({ error: "unauthorized" }, 403);
-        const name = url.searchParams.get("name");
-        if (!name) return jsonRes({ error: "missing name" }, 400);
-        const list = await kvGet(env, "community", []);
-        const next = list.filter(e => e.name.toLowerCase() !== name.toLowerCase());
-        if (next.length !== list.length) {
-          await kvPut(env, "community", next);
-        }
-        return jsonRes({ ok: true });
-      }
+      const stub = snapshotStub(env);
+      return stub.fetch(request);
     }
 
     // ── /names ─────────────────────────────────────────────────────────────
